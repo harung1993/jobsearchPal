@@ -4,7 +4,7 @@
 <style>.ws-rule{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:15px}.ws-rule p{margin:0 0 4px}.ws-rule p:last-child{margin:0}</style>
 {% set s = st.steps %}
 {% set req_done = 4 - st.left|length %}
-{% set tab_sub = "Everything unemploymentPal needs to know about you and your search. Come back and change any of it." %}
+{% set tab_sub = ("Starting a search is a lot. Set this up once, and it works for you every morning. " if not st.ready else "") ~ "Come back and change any of it." %}
 {% include "_tabs.html" %}
 
 <div class="setup-top">

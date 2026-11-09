@@ -131,10 +131,11 @@ def test_morning_brief(tmp_path, monkeypatch):
     db.add_event({"id": "m1", "job_id": None, "kind": "interview", "at": datetime.now().strftime("%Y-%m-%d %H:%M"),
                   "sender": "Jo <jo@acme.example>", "subject": "Let's talk"})
     subject, text, html = brief.compose(db, "http://srv:8787", today=date(2026, 10, 30), label="DUA")
-    assert subject.startswith("Job search brief: 1 ready, 1 new reply, DUA 1/3")
+    assert subject == "Job search brief: Jo wants to talk, and 1 role ready for you · DUA 1/3"
     assert "autoapply-finish greenhouse:acme:1" in text and "http://srv:8787/job/greenhouse:acme:1" in text
-    assert "Brightline" in text and "rejected" in text and "2 to go" in text
+    assert "Brightline" in text and "closed" in text and "rejected" not in text and "2 to go" in text
     assert "Staff AE &lt;x&gt;" in html  # escaped
+    assert "Jo " in text.split("READY FOR YOU")[0]  # the pal and good news come first
 
     sent = {}
     class FakeSMTP:
@@ -375,3 +376,17 @@ def test_own_replies_are_not_recruiter_contacts(tmp_path, monkeypatch):
                   "sender": "me", "subject": "Re: x", "reviewed": 1, "manual": 1})
     emailsync.apply_event(db, [], "<own3@x>", "me", "me@example.com", "Re: x", when, body)
     assert db.get_event("<own3@x>") is not None
+
+
+def test_brief_subject_leads_with_good_news(tmp_path):
+    from autoapply import brief
+    db = DB(tmp_path / "t.db")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db.add_event({"id": "r", "job_id": None, "kind": "rejected", "at": now, "sender": "Northwind <n@x>", "subject": "Update"})
+    subject, text, _ = brief.compose(db, "", today=date.today(), label="DUA")
+    assert subject.startswith("Job search brief: ") and "Northwind" not in subject and "nothing new this morning" in subject
+    assert "stone" in text.lower()  # the pal says it once, in the welcome (either rotation)
+    db.add_event({"id": "o", "job_id": None, "kind": "offer", "at": now, "sender": "Pinecrest <p@x>", "subject": "Offer"})
+    subject, text, _ = brief.compose(db, "", today=date.today(), label="DUA")
+    assert subject.startswith("Job search brief: An offer from Pinecrest")
+    assert text.index("offer: Pinecrest") < text.index("closed: Northwind")

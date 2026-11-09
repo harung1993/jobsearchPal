@@ -28,7 +28,7 @@
      {% for j in jobs %}<option value="{{ j.id }}" {% if e.job_id == j.id %}selected{% endif %}>{{ co(j.company) }} · {{ j.title|truncate(40) }}</option>{% endfor %}
     </select>
     <noscript><button class="btn sm">Save</button></noscript></form></td>
- </tr>{% else %}<tr><td colspan="4" class="empty">{% if show == 'waiting' %}Nothing waiting. New emails are sorted after each sync.{% else %}No emails here.{% endif %}</td></tr>{% endfor %}
+ </tr>{% else %}<tr><td colspan="4" class="empty">{% if show == 'waiting' %}All sorted. Nothing needs you right now.{% else %}No emails here.{% endif %}</td></tr>{% endfor %}
  </tbody></table>
 </section>
 <style>

@@ -62,7 +62,7 @@
   {% for e in letters %}<div class="ink2" style="font-size:14.5px;padding:3px 0">{{ e.at[5:10]|replace('-', '/') }} · {{ e.subject|truncate(70) }}{% if e.proof %} · <a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</div>{% endfor %}{% endif %}
 </section></div>
 
-<details class="card mt help-box"><summary><h2 style="margin:0">Good to know, and help people often miss</h2><span class="muted">taxes, waiting week, severance, RESEA, health coverage, SNAP, 211, legal aid</span></summary>
+<details class="card mt help-box"><summary><h2 style="margin:0">Help you're entitled to, that people often miss</h2><span class="muted">taxes, waiting week, severance, RESEA, health coverage, SNAP, 211, legal aid</span></summary>
  {% if general %}<ul class="general">{% for g in general %}<li>{{ g }}</li>{% endfor %}</ul>{% endif %}
  <div class="grid g3 res" style="margin-top:12px">{% for name, what, url in resources %}<a class="res-item" href="{{ url }}" target="_blank" rel="noopener"><b>{{ name }}</b><span>{{ what }}</span></a>{% endfor %}</div></details>
 <style>.thisweek{display:flex;gap:24px;align-items:stretch;margin-bottom:16px;border-color:color-mix(in srgb,var(--sun) 55%,var(--line));box-shadow:var(--shadow-lg)}
@@ -91,6 +91,6 @@
   <td>{% for p in r.proof %}<a href="/proof/{{ w.start.isoformat() }}/{{ p.split('/')[-1] }}" target="_blank">{{ 'screenshot' if p.endswith('.png') else 'email' }}</a>{% if not loop.last %}, {% endif %}{% else %}<span class="muted" title="No saved email or screenshot for this one">—</span>{% endfor %}</td></tr>{% endfor %}
  </tbody></table></section>{% endmacro %}
 <h2 class="section-h">Weekly log</h2>
-{% for w in weeks[:4] %}{{ week_card(w, loop.first) }}{% else %}<p class="empty">No activities yet. Applications, recruiter contacts and interviews show up here as they happen.</p>{% endfor %}
+{% for w in weeks[:4] %}{{ week_card(w, loop.first) }}{% else %}<p class="empty">Your log fills itself as you apply, talk to recruiters and interview. You don't have to write any of it down.</p>{% endfor %}
 {% if weeks|length > 4 %}<details class="older"><summary>Show {{ weeks|length - 4 }} older weeks</summary>{% for w in weeks[4:] %}{{ week_card(w, false) }}{% endfor %}</details>{% endif %}
 {% endblock %}

@@ -191,7 +191,7 @@ def test_prep_page_and_dashboard_card(tmp_path, base_url, pdfs):
     db.add_event({"id": "i1", "job_id": "manual:gh", "kind": "interview", "at": "2026-10-30 09:00", "sender": "Acme",
                   "subject": "Schedule your recruiter screen", "body": "Pick a time"})
     assert "prep next run" in c.get("/").text
-    assert "No prep pack yet" in c.get("/prep/manual:gh").text
+    assert "Your prep pack comes with the next daily run" in c.get("/prep/manual:gh").text
     p = prep.prep_path(tmp_path / "data", db.get("manual:gh"))
     p.parent.mkdir(parents=True)
     p.write_text("## What candidates report\n- Asked about dbt tests ([Reddit](https://reddit.com/r/x))\n<img src=x onerror=alert(1)>")

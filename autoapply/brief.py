@@ -1,7 +1,9 @@
-"""Morning brief email: today's picks, new replies and where every application stands.
+"""Morning brief email: the pal's welcome, good news first, today's picks, and where every application stands.
 
 Sent to yourself over Gmail SMTP with the same app password the email sync uses, so it lands in
-the inbox your morning brief already reads. Subject starts "Job search brief" for easy filtering.
+the inbox your morning brief already reads. The subject always starts "Job search brief": the email sync
+recognises its own brief by that prefix (emailsync.py), and filters can rely on it. What follows the prefix is
+the best news of the day, never a rejection (VOICE.md).
 """
 from __future__ import annotations
 
@@ -11,8 +13,10 @@ from datetime import date, datetime, timedelta
 from email.message import EmailMessage
 from html import escape
 
-from . import stats
+from . import pal, stats
 from .db import DB
+
+LABELS = {"confirmed": "received", "rejected": "closed"}  # same words as the dashboard
 
 
 def _recent_events(db: DB, hours: int = 30) -> list[dict]:
@@ -33,6 +37,26 @@ def _co(name: str) -> str:
     return name.title() if name and name.islower() else (name or "")
 
 
+GOOD_FIRST = {"offer": 0, "interview": 1, "recruiter": 2, "confirmed": 3, "agency": 4, "rejected": 5}
+
+
+def _good_first(news: list[dict]) -> list[dict]:
+    return sorted(news, key=lambda e: GOOD_FIRST.get(e["kind"], 4))
+
+
+def headline(db: DB, news: list[dict], ready: list[dict]) -> str:
+    """The best news for the subject line: an offer, an interview, a reply, then what's ready. Never a rejection."""
+    parts = []
+    for kind, say in (("offer", "An offer from {co}"), ("interview", "{co} wants to talk"), ("recruiter", "{co} wrote back")):
+        hit = next((e for e in news if e["kind"] == kind), None)
+        if hit:
+            parts.append(say.format(co=pal.company(db, hit)))
+            break
+    if ready:
+        parts.append(f"{len(ready)} role{'' if len(ready) == 1 else 's'} ready for you")
+    return ", and ".join(parts) if parts else "nothing new this morning"
+
+
 def compose(db: DB, review_url: str = "", today: date | None = None, label: str = "Work search",
             floor: int = 3, data_dir=None, settings=None) -> tuple[str, str, str]:
     """Returns (subject, text, html)."""
@@ -41,12 +65,19 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
     ready, news = s["ready"], _recent_events(db)
     todo = nudges.compute(db, data_dir, settings=settings) if data_dir else []
     left = max(0, s["dua_floor"] - s["this_week"])
-    dua = f"{s['this_week']} of {s['dua_floor']} this week" + (" (done)" if not left else f", {left} to go")
-    subject = f"Job search brief: {len(ready)} ready, {len(news)} new repl{'y' if len(news) == 1 else 'ies'}, {label} {s['this_week']}/{s['dua_floor']}" + (
-        f", {len(todo)} to do" if todo else "")
+    dua = f"{s['this_week']} of {s['dua_floor']} this week" + (", covered" if not left else f", {left} to go")
+    now = datetime.now() if today is None else datetime.combine(today, datetime.now().time())
+    first = ((getattr(settings, "profile", None) or {}).get("first_name") or "") if settings else ""
+    g = pal.greeting(db, s, now, first)
+    market = g["market"] or (pal.market_line(now.date()) if now.day <= 7 else None)  # once a month, in the first week
+    subject = f"Job search brief: {headline(db, news, ready)} · {label} {s['this_week']}/{s['dua_floor']}" + (
+        f" · {len(todo)} to do" if todo else "")
     base = review_url.rstrip("/")
 
-    t = [f"{label}: {dua}", ""]
+    t = [g["title"], g["line"], ""]
+    if market:
+        t += [f"{market['text']} ({market['source']}, checked {market['checked']})", ""]
+    t += [f"{label}: {dua}", ""]
     if todo:
         t.append(f"TO DO ({len(todo)})")
         t += [f"- {n['title']} · {n['about']} · {n['why']}" for n in todo[:8]]
@@ -67,11 +98,13 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
                   "due": "prep pack next run"}[r["state"]]
             t.append(f"- {_co(r['job']['company'])} · {r['job']['title']} · {st}")
     t += ["", f"NEW REPLIES ({len(news)})"]
-    t += [f"- {e['kind']}: {e['sender'].split(' <')[0]} · {e['subject']}" for e in news] or ["- none"]
-    t += ["", f"APPLICATIONS: {s['applied']} sent · {s['interviews']} interviews · {s['rejected']} rejected · "
-              f"{s['waiting']} waiting · {s['no_reply']} no reply · {s['response_rate']}% response rate"]
+    t += [f"- {LABELS.get(e['kind'], e['kind'])}: {e['sender'].split(' <')[0]} · {e['subject']}" for e in _good_first(news)] or ["- none yet"]
+    if any(e["kind"] == "rejected" for e in news):
+        t.append("  The closed ones need nothing from you. Most applications end this way, even good ones.")
+    t += ["", f"APPLICATIONS: {s['applied']} sent · {s['interviews']} interviews · {s['waiting']} still in play · "
+              f"{s['rejected']} closed · {s['no_reply']} no reply yet · {s['response_rate']}% response rate"]
     for j in s["applications"][:15]:
-        t.append(f"- {j['applied_label']}: {_co(j['company'])} · {j['title']} · {j['state']}")
+        t.append(f"- {j['applied_label']}: {_co(j['company'])} · {j['title']} · {LABELS.get(j['state'], j['state'])}")
     stale = [r for r in s["runs"] if r["state"] in ("fail", "stale")]
     if stale:
         t += ["", "CHECK: " + "; ".join(f"{r['label']} {r['state']} ({r['when']})" for r in stale)]
@@ -81,7 +114,11 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
 
     def li(items):
         return "".join(f"<li>{i}</li>" for i in items)
-    h = [f"<p style='font-size:15px'><b>{escape(label)}:</b> {escape(dua)}</p>",
+    h = [f"<p style='font-size:18px;margin:0 0 4px'><b>{escape(g['title'])}</b></p><p style='font-size:15px;margin:0 0 12px'>{escape(g['line'])}</p>"]
+    if market:
+        h.append(f"<p style='font-size:14px;background:#fcefd2;padding:8px 12px;border-radius:8px'>{escape(market['text'])}<br>"
+                 f"<span style='color:#666'>{escape(market['source'])}, checked {escape(market['checked'])}</span></p>")
+    h += [f"<p style='font-size:15px'><b>{escape(label)}:</b> {escape(dua)}</p>",
          f"<h3>Ready for you ({len(ready)})</h3><ul>"]
     h.append(li([f"<b>{escape(_co(j['company']))}</b> · {escape(j['title'])}{' · ' + escape(j['pay']) if j['pay'] else ''}<br>"
                  f"<a href='{escape(base)}/job/{escape(j['id'])}'>Review</a> · finish on Mac: <code>autoapply-finish {escape(j['id'])}</code>"
@@ -96,12 +133,15 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
             f"<a href='{escape(base)}/prep/{escape(r['job']['id'])}'>Prep pack</a>" if r["state"] == "ready" else
             ("prep pack updating next run" if r["state"] == "update" else "prep pack next run")) for r in ivs]))
     h.append(f"</ul><h3>New replies ({len(news)})</h3><ul>")
-    h.append(li([f"<b>{escape(e['kind'])}</b>: {escape(e['sender'].split(' <')[0])} · {escape(e['subject'])}" for e in news]) or "<li>None</li>")
-    h.append(f"</ul><h3>Applications</h3><p>{s['applied']} sent · {s['interviews']} interviews · {s['rejected']} rejected · "
-             f"{s['waiting']} waiting · {s['no_reply']} no reply · {s['response_rate']}% response rate</p>")
+    h.append(li([f"<b>{escape(LABELS.get(e['kind'], e['kind']))}</b>: {escape(e['sender'].split(' <')[0])} · {escape(e['subject'])}"
+                 for e in _good_first(news)]) or "<li>None yet</li>")
+    if any(e["kind"] == "rejected" for e in news):
+        h.append("</ul><p style='color:#555;font-size:14px'>The closed ones need nothing from you. Most applications end this way, even good ones.</p><ul>")
+    h.append(f"</ul><h3>Applications</h3><p>{s['applied']} sent · {s['interviews']} interviews · {s['waiting']} still in play · "
+             f"{s['rejected']} closed · {s['no_reply']} no reply yet · {s['response_rate']}% response rate</p>")
     h.append("<table cellpadding='4' style='border-collapse:collapse;font-size:13px'>" + "".join(
         f"<tr><td style='color:#666'>{escape(j['applied_label'])}</td><td>{escape(_co(j['company']))}</td>"
-        f"<td>{escape(j['title'])}</td><td><b>{escape(j['state'])}</b></td></tr>" for j in s["applications"][:15]) + "</table>")
+        f"<td>{escape(j['title'])}</td><td><b>{escape(LABELS.get(j['state'], j['state']))}</b></td></tr>" for j in s["applications"][:15]) + "</table>")
     if stale:
         h.append("<p style='color:#b42318'><b>Check:</b> " + escape("; ".join(f"{r['label']} {r['state']} ({r['when']})" for r in stale)) + "</p>")
     if base:

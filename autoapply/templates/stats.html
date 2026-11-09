@@ -3,15 +3,15 @@
 {% block title %}Stats{% endblock %}
 {% block body %}
 <div class="ph"><div><h1>Stats</h1>
- <div class="sub">Everything since your first tracked application · weeks run Sunday to Saturday · <a href="/skills">Skills to learn</a></div></div></div>
+ <div class="sub">Everything you've done since your first tracked application. Every one of these took effort · weeks run Sunday to Saturday · <a href="/skills">Skills to learn</a></div></div></div>
 
 <section class="grid g6" aria-label="Key numbers">
  <div class="card tile"><div class="lbl">Applied</div><div class="num">{{ s.applied }}</div><div class="sub">{{ s.found_total }} roles found</div></div>
- <div class="card tile"><div class="lbl">Response rate</div><div class="num">{{ s.response_rate }}%</div><div class="sub">{{ s.responded }} replies</div></div>
- <div class="card tile"><div class="lbl">Interview rate</div><div class="num">{{ s.interview_rate }}%</div><div class="sub">{{ s.interviews }} interviews</div></div>
+ <div class="card tile"><div class="lbl">Replies</div><div class="num">{{ s.responded }}</div><div class="sub">from {{ s.applied }} sent · {{ s.response_rate }}%</div></div>
+ <div class="card tile"><div class="lbl">Interviews</div><div class="num">{{ s.interviews }}</div><div class="sub">from {{ s.applied }} sent · {{ s.interview_rate }}%</div></div>
  <div class="card tile"><div class="lbl">Median reply</div><div class="num">{% if s.median_wait is not none %}{{ s.median_wait }}<small> days</small>{% else %}–{% endif %}</div><div class="sub">submit to first answer</div></div>
- <div class="card tile"><div class="lbl">Weeks at minimum</div><div class="num">{{ s.weeks_met }}<small> / {{ [s.weeks_active, 1]|max }}</small></div><div class="sub">last 12 active weeks</div></div>
- <div class="card tile"><div class="lbl">Streak</div><div class="num">{{ s.streak }}<small> wk{{ '' if s.streak == 1 else 's' }}</small></div><div class="sub">in a row at {{ s.dua_floor }}+</div></div>
+ <div class="card tile"><div class="lbl">Weeks covered</div><div class="num">{{ s.weeks_met }}</div><div class="sub">weeks at your {{ ws_label }} minimum, last 12 active</div></div>
+ <div class="card tile"><div class="lbl">Recruiters</div><div class="num">{{ s.recruiter_count }}</div><div class="sub">people who reached out</div></div>
 </section>
 
 <section class="card mt"><h2>Applications per week <span class="count">last {{ s.weeks }} weeks</span></h2>
@@ -27,7 +27,7 @@
  </div>
  <div class="card"><h2>Where applications stand</h2>
   {{ hbars(s.states) }}
-  <p class="muted" style="font-size:13.5px;margin:10px 0 0">"No reply" means more than 30 days without an answer.</p>
+  <p class="muted" style="font-size:13.5px;margin:10px 0 0">"No reply yet" means more than 30 days without an answer. Many companies never write back; it isn't about you.</p>
  </div>
 </section>
 
@@ -45,7 +45,7 @@
  <table><thead><tr><th>Platform</th><th class="num">Applied</th><th class="num">Replies</th><th class="num hide-sm">Interviews</th><th style="width:34%">Response rate</th></tr></thead><tbody>
  {% for p in s.platforms %}<tr><td><b style="font-weight:600">{{ p.name }}</b></td><td class="num">{{ p.applied }}</td><td class="num">{{ p.responded }}</td><td class="num hide-sm">{{ p.interviews }}</td>
   <td><div class="hbars" style="margin:0"><div class="row" style="grid-template-columns:minmax(0,1fr) 44px;margin:0" data-tip="{{ p.name }}: {{ p.rate }}% of {{ p.applied }}"><div class="track"><div class="fill" style="width:{{ p.rate }}%"></div></div><span class="v">{{ p.rate }}%</span></div></div></td></tr>
- {% else %}<tr><td colspan="5" class="empty">No applications yet.</td></tr>{% endfor %}</tbody></table>
+ {% else %}<tr><td colspan="5" class="empty">Nothing sent yet. Your first one will show up here.</td></tr>{% endfor %}</tbody></table>
  {% if s.platforms|length > 1 %}<p class="muted" style="font-size:13.5px;margin:10px 0 0">Small counts swing a lot: one reply on two applications reads as 50%.</p>{% endif %}
 </section>
 

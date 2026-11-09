@@ -1,14 +1,45 @@
 {% extends "base.html" %}
 {% from "macros.html" import week_bars, hbars, co %}
 {% block body %}
-<div class="ph"><div><h1>{% set hr = s.now_hour %}{{ "Good morning" if hr < 12 else ("Good afternoon" if hr < 18 else "Good evening") }}{% if first_name %}, {{ first_name }}{% endif %}</h1>
- <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div></div>
+{% from "_horizon.html" import horizon, horizon_css %}{{ horizon_css() }}
+<section class="card welcome" aria-labelledby="hello">
+ {{ horizon(s.now_hour, celebrate.kind if celebrate else "") }}
+ <div class="welcome-b">
+  <div class="welcome-t">
+   {% if celebrate and celebrate.kind == 'week' %}<div class="cel cel-week" role="status"><b>{{ celebrate.title }}</b><span>{{ celebrate.line }}</span></div>{% endif %}
+   <h1 id="hello">{{ greet.title }}</h1>
+   {% if celebrate and celebrate.kind != 'week' %}<p class="hello-line cel-{{ celebrate.kind }}" role="status"><b>{{ celebrate.title }}.</b> {{ celebrate.line }}</p>
+   {% else %}<p class="hello-line">{{ greet.line }}</p>{% endif %}
+   {% if greet.market %}<p class="market">{{ greet.market.text }} <small>{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener">{{ greet.market.source }}</a>{% else %}{{ greet.market.source }}{% endif %}, checked {{ strptime(greet.market.checked).strftime("%b %-d, %Y") }}</small></p>{% endif %}
+   <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div>
+  </div>
  <div class="ph-acts">{% if running %}<span class="running" role="status"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.step %} · {{ running.step }}{% endif %}</span>
   <script>setTimeout(()=>location.reload(),20000)</script>
  {% else %}<form method="post" action="/run" class="runnow" onsubmit="this.querySelector('button').disabled=true">
   <label class="ink2" for="picks">Roles</label><select id="picks" name="picks">{% for n in range(1, 6) %}<option {% if n == picks_default %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
-  <button class="btn" title="Find, tailor and fill more roles now. Nothing is submitted.">Run now</button></form>{% endif %}</div></div>
-<style>.ph-acts{display:flex;gap:8px;align-items:center}.runnow{display:flex;gap:6px;align-items:center;margin:0}.runnow select{width:auto;min-width:60px}
+  <button class="btn" title="Find, tailor and fill more roles now. Nothing is submitted.">Run now</button></form>{% endif %}</div>
+ </div>
+ {% if rejection %}<div class="palnote" role="note">
+  <svg class="stone" width="96" height="22" viewBox="0 0 96 22" aria-hidden="true"><path d="M2 16h92" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M24 20h48" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/><ellipse cx="48" cy="13" rx="5" ry="3.4" fill="var(--accent-ink)"/></svg>
+  {% if greet.state != 'rejection' %}<p><b>{{ rejection.company }} said no this time.</b> Rejections sting, even when you expect them. It's one stone in a very big ocean: most no's come down to numbers and screening, and one doesn't decide the rest of your search.</p>{% endif %}
+  <form method="post" action="/pal/seen" class="acts"><input type="hidden" name="key" value="{{ rejection.key }}">
+   {% if s.ready or shortlist %}<button class="btn sm primary" name="back" value="/#ready-h">See the roles ready for you</button>{% endif %}
+   <button class="btn sm" name="back" value="/">Put it away</button></form>
+ </div>{% endif %}
+</section>
+<style>.welcome{overflow:hidden;margin-bottom:22px;padding:0}.welcome .hz{border-radius:var(--radius) var(--radius) 0 0}
+.welcome-b{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding:18px 22px 20px}
+.welcome-t{min-width:0;flex:1 1 420px;display:grid;gap:6px}
+.welcome h1{font-size:26px;line-height:1.25;margin:0;letter-spacing:-.015em;text-wrap:balance}
+.hello-line{margin:0;color:var(--ink-2);font-size:16.5px;max-width:64ch}
+.welcome .sub{color:var(--ink-3);font-size:14.5px}
+.market{margin:2px 0 0;background:var(--sun-soft);border-radius:10px;padding:8px 12px;font-size:15px;max-width:64ch}.market small{display:block;color:var(--ink-3);font-size:13px}
+.cel{display:grid;gap:2px;background:var(--sun-soft);border-radius:10px;padding:10px 12px;margin-bottom:4px}.cel b{font-size:16px}.cel span{color:var(--ink-2);font-size:15px}
+.palnote{margin:0 22px 20px;padding:12px 16px;border-radius:12px;background:var(--accent-soft);display:grid;gap:8px}
+.palnote p{margin:0}.palnote .acts{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+@media (max-width:600px){.welcome-b{padding:16px}.welcome h1{font-size:23px}.palnote{margin:0 16px 16px}}</style>
+<style>.wdots{display:flex;gap:6px;margin-top:8px}.wdots i{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2)}.wdots i.on{background:var(--sun);border-color:var(--sun)}
+.ph-acts{display:flex;gap:8px;align-items:center}.runnow{display:flex;gap:6px;align-items:center;margin:0}.runnow select{width:auto;min-width:60px}
 .running{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;color:var(--ink-2);background:var(--accent-soft);border-radius:999px;padding:6px 12px}
 .running i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}@media (prefers-reduced-motion:reduce){.running i{animation:none}}
@@ -37,6 +68,13 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
  <form method="post" action="/decline/{{ j.id|urlencode }}" class="pop" aria-label="Why decline {{ j.company }}?"><span class="ink2">Why?</span>
   {% for k, label in decline_reasons.items() %}<button class="btn ghost sm" name="reason" value="{{ k }}">{{ label }}</button>{% endfor %}</form></details>{% endmacro %}
 <section class="card hero" aria-labelledby="ready-h"><h2 id="ready-h">Ready for you <span class="count">{{ s.ready|length + shortlist|length }}</span></h2>
+ {% if interviews %}<div class="group-h"><b>Interviews</b><span>Good news first. Prep packs are written by the daily run.</span></div>{% endif %}
+ {% for r in interviews %}<div class="ready"><div class="avatar iv" aria-hidden="true">{{ (r.job.company or '?')[:1]|upper }}</div>
+  <div class="body"><div class="t">{{ co(r.job.company) }} · {{ r.job.title }} <span class="pill interview">interview</span></div>
+   <div class="m">{{ r.emails[0].subject|truncate(80) }} · {{ r.latest[5:10]|replace('-', '/') }}</div></div>
+  {% if r.state == 'ready' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep pack</a>
+  {% elif r.state == 'update' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep (updating next run)</a>
+  {% else %}<span class="pill waiting">prep next run</span>{% endif %}</div>{% endfor %}
  {% if s.ready %}<div class="group-h"><b>Ready to submit</b><span>Filled in and waiting for your review. Nothing is sent until you press Submit.</span></div>
  {% for j in s.ready %}<div class="ready"><div class="avatar" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
@@ -52,25 +90,20 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
   <div class="acts">{{ decline(j) }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-role="{{ j.company }} · {{ j.title }}">
    <button class="btn sm" title="Tailor and fill this one now. Uses credits.">Prepare</button></form>{% endif %}</div></div>
  {% endfor %}{% endif %}
- {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run finds and prepares more roles.</span></div>{% endif %}
- {% for r in interviews %}<div class="ready"><div class="avatar iv" aria-hidden="true">{{ (r.job.company or '?')[:1]|upper }}</div>
-  <div class="body"><div class="t">{{ co(r.job.company) }} · {{ r.job.title }} <span class="pill interview">interview</span></div>
-   <div class="m">{{ r.emails[0].subject|truncate(80) }} · {{ r.latest[5:10]|replace('-', '/') }}</div></div>
-  {% if r.state == 'ready' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep pack</a>
-  {% elif r.state == 'update' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep (updating next run)</a>
-  {% else %}<span class="pill waiting">prep next run</span>{% endif %}</div>{% endfor %}
+ {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
 </section>
 
 <section class="grid g4 mt" aria-label="Headline numbers">
  <div class="card tile key"><div class="lbl">{{ ws_label }} this week</div><div class="num">{{ s.this_week }}<small> / {{ s.dua_floor }}</small></div>
-  <div class="meter {% if s.this_week >= s.dua_floor %}ok{% endif %}" role="img" aria-label="{{ s.this_week }} of {{ s.dua_floor }} activities"><span style="width:{{ [100, (100 * s.this_week / s.dua_floor)|round]|min }}%"></span></div>
-  <div class="sub">{% if s.this_week >= s.dua_floor %}Minimum met{% else %}{{ s.dua_floor - s.this_week }} more needed{% endif %} · week of {{ s.this_week_start.strftime("%b %-d") }}</div></div>
+  {% if s.dua_floor <= 7 %}<div class="wdots" role="img" aria-label="{{ s.this_week }} of {{ s.dua_floor }} activities this week">{% for n in range(s.dua_floor) %}<i class="{{ 'on' if n < s.this_week }}"></i>{% endfor %}</div>
+  {% else %}<div class="meter {% if s.this_week >= s.dua_floor %}ok{% endif %}" role="img" aria-label="{{ s.this_week }} of {{ s.dua_floor }} activities"><span style="width:{{ [100, (100 * s.this_week / s.dua_floor)|round]|min }}%"></span></div>{% endif %}
+  <div class="sub">{{ week_left }} · week of {{ s.this_week_start.strftime("%b %-d") }}</div></div>
  <div class="card tile"><div class="lbl">Applications</div><div class="num">{{ s.applied }}</div>
   <div class="sub">{{ s.series[-1][1] }} this week · {{ s.series[-2][1] if s.series|length > 1 else 0 }} last week</div></div>
- <div class="card tile"><div class="lbl">Response rate</div><div class="num">{{ s.response_rate }}%</div>
-  <div class="sub">{{ s.responded }} heard back{% if s.avg_days_to_reply is not none %} · ~{{ s.avg_days_to_reply }} days to reply{% endif %}</div></div>
+ <div class="card tile"><div class="lbl">Replies</div><div class="num">{{ s.responded }}</div>
+  <div class="sub">from {{ s.applied }} sent{% if s.avg_days_to_reply is not none %} · ~{{ s.avg_days_to_reply }} days to reply{% endif %}</div></div>
  <div class="card tile"><div class="lbl">Interviews</div><div class="num">{{ s.interviews }}</div>
-  <div class="sub">{{ s.rejected }} rejected · {{ s.waiting }} waiting</div></div>
+  <div class="sub">{{ s.waiting }} still in play · {{ s.rejected }} closed</div></div>
 </section>
 
 {% if todo %}<section class="card mt" id="todo"><h2>To do <span class="count">{{ todo|length }}</span></h2>
@@ -94,8 +127,8 @@ pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--su
 
 <section class="grid g2 mt">
  <div class="card"><h2>Latest replies <a href="/emails?show={{ 'waiting' if s.pending else 'all' }}">{% if s.pending %}{{ s.pending|length }} not sorted{% else %}All emails{% endif %}</a></h2>
-  <ul class="feed">{% for e in s.events[:6] %}<li><span class="pill {{ e.kind }}">{{ e.kind|label }}</span><span>{{ e.subject|truncate(70) }}</span><span class="when">{{ e.at[5:10]|replace('-', '/') }}</span></li>
-  {% else %}<li class="empty">No replies synced yet. Run <code>autoapply sync-email</code> once the Gmail app password is set.</li>{% endfor %}</ul>
+  <ul class="feed">{% for e in s.events[:6] %}<li><span class="pill {{ e.kind|pillcls }}">{{ e.kind|label }}</span><span>{{ e.subject|truncate(70) }}</span><span class="when">{{ e.at[5:10]|replace('-', '/') }}</span></li>
+  {% else %}<li class="empty">No replies yet. Replies take time; they show up here once <a href="/setup#gmail">Gmail is connected</a>.</li>{% endfor %}</ul>
  </div>
  <div class="card"><h2>Recruiters <span class="count">{{ s.recruiter_count }}</span></h2>
   <ul class="feed">{% for r in s.recruiters[:6] %}<li><div style="min-width:0"><div class="who">{{ r.sender.split(" <")[0] }}{% if r.count > 1 %} <span class="muted">· {{ r.count }} emails</span>{% endif %}</div><div class="ink2" style="font-size:14px">{{ r.subject|truncate(70) }}</div></div><span class="when">{{ r.last_at[5:10]|replace('-', '/') }}</span></li>
@@ -111,9 +144,9 @@ pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--su
  {% macro row(j) %}<tr><td><b style="font-weight:600">{{ co(j.company) }}</b></td>
   <td>{% if not j.id.startswith('tracker:') %}<a href="/job/{{ j.id|urlencode }}">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}</td>
   <td class="ink2" style="white-space:nowrap">{{ j.applied_label }}</td><td class="ink2 hide-sm">{{ j.pay or "" }}</td>
-  <td><span class="pill {{ j.state }}">{{ j.state|label }}</span></td></tr>{% endmacro %}
+  <td><span class="pill {{ j.state|pillcls }}">{{ j.state|label }}</span></td></tr>{% endmacro %}
  <table><thead><tr><th>Company</th><th>Role</th><th>Applied</th><th class="hide-sm">Pay</th><th>Status</th></tr></thead><tbody>
- {% for j in s.applications[:10] %}{{ row(j) }}{% else %}<tr><td colspan="5" class="empty">No applications yet.</td></tr>{% endfor %}</tbody></table>
+ {% for j in s.applications[:10] %}{{ row(j) }}{% else %}<tr><td colspan="5" class="empty">Nothing sent yet. Your first one will show up here.</td></tr>{% endfor %}</tbody></table>
  {% if s.applications|length > 10 %}<details style="margin-top:10px"><summary>Show {{ s.applications|length - 10 }} older</summary>
   <table><tbody>{% for j in s.applications[10:] %}{{ row(j) }}{% endfor %}</tbody></table></details>{% endif %}
 </section>

@@ -9,7 +9,7 @@
 {% if row and row.state == 'update' %}<p class="notice">A newer interview email arrived ({{ row.latest }}). The next daily run updates this pack for that stage.</p>{% endif %}
 {% if row %}<section class="card mt"><h2>Interview emails</h2><ul class="feed">{% for e in row.emails %}<li><span class="pill interview">interview</span><span>{{ e.subject }}</span><span class="when">{{ e.at[5:10]|replace('-', '/') }}</span></li>{% endfor %}</ul></section>{% endif %}
 <section class="card mt prep">
-{% if body %}{{ body|safe }}{% else %}<p class="empty">No prep pack yet. The next daily run writes one: reported questions for this company with sources, likely technical questions from the posting, your best matching stories, and questions to ask.</p>{% endif %}
+{% if body %}{{ body|safe }}{% else %}<p class="empty">You've already done the hard part by getting here. Your prep pack comes with the next daily run: reported questions for this company with sources, likely technical questions from the posting, your best matching stories, and questions to ask.</p>{% endif %}
 </section>
 <style>
 .prep{line-height:1.6;font-size:15.5px}.prep h2{font-size:19px;margin:22px 0 8px}.prep h2:first-child{margin-top:0}.prep h3{font-size:16px;margin:16px 0 6px}
