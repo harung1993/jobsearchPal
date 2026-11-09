@@ -1,11 +1,10 @@
 """Optional AI skill matching: off by default, synonyms match, tagging is batched, and token use is shown honestly."""
 import json
 
-from fastapi.testclient import TestClient
 
 from autoapply import rank, skills
 from autoapply.prefs import Prefs
-from autoapply.web import make_app
+from web_client import client
 from test_daily import make
 
 
@@ -64,7 +63,7 @@ def test_estimate_is_honest_about_claude_overhead(tmp_path):
 
 def test_settings_page_toggle_and_skills_list(tmp_path):
     s, db, _ = make(tmp_path)
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     html = c.get("/settings?tab=daily").text
     assert "Skill matching" in html and "tokens a day" in html
     c.post("/settings", data={"tab": "daily", "skills_form": "1", "skills_enabled": "1", "skills_via": "openrouter",

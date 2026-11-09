@@ -4,7 +4,7 @@
 - Job interests (titles, companies to watch, feeds) -> config.yaml
 - Base resume -> materials/<Last name> Resume - Base.docx (+ .pdf)
 - What you're looking for -> materials/context/setup.md (the agent reads materials/context/*.md)
-- Gmail and the dashboard password -> data/secrets.json (owner-only; .env still wins)
+- Gmail and the `autoapply finish` key -> data/secrets.json (owner-only; .env still wins)
 
 Nothing here is required to come from the page: hand-edited files work as before.
 """
@@ -140,8 +140,6 @@ def status(settings, environ: dict) -> dict:
         "gmail": {"done": bool(environ.get("GMAIL_USER") and environ.get("GMAIL_APP_PASSWORD")),
                   "note": environ.get("GMAIL_USER") or "optional: job alerts, replies and the morning brief"},
         "agent": agent_ready(_prefs(settings)),
-        "token": {"done": bool(environ.get("AUTOAPPLY_TOKEN")),
-                  "note": "set" if environ.get("AUTOAPPLY_TOKEN") else "anyone who can reach this page can use it"},
     }
     left = [k for k in REQUIRED if not steps[k]["done"]]
     return {"steps": steps, "left": left, "ready": not left, "fresh": bool(settings.raw.get("_from_example"))}

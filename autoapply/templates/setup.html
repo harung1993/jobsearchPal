@@ -11,7 +11,7 @@
 <div class="prog" aria-label="{{ req_done }} of 4 required steps done"><b>{{ req_done }}</b> of 4 required done
   <div class="meter {{ 'ok' if st.ready }}"><span style="width:{{ (100 * req_done / 4)|round }}%"></span></div></div>
 <nav class="rail" aria-label="Setup steps">
- {% for key, label, req in [('resume','Resume',1),('profile','Contact',1),('interests','Job interests',1),('about','About you',0),('agent','Agent',1),('gmail','Gmail',0),('token','Password',0)] %}
+ {% for key, label, req in [('resume','Resume',1),('profile','Contact',1),('interests','Job interests',1),('about','About you',0),('agent','Agent',1),('gmail','Gmail',0)] %}
  <a href="#{{ key }}" class="{{ 'done' if s[key].done }}"><i aria-hidden="true">{{ '✓' if s[key].done else loop.index }}</i>{{ label }}{% if not req %}<small>optional</small>{% endif %}</a>
  {% endfor %}
 </nav>
@@ -208,20 +208,6 @@
   <div class="actions"><button class="btn primary" name="action" value="save">Test and save</button>
    {% if s.gmail.done and not gmail_env %}<button class="btn" name="action" value="forget">Forget it</button>{% endif %}</div>
  </form>
-</section>
-
-<section class="card mt step" id="token">
- <h2><span><span class="n {{ 'done' if s.token.done }}">{{ "✓" if s.token.done else "7" }}</span> Dashboard password</span><span class="count">{{ s.token.note }}</span></h2>
- {% if s.token.done %}
-  <p class="lead">Set{% if token_env %} in <code>.env</code>{% endif %}. To sign in on another device, open the dashboard address with
-   <code>?t=</code> and the password on the end, once. A cookie remembers it.</p>
-  {% if link %}<p class="notice"><b>Save this link now; it isn't shown again.</b><br><code class="sel">{{ link }}</code>
-   {% if link.startswith('/') %}<br><small class="muted">Put your dashboard's address in front of it, e.g. http://100.x.y.z:8787{{ link }}</small>{% endif %}</p>{% endif %}
- {% else %}
-  <p class="lead">Without one, anyone who can reach this page can see your applications. Make one before you open the dashboard
-   to your phone (with <code>BIND</code> in <code>.env</code>, ideally on Tailscale).</p>
-  <form method="post" action="/setup/token"><div class="actions"><button class="btn primary">Make a password</button></div></form>
- {% endif %}
 </section>
 
 <style>

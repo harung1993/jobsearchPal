@@ -2,10 +2,10 @@
 from datetime import date, datetime
 
 import yaml
-from fastapi.testclient import TestClient
 
 from autoapply import benefits, emailsync, nudges
-from autoapply.web import make_app, my_state
+from autoapply.web import my_state
+from web_client import client
 from test_daily import make
 
 
@@ -41,7 +41,7 @@ def test_claim_day_work_search_and_resea_todos(tmp_path):
     seminar = next(n for n in todos if n["title"].startswith("Career Center Seminar"))
     assert "Nov 20, in 15 days" in seminar["about"]
     assert not any("Send ID" in n["title"] for n in todos)
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     c.post(f"/nudge/{seminar['key']}", data={"action": "done"})
     assert {t["title"]: t["done"] for t in benefits.tasks(db, include_done=True)}[seminar["title"]] == 1
     assert not nudges.for_agent(db, tmp_path / "data")  # no drafts for these
@@ -72,7 +72,7 @@ def test_agency_letters(tmp_path):
 
 def test_work_search_page_claim_and_tasks(tmp_path):
     s, db = _settings(tmp_path)
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     assert "Add your claim's details" in c.get("/dua").text
     c.post("/dua/claim", data={"claim_start": "2026-10-05", "weekly_benefit": "$1,015", "weeks_allowed": "26", "certify_day": "Sunday"})
     cfg = yaml.safe_load((tmp_path / "config.yaml").read_text())["work_search"]

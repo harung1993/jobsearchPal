@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from autoapply import config, setup
 from autoapply.db import DB
 from autoapply.web import make_app
+from web_client import client
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -26,7 +27,7 @@ def fresh(tmp_path, monkeypatch):
     config.FROM_SECRETS.clear()
     s = config.load(str(tmp_path / "config.yaml"), allow_example=True)
     db = DB(s.data_dir / "t.db")
-    yield s, TestClient(make_app(s, db))
+    yield s, client(s, db)
     for k in list(config.FROM_SECRETS):
         os.environ.pop(k, None)
     config.FROM_SECRETS.clear()
@@ -93,19 +94,25 @@ def test_rejects_non_docx(fresh):
     assert "a Word .docx file" in r.text
 
 
-def test_password_is_created_once_and_then_required(fresh):
-    s, c = fresh
-    r = c.post("/setup/token", follow_redirects=False)
-    loc = r.headers["location"]
-    token = loc.split("t=")[1].split("&")[0]
-    assert os.environ["AUTOAPPLY_TOKEN"] == token
-    saved = json.loads((s.data_dir / "secrets.json").read_text())
-    assert saved["AUTOAPPLY_TOKEN"] == token and oct((s.data_dir / "secrets.json").stat().st_mode)[-3:] == "600"
-    page = c.get(loc).text  # this browser gets the cookie
-    assert "Save this link now" in page
-    assert c.get("/setup").status_code == 200
-    assert TestClient(c.app).get("/setup").status_code == 403  # a new browser needs it
-    assert c.post("/setup/token").status_code == 409
+def test_account_comes_first_and_then_sign_in_is_required(fresh):
+    s, signed_in = fresh
+    (s.data_dir / "account.json").unlink()  # back to a brand-new install
+    c = TestClient(make_app(s, DB(s.data_dir / "t.db")))
+    html = {"accept": "text/html"}
+    for path in ("/", "/setup", "/leads"):  # every page sends a new install to "Create your account"
+        assert c.get(path, headers=html, follow_redirects=False).headers["location"] == "/account"
+    assert "Create your account" in c.get("/account").text and "Setup" not in c.get("/account").text
+    r = c.post("/account", data={"email": "me@example.org", "password": "long enough 1", "again": "long enough 1"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/"
+    assert oct((s.data_dir / "account.json").stat().st_mode)[-3:] == "600"
+    assert "long enough" not in (s.data_dir / "account.json").read_text()
+    saved = json.loads((s.data_dir / "secrets.json").read_text())  # the finish key, made silently
+    assert saved["AUTOAPPLY_TOKEN"] == os.environ["AUTOAPPLY_TOKEN"]
+    assert c.get("/setup").status_code == 200  # this browser is signed in
+    assert "Dashboard password" not in c.get("/setup").text and c.post("/setup/token").status_code in (404, 405)
+    assert TestClient(c.app).get("/setup", headers=html, follow_redirects=False).headers["location"] == "/login?next=/setup"
+    assert c.get("/account", follow_redirects=False).headers["location"] == "/"  # only one account, ever
 
 
 def test_gmail_saved_only_after_login_works(fresh, monkeypatch):

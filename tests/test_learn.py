@@ -2,10 +2,9 @@
 import json
 from datetime import datetime
 
-from fastapi.testclient import TestClient
 
 from autoapply import learn, skills
-from autoapply.web import make_app
+from web_client import client
 from test_daily import make
 
 
@@ -41,7 +40,7 @@ def test_keyword_gaps_page_and_marks(tmp_path):
     assert "Healthcare data" in names
     assert {"SQL", "Python", "dbt"} <= {i["name"] for i in g["have"]}
     assert ("payments domain knowledge", 1) in g["other_notes"]
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     assert "Skills to learn" in c.get("/skills").text
     c.post("/skills/mark", data={"skill": "Airflow", "mark": "learning"})
     c.post("/skills/mark", data={"skill": "Kubernetes", "mark": "have"})

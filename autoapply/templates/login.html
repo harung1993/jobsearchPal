@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{ 'Create your account' if mode == 'create' else 'Sign in' }} · unemploymentPal</title>
+<script>try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/* Stands alone on purpose: no base.html, so nothing about the person's search shows before sign-in. Same tokens as base.html. */
+:root{color-scheme:light;--bg:#f1f4f2;--surface:#fff;--surface-2:#eef2f0;--line:#dfe5e2;--ink:#14211d;--ink-2:#41504b;--ink-3:#64736e;
+ --accent:#0f6e66;--accent-ink:#0b5650;--rail:#12302b;--rail-ink:#d7e6e1;--bad:#b42318;--bad-soft:#fdeceA;--warn-soft:#fdf2d8;--warn-dot:#f0a91b;
+ --on-accent:#fff;--focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
+ --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;--accent:#3fb3a5;--accent-ink:#8fdcd2;--on-accent:#0d1513;--rail:#0a1311;--bad:#f38a80;--bad-soft:#341815;--warn-soft:#2c230e}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
+ --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;--accent:#3fb3a5;--accent-ink:#8fdcd2;--on-accent:#0d1513;--rail:#0a1311;--bad:#f38a80;--bad-soft:#341815;--warn-soft:#2c230e}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink)}
+body{font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;
+ display:grid;place-items:center;min-height:100vh;padding:24px 16px}
+.box{width:100%;max-width:400px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;margin:0 0 20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+h1{font-size:22px;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
+.lead{color:var(--ink-2);margin:0 0 18px;font-size:15.5px}
+form{display:grid;gap:14px}
+label{display:grid;gap:6px;font-size:14.5px;font-weight:600}
+small{font-weight:400;color:var(--ink-3);font-size:14px}
+input{width:100%;font:inherit;font-size:16px;min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}
+input:focus{outline:none;border-color:var(--accent);box-shadow:var(--focus)}
+button{font:inherit;font-weight:700;font-size:16px;height:42px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;margin-top:4px}
+button:hover{background:color-mix(in srgb,var(--accent) 85%,var(--ink));border-color:transparent} button:focus-visible{outline:none;box-shadow:var(--focus)}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:9px;padding:10px 12px;font-size:15px;margin:0 0 14px}
+.notice{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn-dot) 30%,transparent);border-radius:9px;padding:12px 14px;font-size:15px}
+.notice p{margin:0 0 8px}.notice p:last-child{margin:0}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);padding:1px 6px;border-radius:6px;word-break:break-word}
+.foot{color:var(--ink-3);font-size:14px;margin:14px 2px 0}
+</style></head><body>
+<main class="box">
+ <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>unemploymentPal</span></div>
+ <div class="card">
+ {% if mode == 'create' %}
+  <h1>Create your account</h1>
+  {% if not proof %}
+   <div class="notice" role="alert">
+    <p>This dashboard already had a password, so only its owner can create the account.</p>
+    <p>Open your saved sign-in link (the dashboard address ending in <code>?t=</code>) once in this browser, or run
+     <code>autoapply reset-password</code> on the server (with Docker: <code>docker compose exec web autoapply reset-password</code>).</p>
+   </div>
+  {% else %}
+   <p class="lead">First step of setup. Use the email address for your job search and a password only you know.
+    You'll sign in with these on every device.</p>
+   {% if err %}<p class="err" role="alert">{{ err }}</p>{% endif %}
+   <form method="post" action="/account">
+    <input type="hidden" name="t" value="{{ t }}">
+    <label>Email<input type="email" name="email" value="{{ email or '' }}" autocomplete="username" required autofocus></label>
+    <label>Password <small>at least {{ min_len }} characters</small>
+     <input type="password" name="password" autocomplete="new-password" minlength="{{ min_len }}" required></label>
+    <label>Type it again<input type="password" name="again" autocomplete="new-password" minlength="{{ min_len }}" required></label>
+    <button>Create account</button>
+   </form>
+  {% endif %}
+ {% else %}
+  <h1>Sign in</h1>
+  <p class="lead">Your job search, applications and emails are behind this.</p>
+  {% if err %}<p class="err" role="alert">{{ err }}</p>{% endif %}
+  <form method="post" action="/login">
+   <input type="hidden" name="next" value="{{ next }}">
+   <label>Email<input type="email" name="email" value="{{ email or '' }}" autocomplete="username" required {{ '' if email else 'autofocus' }}></label>
+   <label>Password<input type="password" name="password" autocomplete="current-password" required {{ 'autofocus' if email }}></label>
+   <button>Sign in</button>
+  </form>
+ {% endif %}
+ </div>
+ {% if mode != 'create' %}<p class="foot">Forgot it? Run <code>autoapply reset-password</code> on the server.</p>{% endif %}
+</main>
+</body></html>

@@ -2,10 +2,9 @@
 import json
 from datetime import datetime
 
-from fastapi.testclient import TestClient
 
 from autoapply import cli, leads
-from autoapply.web import make_app
+from web_client import client
 from test_daily import make
 
 LINKEDIN = """Your job alert for analytics engineer in Greater Boston
@@ -77,7 +76,7 @@ def test_save_dedupes_and_tracks(tmp_path, capsys):
 def test_leads_page_star_and_dismiss(tmp_path):
     s, db, cfg = make(tmp_path)
     leads.save(db, leads.parse(LINKEDIN), "Linkedin", datetime(2026, 11, 3, 9), {}, set())
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     html = c.get("/leads").text
     assert "Hooli" in html and "Initech" in html and "To look at" in html
     k = leads.rows(db)[0]["key"]
@@ -140,7 +139,7 @@ def test_auto_apply_one_lead(tmp_path, monkeypatch, capsys):
     k = leads.key("Initech", "Staff Data Engineer, Platform")
     started = []
     monkeypatch.setattr(subprocess, "Popen", lambda args, **kw: started.append(kw["env"]))
-    c = TestClient(make_app(s, db))
+    c = client(s, db)
     assert "Auto apply" in c.get("/leads").text and "uses credits" in c.get("/leads").text
     c.post("/leads/apply", data={"key": k})
     assert started and started[0]["AUTOAPPLY_LEAD"] == k and started[0]["AUTOAPPLY_TRIGGER"] == "manual"
@@ -187,7 +186,7 @@ def test_resolve_finds_lead_on_company_board(tmp_path):
     assert leads.get(db, leads.key("Hooli, Inc.", "Line Cook"))["job_id"] is None
     calls.clear()
     assert leads.resolve(db, s, fetchers=fetchers, now=now)["checked"] == 0 and not calls  # tried this week already
-    html = TestClient(make_app(s, db)).get("/leads?show=all").text
+    html = client(s, db).get("/leads?show=all").text
     assert "company site" in html and "https://jobs.ashbyhq.com/hooli/9" in html and "company page not found yet" in html
 
 
@@ -202,5 +201,5 @@ def test_job_sources_overview(tmp_path, monkeypatch):
     assert {"LinkedIn", "Indeed", "HigherEdJobs", "USAJOBS", "The Muse"} <= set(names)
     assert names["HigherEdJobs"]["status"] == "needs" and names["HigherEdJobs"]["href"] == "/setup#gmail"  # no Gmail yet
     assert 0 <= o["on"] <= o["total"] == len(names)
-    html = TestClient(make_app(s, db)).get("/leads").text
+    html = client(s, db).get("/leads").text
     assert "Where your jobs come from" in html and "HigherEdJobs" in html

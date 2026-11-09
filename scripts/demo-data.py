@@ -1,14 +1,16 @@
 """Builds a demo folder with fictional data, for screenshots and trying the dashboard:
     python3 scripts/demo-data.py /tmp/demo && cd /tmp/demo && autoapply serve   # http://127.0.0.1:8799
+Sign in as demo@example.org with the password "demo password" (demo only).
 """
 import sys, json, random
 from datetime import datetime, timedelta
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autoapply.db import DB
-from autoapply import history
+from autoapply import auth, history
 root = Path(sys.argv[1]); (root/"data").mkdir(parents=True, exist_ok=True)
 db = DB(root/"data"/"autoapply.db")
+auth.save(root/"data", "demo@example.org", "demo password")  # sign-in is always on; a demo account
 # Demo data only: fictional companies.
 rows = [["Position","Company","Location","Date Applied","Salary","Found on","Applied via","Notes"]]
 cos = ["Brightline","Cobalt Labs","Fernwood Health","Gridpoint","Harbor AI","Juniper Data","Kestrel","Lumen Works","Maple Analytics","Nimbus","Orchard","Pinecrest","Quarry","Redwood Metrics","Summit Health","Tidewater"]

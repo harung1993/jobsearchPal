@@ -28,14 +28,25 @@ try:
     ]
     with sync_playwright() as p:
         b = p.chromium.launch()
+        ctx = b.new_context()
+        pg = ctx.new_page()  # sign in once with the demo account from demo-data.py; the cookie is shared
+        pg.goto(base + "/login")
+        pg.fill("input[name=email]", "demo@example.org")
+        pg.fill("input[name=password]", "demo password")
+        pg.click("button")
+        pg.wait_for_url(base + "/")
+        cookies = ctx.cookies()
+        pg.close()
         for name, path, w, h, theme, full in shots:
-            pg = b.new_page(viewport={"width": w, "height": h}, color_scheme=theme)
+            c = b.new_context(viewport={"width": w, "height": h}, color_scheme=theme)
+            c.add_cookies(cookies)
+            pg = c.new_page()
             pg.goto(base + path)
             pg.evaluate(f"localStorage.setItem('aa-theme', '{theme}')")
             pg.goto(base + path)
             pg.wait_for_timeout(700)
             pg.screenshot(path=str(repo / "docs" / name), full_page=full)
-            pg.close()
+            c.close()
             print("docs/" + name)
         b.close()
 finally:
