@@ -52,6 +52,12 @@
  <ul class="feed">{% for req, n in g.other_notes %}<li><span>{{ req }}</span><span class="when">{{ n }} role{{ '' if n == 1 else 's' }}</span></li>{% endfor %}</ul></section>{% endif %}
 {% endif %}
 
+{% if related %}<section class="card mt" id="titles" aria-labelledby="titles-h"><h2 id="titles-h">Titles close to yours <span class="count">{{ related|length }}</span></h2>
+ <p class="ink2 lead-p">These came up at least twice in the roles found for you, and share words with what you search for{% if my_titles %} ({{ my_titles|join(', ') }}){% endif %}. Looking a little wider can open more doors, especially in a long search. Add one and the next daily run looks for it too.</p>
+ <ul class="feed">{% for r in related %}<li><span><b>{{ r.title }}</b> <span class="muted">· seen {{ r.count }} times</span></span>
+  <form method="post" action="/titles/add" class="inline"><input type="hidden" name="title" value="{{ r.title }}"><button class="btn sm">Add to my search</button></form></li>{% endfor %}</ul>
+ <p class="muted" style="margin:8px 0 0;font-size:14px">Remove titles any time on <a href="/setup#interests">Setup</a>.</p></section>{% endif %}
+
 <p class="muted mt" style="font-size:14px">{% if g.read_by_ai %}Roles read by Skill matching use the model's list; the rest are{% else %}Counted from job descriptions{% endif %} matched against a fixed list of about 80 skills, so a skill that isn't on it won't show for those. "Your resume" means your skills list from Skill matching, your base resume, CLAUDE.local.md and notes about you.</p>
 
 <style>

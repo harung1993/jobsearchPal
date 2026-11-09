@@ -6,6 +6,7 @@
 <div class="ph"><div><h1>Interview prep · {{ co(job.company) }}</h1>
  <div class="sub">{{ job.title }}{% if row and row.made %} · written {{ row.made }}{% endif %}{% if job.url %} · <a href="{{ job.url }}" target="_blank">posting</a>{% endif %}</div></div>
  <button class="btn" onclick="window.print()">Print</button></div>
+{% if not reflected %}<p class="notice reflect-offer"><span class="grow">Before you prep: fifteen minutes on what matters to you. Some people find it steadying before an interview. Private, and it stays on this server.</span><a class="btn sm" href="/reflect?back=/prep/{{ job.id|urlencode }}">Take fifteen minutes</a></p>{% endif %}
 {% if row and row.state == 'update' %}<p class="notice">A newer interview email arrived ({{ row.latest }}). The next daily run updates this pack for that stage.</p>{% endif %}
 {% if row %}<section class="card mt"><h2>Interview emails</h2><ul class="feed">{% for e in row.emails %}<li><span class="pill interview">interview</span><span>{{ e.subject }}</span><span class="when">{{ e.at[5:10]|replace('-', '/') }}</span></li>{% endfor %}</ul></section>{% endif %}
 <section class="card mt prep">

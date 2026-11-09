@@ -15,6 +15,8 @@ def db(tmp_path):
     d.upsert_job({"id": "gh:acme:1", "ats": "greenhouse", "company": "acme", "title": "Analytics Engineer", "location": "",
                   "url": "u", "apply_url": "u", "description": ""})
     d.update("gh:acme:1", status="submitted", submitted_at="2026-10-20 09:00")
+    from autoapply import coach
+    coach.set_note(d, "last_action", "2026-11-09 18:00")  # active yesterday, so not a "welcome back" morning
     return d
 
 

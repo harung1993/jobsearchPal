@@ -62,6 +62,26 @@
   {% for e in letters %}<div class="ink2" style="font-size:14.5px;padding:3px 0">{{ e.at[5:10]|replace('-', '/') }} · {{ e.subject|truncate(70) }}{% if e.proof %} · <a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</div>{% endfor %}{% endif %}
 </section></div>
 
+<section class="card people" id="people" aria-labelledby="people-h"><h2 id="people-h"><span>People you've been in touch with</span><span class="count">{{ people|length }}</span></h2>
+ <p class="ink2 lead">Many jobs come through people you know a little: a former colleague, a friend of a friend, someone from a meetup. A short note to one of them is real search work. Each one is listed in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
+ <form method="post" action="/contacts" class="add-person"><input type="hidden" name="action" value="add">
+  <label class="fld"><span>Who</span><input type="text" name="name" maxlength="80" required placeholder="e.g. Sam Rivera"></label>
+  <label class="fld"><span>Where they work</span><input type="text" name="company" maxlength="80" value="{{ prefill_company }}" {% if prefill_company %}autofocus{% endif %}></label>
+  <label class="fld"><span>How</span><select name="how">{% for h in how %}<option>{{ h }}</option>{% endfor %}</select></label>
+  <label class="fld"><span>When</span><input type="date" name="at" value="{{ today.isoformat() }}"></label>
+  <label class="fld wide"><span>Note (optional)</span><input type="text" name="note" maxlength="200" placeholder="e.g. asked about the analytics team"></label>
+  <div class="acts"><button class="btn sm primary">Add</button></div></form>
+ {% if people %}<ul class="feed people-list">{% for c in people %}<li><div style="min-width:0"><div class="who">{{ c.name }}{% if c.company %} <span class="muted">· {{ c.company }}</span>{% endif %}</div>
+  <div class="ink2" style="font-size:14px">{{ c.how }}{% if c.note %} · {{ c.note }}{% endif %}</div></div>
+  <span class="when">{{ c.at[5:10]|replace('-', '/') }}</span>
+  <form method="post" action="/contacts"><input type="hidden" name="action" value="delete"><input type="hidden" name="cid" value="{{ c.id }}"><button class="btn ghost sm" aria-label="Remove {{ c.name }}">✕</button></form></li>{% endfor %}</ul>
+ {% else %}<p class="muted" style="margin:6px 0 0">No one yet. One message this week is a good start.</p>{% endif %}
+ <form method="post" action="/contacts" class="counts-form"><input type="hidden" name="action" value="counts">
+  <label><input type="checkbox" name="counts" value="yes" {% if contacts_count %}checked{% endif %} onchange="this.form.submit()"> Count these toward my {{ ws_label|lower }} each week</label>
+  <noscript><button class="btn sm ghost">Save</button></noscript>
+  <span class="muted">Off until you turn it on. Many states accept networking and contacting employers; some don't.{% if rule %} Check {{ rule.name }}'s rule above.{% endif %} Your agency's notice is what counts.</span></form>
+</section>
+
 <details class="card mt help-box"><summary><h2 style="margin:0">Help you're entitled to, that people often miss</h2><span class="muted">taxes, waiting week, severance, RESEA, health coverage, SNAP, 211, legal aid</span></summary>
  {% if general %}<ul class="general">{% for g in general %}<li>{{ g }}</li>{% endfor %}</ul>{% endif %}
  <div class="grid g3 res" style="margin-top:12px">{% for name, what, url in resources %}<a class="res-item" href="{{ url }}" target="_blank" rel="noopener"><b>{{ name }}</b><span>{{ what }}</span></a>{% endfor %}</div></details>
@@ -80,13 +100,17 @@
 .task .due{display:flex;gap:8px;align-items:center;margin-top:4px}.task .due input{width:auto;padding:2px 6px;font-size:14px}.task .due span{font-size:13.5px}
 .add-task{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.add-task input[type=text]{flex:1;min-width:160px}.add-task input[type=date]{width:auto}
 .general{margin:0;padding-left:18px;font-size:15px;color:var(--ink-2)}.general li{margin:3px 0}.res{gap:10px}.res-item{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:inherit}
-.res-item:hover{text-decoration:none;background:var(--surface-2)}.res-item span{font-size:14px;color:var(--ink-2)}</style>
+.res-item:hover{text-decoration:none;background:var(--surface-2)}
+.people{margin-bottom:16px}.people .lead{margin:0 0 10px;max-width:70ch}.add-person{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}
+.add-person .wide{grid-column:1/-2}.add-person .acts{margin:0}.people-list{margin-top:12px}.people-list li{display:flex;gap:10px;align-items:center}.people-list li>div{flex:1}.people-list form{margin:0}
+.counts-form{display:grid;gap:4px;margin-top:12px;font-size:14.5px}.counts-form .muted{font-size:13.5px}
+@media (max-width:700px){.add-person{grid-template-columns:minmax(0,1fr)}.add-person .wide{grid-column:auto}}.res-item span{font-size:14px;color:var(--ink-2)}</style>
 {% macro week_card(w, first) %}<section class="card {% if not first %}mt{% endif %}">
  <h2><span>{{ w.start.strftime("%b %-d") }} – {{ w.end.strftime("%b %-d, %Y") }}{% if w.current %} <span class="pill filled" style="margin-left:6px">this week</span>{% endif %}
    <span class="pill {{ 'submitted' if w.count >= floor else 'waiting' }}" style="margin-left:6px">{{ w.count }} / {{ floor }} activities</span></span>
   <a class="btn sm" href="/dua/{{ w.start.isoformat() }}.zip">Download proof (.zip)</a></h2>
  <table><thead><tr><th>Date</th><th class="hide-sm">Activity</th><th>Company</th><th class="hide-sm">Position</th><th>Result</th><th>Proof</th></tr></thead><tbody>
- {% for r in w.rows %}<tr><td class="ink2" style="white-space:nowrap">{{ r.date.strftime("%a %-m/%-d") }}</td><td class="hide-sm">{{ r.type }}</td>
+ {% for r in w.rows %}<tr><td class="ink2" style="white-space:nowrap">{{ r.date.strftime("%a %-m/%-d") }}</td><td class="hide-sm">{{ r.type }}{% if not r.counts %} <span class="muted">(not counted)</span>{% endif %}</td>
   <td><b style="font-weight:600">{{ co(r.company) }}</b></td><td class="hide-sm ink2">{{ r.position }}</td><td><span class="pill {{ r.result|lower }}">{{ r.result }}</span></td>
   <td>{% for p in r.proof %}<a href="/proof/{{ w.start.isoformat() }}/{{ p.split('/')[-1] }}" target="_blank">{{ 'screenshot' if p.endswith('.png') else 'email' }}</a>{% if not loop.last %}, {% endif %}{% else %}<span class="muted" title="No saved email or screenshot for this one">—</span>{% endfor %}</td></tr>{% endfor %}
  </tbody></table></section>{% endmacro %}

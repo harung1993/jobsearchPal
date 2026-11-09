@@ -14,6 +14,15 @@
  <div class="card tile"><div class="lbl">Recruiters</div><div class="num">{{ s.recruiter_count }}</div><div class="sub">people who reached out</div></div>
 </section>
 
+<section class="card mt beyond" aria-labelledby="beyond-h"><h2 id="beyond-h">Beyond applications</h2>
+ <div class="grid g3">
+  <div><div class="num">{{ s.planned_weeks }}</div><div class="sub">week{{ '' if s.planned_weeks == 1 else 's' }} with a plan you wrote · <a href="/#plan">this week's</a></div></div>
+  <div><div class="num">{{ s.contacts_total }}</div><div class="sub">{{ 'person' if s.contacts_total == 1 else 'people' }} you got in touch with{% if s.contact_interviews %} · {{ s.contact_interviews }} interview{{ '' if s.contact_interviews == 1 else 's' }} at their companies{% endif %} · <a href="/dua#people">add</a></div></div>
+  <div><div class="num">{{ s.reflections }}</div><div class="sub">reflection{{ '' if s.reflections == 1 else 's' }} on what matters to you · <a href="/reflect">write one</a></div></div>
+ </div>
+</section>
+<style>.beyond .num{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}.beyond .sub{font-size:14px;color:var(--ink-2)}</style>
+
 <section class="card mt"><h2>Applications per week <span class="count">last {{ s.weeks }} weeks</span></h2>
  {{ week_bars(s.series, 'application', 'Applications per week for the last ' ~ s.weeks ~ ' weeks, with the weekly minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, H=210, every=4) }}
 </section>

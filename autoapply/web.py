@@ -214,8 +214,15 @@ def make_app(settings, db: DB) -> FastAPI:
         src = jobsources.overview(settings, db)
         first_name = (settings.profile or {}).get("first_name", "")
         cel = pal.celebration(db, s, now.date(), label=work_search(settings)[0])
+        from . import coach
+        ivs = prep.interviews(db, settings.data_dir)
+        greet = pal.greeting(db, s, now, first_name)
+        wk_plan = coach.plan(db, s["this_week_start"])
+        back = greet["state"] == "back"
         resp = page("index.html", s=s, shortlist=more, decline_reasons=DECLINE_REASONS, src_on=src["on"], src_total=src["total"], first_name=first_name,
-                    interviews=prep.interviews(db, settings.data_dir)[:6], greet=pal.greeting(db, s, now, first_name),
+                    interviews=ivs[:6], greet=greet, plan=wk_plan, plan_line=coach.plan_line(wk_plan), plan_days=coach.DAYS,
+                    plan_open=not wk_plan and f"pal:plan-skip:{s['this_week_start'].isoformat()}" not in db.nudge_states(),
+                    offer=None if back else coach.offer(db, settings, s, now.date(), bool(ivs)), back=back, if_then=coach.if_then(db),
                     celebrate=cel, rejection=pal.rejection_note(db, now.date()), week_left=_week_left(s, now.date()),
                     todo=todo, nav="dashboard", running=run_state(), picks_default=Prefs(settings.data_dir, settings.raw).limits()["picks_per_day"])
         if cel:
@@ -258,6 +265,8 @@ def make_app(settings, db: DB) -> FastAPI:
         label = DECLINE_REASONS.get(reason, "other")
         if job["status"] in ("new", "filled"):
             db.update(job_id, status="skipped", error=f"Declined ({label})")
+            from . import coach
+            coach.touch(db)
             from . import leads
             leads.ensure(db)
             db.conn.execute("update leads set status = 'dismissed' where job_id = ?", (job_id,))
@@ -268,6 +277,8 @@ def make_app(settings, db: DB) -> FastAPI:
     def prepare(job_id: str):
         """Prepare one shortlisted role now: tailor and fill it. Uses credits; never submits."""
         job, _, _ = load(job_id)
+        from . import coach
+        coach.touch(db)
         if job["status"] == "new" and start_run(AUTOAPPLY_JOB=job_id, AUTOAPPLY_PICKS="1"):
             db.log_run("run-now", True, f"prepare: {job_id}")
         return RedirectResponse("/", status_code=303)
@@ -295,6 +306,8 @@ def make_app(settings, db: DB) -> FastAPI:
     @app.post("/run")
     def run_now(picks: int = Form(2)):
         """Run now: the same pass as the morning run, for more applications today. Never submits anything."""
+        from . import coach
+        coach.touch(db)
         if start_run(AUTOAPPLY_PICKS=str(max(1, min(5, picks)))):
             db.log_run("run-now", True, f"started with {picks} role{'s' if picks != 1 else ''}")
         return RedirectResponse("/", status_code=303)
@@ -308,6 +321,8 @@ def make_app(settings, db: DB) -> FastAPI:
             return RedirectResponse("/#todo", status_code=303)
         if action == "done":
             db.set_nudge(key, "done")
+            from . import coach
+            coach.touch(db)
         elif action == "snooze":
             db.set_nudge(key, "snoozed", (datetime.now() + timedelta(days=max(1, min(days, 30)))).strftime("%Y-%m-%d %H:%M"))
         elif action == "reopen":
@@ -315,6 +330,66 @@ def make_app(settings, db: DB) -> FastAPI:
         else:
             raise HTTPException(400)
         return RedirectResponse("/#todo", status_code=303)
+
+    @app.post("/plan")
+    async def plan_save(request: Request):
+        """The person's own plan for this week. Optional; nothing reminds them of it (reminders added nothing in the trial)."""
+        from . import coach
+        f = await request.form()
+        week = stats.week_start(date.today())
+        if f.get("action") == "skip":
+            db.set_nudge(f"pal:plan-skip:{week.isoformat()}", "done")
+        else:
+            coach.save_plan(db, week, str(f.get("roles") or ""), [str(d) for d in f.getlist("days")], str(f.get("contact") or ""))
+        return RedirectResponse("/#plan", status_code=303)
+
+    @app.post("/contacts")
+    def contact_action(action: str = Form("add"), name: str = Form(""), company: str = Form(""), how: str = Form(""),
+                       note: str = Form(""), at: str = Form(""), cid: int = Form(0), counts: str = Form("")):
+        """People you got in touch with about work. They go in the work-search log as networking contacts."""
+        from . import coach
+        if action == "add":
+            coach.add_contact(db, name, company, how, note, at)
+        elif action == "delete" and cid:
+            coach.delete_contact(db, cid)
+        elif action == "counts":
+            coach.set_note(db, "ws:count_contacts", counts == "yes")
+        return RedirectResponse("/dua#people", status_code=303)
+
+    @app.get("/reflect")
+    def reflect_page(back: str = ""):
+        from . import auth as _auth
+        from . import coach
+        return page("reflect.html", values=coach.VALUES, past=coach.reflections(db), back=_auth.safe_next(back) if back else "",
+                    nav="dashboard")
+
+    @app.post("/reflect")
+    async def reflect_save(request: Request):
+        from . import auth as _auth
+        from . import coach
+        f = await request.form()
+        coach.save_reflection(db, [str(v) for v in f.getlist("values")], str(f.get("text") or ""))
+        for k in ("pal:values:early", "pal:values:interview"):
+            db.set_nudge(k, "done")
+        back = str(f.get("back") or "")
+        return RedirectResponse(_auth.safe_next(back) if back else "/reflect#saved", status_code=303)
+
+    @app.post("/setback")
+    def setback_save(if_then: str = Form(""), key: str = Form("")):
+        """Saves the person's own plan for a hard day; shown again with the next rejection."""
+        from . import coach
+        coach.set_note(db, "setback:ifthen", " ".join(if_then.split())[:200] or None)
+        if key.startswith("pal:setback:"):
+            db.set_nudge(key, "done")
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/titles/add")
+    def titles_add(title: str = Form(...), back: str = Form("/skills#titles")):
+        """Adds a related title to the search (config.yaml), so the next run looks for it too."""
+        from . import auth as _auth
+        from . import setup
+        setup.add_title(settings, title)
+        return RedirectResponse(_auth.safe_next(back), status_code=303)
 
     @app.get("/leads")
     def leads_page(show: str = "open"):
@@ -363,7 +438,9 @@ def make_app(settings, db: DB) -> FastAPI:
     @app.get("/skills")
     def skills_page():
         from . import learn
-        return page("learn.html", g=learn.gaps(db, settings), nav="skills")
+        from . import coach
+        return page("learn.html", g=learn.gaps(db, settings), nav="skills", related=coach.related_titles(db, settings),
+                    my_titles=(settings.raw.get("search") or {}).get("title_keywords") or [])
 
     @app.post("/skills/mark")
     def skills_mark(skill: str = Form(...), mark: str = Form(...)):
@@ -504,6 +581,8 @@ def make_app(settings, db: DB) -> FastAPI:
                 return RedirectResponse(f"/emails?show={show}", status_code=303)
         try:
             emailsync.review_event(db, event_id, kind, job_id=job_id, manual=True)
+            from . import coach
+            coach.touch(db)
         except (KeyError, ValueError) as e:
             raise HTTPException(400, str(e))
         return RedirectResponse(f"/emails?show={show}", status_code=303)
@@ -517,7 +596,8 @@ def make_app(settings, db: DB) -> FastAPI:
         row = next((r for r in prep.interviews(db, settings.data_dir) if r["job"]["id"] == job_id), None)
         p = prep.prep_path(settings.data_dir, job)
         body = prep.render(p.read_text()) if p.exists() else ""
-        return page("prep.html", job=job, row=row, body=body, nav="dashboard")
+        from . import coach
+        return page("prep.html", job=job, row=row, body=body, nav="dashboard", reflected=bool(coach.reflections(db)))
 
     @app.get("/settings")
     def settings_page(msg: str = "", tab: str = "sorting"):
@@ -788,10 +868,12 @@ def make_app(settings, db: DB) -> FastAPI:
         return _back("Gmail works. Job alerts and replies will be read (read-only), and the brief sent from it.", "agent")
 
     @app.get("/dua")
-    def dua():
+    def dua(company: str = ""):
         from . import benefits
+        from . import coach
         rule = my_state(settings)
-        return page("dua.html", weeks=stats.dua_weeks(db), floor=work_search(settings)[1], rule=rule, nav="work", today=date.today(),
+        return page("dua.html", people=coach.contacts(db)[:40], how=coach.HOW, contacts_count=coach.contacts_count(db),
+                    prefill_company=company[:80], weeks=stats.dua_weeks(db), floor=work_search(settings)[1], rule=rule, nav="work", today=date.today(),
                     claim=benefits.claim(settings), runway=benefits.runway(settings, rule), days=benefits.DAYS,
                     tasks=benefits.tasks(db, include_done=True), resources=benefits.RESOURCES, general=general_notes(),
                     letters=[e for e in db.events() if e["kind"] == "agency"][:8])
@@ -848,6 +930,8 @@ def make_app(settings, db: DB) -> FastAPI:
     async def act(job_id: str, request: Request, action: str = Form(...), plan: str = Form("{}"), approve: str = Form("")):
         job, old_plan, old_report = load(job_id)
         form = await request.form()
+        from . import coach
+        coach.touch(db)
         try:
             new_plan = json.loads(plan)
         except json.JSONDecodeError as e:

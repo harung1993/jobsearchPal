@@ -11,7 +11,9 @@ Already done before you started: email sync and `autoapply find` (new roles from
    there, skip it. Track live ones with `autoapply add <ats url> --company <name> --title <title>`.
    Feed roles (ats "feed") you want to pick need the same hop to the real posting first.
 {{DISCOVER}}
-4. Pick the best N by fit (against materials/ and CLAUDE.local.md), then freshness, then pay; at most one role per company. Skip anything
+4. Pick the best N by fit (against materials/ and CLAUDE.local.md), then freshness, then pay; at most one role per company.
+   Fit decides, never the weekly work-search number: don't pick a weak fit to make up a count. Fewer, better applications
+   go further, and the person can log other activities (contacts, workshops) for the week. Skip anything
    already applied to (`autoapply list --status submitted`, materials/applications/). `autoapply skip <id> [<id> ...]
    --reason "..."` clears misses from the candidate list in one call (one reason per call).
 5. Write data/daily/picks.json: [{"id": "<job id>", "why": "<one line on fit>"}], best first.

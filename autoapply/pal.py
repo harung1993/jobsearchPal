@@ -30,6 +30,9 @@ LINES = {
                   "most no's come down to numbers and screening, and one doesn't decide the rest of your search.",
                   "A no from {co}. That stings, and it's fine that it does. One stone in a big ocean; most applications end "
                   "this way, even good ones. {ready}"],
+    # After a week or more with nothing done: no catch-up list, just what's ready and one place to start.
+    "back": ["No catch-up list today: just what's ready, and one place to start. {ready}",
+             "Time away is part of a long search. Let's start with one thing. {ready}"],
     "evening": ["You've done enough for today. Everything here will still be waiting in the morning.",
                 "Searching is real work. It's fine to stop for today."],
     "monday": ["Last week's effort still counts. {record}{ready}",
@@ -44,7 +47,7 @@ LINES = {
                 "One step at a time today. {ready}"],
 }
 HEADLINE = {"offer": "An offer came in.", "interview": "Someone wants to talk.", "reply": "Someone wrote back.",
-            "monday": "New week.", "start": "Welcome."}
+            "monday": "New week.", "start": "Welcome.", "back": "Welcome back."}
 
 
 def _at(e: dict) -> datetime | None:
@@ -115,7 +118,10 @@ def greeting(db, s: dict, now: datetime, first_name: str = "") -> dict:
             break
     else:
         heard = _recent(db, ("confirmed", "interview", "rejected", "offer", "recruiter"), now - timedelta(days=QUIET_DAYS))
-        if now.hour >= 20:
+        from . import coach
+        if s.get("applied") and coach.away_days(db, s, now.date()) >= coach.AWAY_DAYS:
+            state = "back"
+        elif now.hour >= 20:
             state = "evening"
         elif now.weekday() == 0 and now.hour < 12 and s.get("applied"):
             state = "monday"
