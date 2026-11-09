@@ -111,8 +111,27 @@ def _lookup(answers: dict, label: str):
     return None
 
 
-def resolve(f: dict, plan: dict, profile: dict) -> tuple[object, str]:
-    """Returns (value, source). source: plan | profile | approved | file | held | ''."""
+CHOICE_KINDS = ("select", "radio", "checkbox")
+
+
+def _option_texts(f: dict) -> list[str]:
+    return [o if isinstance(o, str) else o["text"] for o in f.get("options") or []]
+
+
+def _fits(f: dict, value) -> bool:
+    """A choice question takes only a value one of its options matches. Ashby labels the text-message consent
+    radio "Phone" too, so the profile's phone number must not land there as a failed answer."""
+    texts = _option_texts(f)
+    if f["kind"] not in CHOICE_KINDS or not texts:
+        return True
+    return all(_best_option(texts, str(w)) for w in (value if isinstance(value, list) else [value]))
+
+
+def resolve(f: dict, plan: dict, profile: dict, siblings: set[str] | None = None) -> tuple[object, str]:
+    """Returns (value, source). source: plan | profile | approved | file | held | ''.
+
+    siblings: options of choice questions on the same page with this same label. A text field skips a saved
+    answer that is one of them: that answer was meant for the choice question, not for this field."""
     label = f["label"]
     if f["kind"] == "file":
         for slot, pat in FILE_SLOTS:
@@ -132,13 +151,17 @@ def resolve(f: dict, plan: dict, profile: dict) -> tuple[object, str]:
                     return rule["value"], "standing"
         return None, "held"
     v = _lookup(plan.get("answers", {}), label)
-    if v is not None:
+    meant_elsewhere = f["kind"] not in CHOICE_KINDS and v is not None and norm(str(v)) in (siblings or set())
+    if v is not None and _fits(f, v) and not meant_elsewhere:
         return v, "plan"
     for rule in profile.get("rules", []):
         if "kinds" in rule and f["kind"] not in rule["kinds"]:
             continue
         if re.search(rule["match"], label, re.I):
-            return (profile.get(rule["key"]) if "key" in rule else rule.get("value")), "profile"
+            v = profile.get(rule["key"]) if "key" in rule else rule.get("value")
+            if v not in (None, "") and not _fits(f, v):
+                continue  # e.g. a phone number offered to a yes/no question that happens to be labelled "Phone"
+            return v, "profile"
     return None, ""
 
 
@@ -260,8 +283,12 @@ def _fill_page(page: Page, plan: dict, profile: dict, report: Report):
     fields = page.evaluate(SCAN_JS)
     # Upload the resume first: Lever and Ashby parse it and prefill fields we'd overwrite anyway.
     fields.sort(key=lambda f: 0 if f["kind"] == "file" else 1)
+    choice_opts: dict[str, set[str]] = {}
     for f in fields:
-        value, source = resolve(f, plan, profile)
+        if f["kind"] in CHOICE_KINDS:
+            choice_opts.setdefault(norm(f["label"]), set()).update(norm(t) for t in _option_texts(f))
+    for f in fields:
+        value, source = resolve(f, plan, profile, choice_opts.get(norm(f["label"])))
         info = {"label": f["label"], "kind": f["kind"], "required": f.get("required", False),
                 "options": [o if isinstance(o, str) else o["text"] for o in f.get("options", [])][:30]}
         if source == "held":
