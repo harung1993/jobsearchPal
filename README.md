@@ -189,7 +189,7 @@ Four tabs. The menu's Settings item opens **Setup** first, with a badge while a 
 
 | Tab | What you set |
 |---|---|
-| Setup | resume, contact details, job interests and job sites, notes about you, agent sign-in, Gmail, dashboard password (see Docker below). |
+| Setup | resume, contact details, job interests and job sites, notes about you, agent sign-in, Gmail (see Docker below). |
 | Email sorting | which sources are on, their order (↑ ↓), the model for each (OpenRouter's list comes with live prices), Jev's minimum confidence, the Ollama address. Each source has a **Test** button that sorts a sample email and shows the answer, time and cost, plus 30-day counts of emails sorted, cost and failures. |
 | Email sorting: OpenRouter key | for Jev and OpenRouter. It's stored in `data/secrets.json` (owner-only) and never shown again. A key in `.env` wins. |
 | Costs and limits | daily caps for tailoring, prep packs and drafts; the monthly budget for paid APIs; 30-day usage and cost by day. |
@@ -289,8 +289,15 @@ job-search Gmail limits what the password can reach. To cut it off, revoke it at
 the budget on Settings > Costs & limits; set a credit limit on the key itself too.
 
 **The dashboard.** It shows your applications, emails and answers. It listens on `127.0.0.1` unless you
-set `BIND`. Set a dashboard password (Settings > Setup, step 7) before you open it to your phone or network,
-and prefer a private network such as Tailscale.
+set `BIND`. Sign-in is always on: the first page of a new install is **Create your account** (the email for
+your job search and a password of at least 10 characters), and every page after that needs it. The password is
+kept as a salted scrypt hash in `data/account.json` (owner-only); a sign-in lasts 30 days in a signed cookie.
+Five wrong tries from one address make it wait a few minutes. Forgot it: run `autoapply reset-password` on the
+server (Docker: `docker compose exec web autoapply reset-password`), which also signs every browser out. There
+is no password-change screen. The cookie isn't marked Secure because the setup is plain http, so prefer a
+private network such as Tailscale before you open it to your phone. `AUTOAPPLY_TOKEN` is now only the machine
+key `autoapply finish` uses to fetch a filled form (`/bundle` and `/file`); it is made in `data/secrets.json`
+when you create the account.
 
 **What leaves your server.** Job emails, your resume and notes go to the model you pick (your Claude or
 ChatGPT subscription, or OpenRouter/Jev if you turn them on); Ollama stays local. Postings are fetched from
@@ -329,7 +336,7 @@ the key's usage before and after, and the run is skipped once the month's budget
    - `config.example.yaml` → `config.yaml` (boards to watch, title keywords, dashboard host,
      work-search label and weekly minimum)
    - `profile.example.yaml` → `profile.yaml` (your contact details and standard answers)
-   - `.env.example` → `.env` (a long random `AUTOAPPLY_TOKEN`, `REVIEW_URL`, Gmail app password)
+   - `.env.example` → `.env` (`REVIEW_URL`, Gmail app password)
 3. Put your files in `materials/` (see `materials/README.md`), and write `CLAUDE.local.md` with
    personal facts the agent should use (the same file works for Codex): work authorization, titles and dates, pay asks, location
    preferences, how to name files. Both are gitignored.
@@ -342,7 +349,7 @@ the key's usage before and after, and the run is skipped once the month's budget
    sudo loginctl enable-linger $USER
    crontab -e   # add the line from the top of scripts/daily.sh
    ```
-7. Open `REVIEW_URL?t=<your token>` once on each device. A cookie remembers it. On the **Settings**
+7. Open `REVIEW_URL`, create your account (email and password), and sign in on each device. On the **Settings**
    page, pick the daily-run agent and model and the email-sorting order.
 8. Optional, on your laptop: `bash scripts/mac-setup.sh <ssh-host>` installs `autoapply-finish`.
 
@@ -360,7 +367,8 @@ docker compose run --rm web claude          # sign in to Claude Code and trust /
 ```
 
 Then open `http://localhost:8787/` (or `http://<server>:8787/` with `BIND` set, below). A fresh install opens
-the **Setup** page, which walks through everything in a browser:
+**Create your account** (email and password; sign-in is required from then on), then the **Setup** page,
+which walks through everything in a browser:
 
 1. **Base resume**: upload your .docx (a PDF is made for you). Tailored resumes are built from it.
 2. **Contact details and standard answers** (prefilled from the resume), saved to `profile.yaml`.
@@ -370,7 +378,6 @@ the **Setup** page, which walks through everything in a browser:
    what to emphasize and avoid, saved to `materials/context/setup.md`.
 5. **Agent sign-in**: the command above; the page shows when it worked.
 6. **Gmail** (optional): an app password, tested before it's saved, for job alerts, replies and the brief.
-7. **Dashboard password** (optional, recommended before you open it beyond localhost).
 
 ![Setup](docs/setup.png)
 

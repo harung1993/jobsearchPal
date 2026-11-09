@@ -78,19 +78,101 @@ def make_app(settings, db: DB) -> FastAPI:
     shots = settings.data_dir / "screenshots"
     headless = settings.raw.get("browser", {}).get("headless", True)
 
+    from . import auth
+    from .prefs import Prefs as _Prefs
+    throttle = auth.Throttle()
+    if auth.load(settings.data_dir):
+        auth.ensure_token(_Prefs(settings.data_dir, settings.raw))  # the `autoapply finish` key, if it went missing
+
+    def _denied(request: Request, to: str):
+        """A browser page load goes to `to` (303); anything else (fetch, curl, finish) gets 401."""
+        if request.method == "GET" and "text/html" in request.headers.get("accept", ""):
+            return RedirectResponse(to, status_code=303)
+        return HTMLResponse("sign in first", status_code=401)
+
     @app.middleware("http")
-    async def auth(request: Request, call_next):
-        # Optional shared secret: open /?t=TOKEN once, then a cookie carries it. Read on every request,
-        # because the Setup page can create it.
-        token = os.environ.get("AUTOAPPLY_TOKEN")
-        if token:
-            given = request.query_params.get("t") or request.cookies.get("aa")
-            if given != token:
-                return HTMLResponse("forbidden", status_code=403)
-        resp = await call_next(request)
-        if token and request.query_params.get("t"):
-            resp.set_cookie("aa", token, httponly=True, samesite="strict")
-        return resp
+    async def gate(request: Request, call_next):
+        # Sign-in is required everywhere once the account exists, and the account is created first.
+        from urllib.parse import quote
+        path = request.url.path
+        if path.startswith(("/bundle/", "/file/")) and auth.token_ok(request.query_params.get("t")):
+            return await call_next(request)  # `autoapply finish` on the laptop: machine key, no cookie
+        if path in ("/login", "/logout", "/account"):
+            return await call_next(request)  # these routes check for themselves
+        account = auth.load(settings.data_dir)
+        if auth.valid_cookie(account, request.cookies.get(auth.COOKIE)):
+            return await call_next(request)
+        if not account:
+            t = request.query_params.get("t")
+            return _denied(request, "/account" + (f"?t={quote(t)}" if t else ""))
+        nxt = path + (f"?{request.url.query}" if request.url.query else "")
+        return _denied(request, "/login" + (f"?next={quote(nxt)}" if nxt != "/" else ""))
+
+    def _bare(name: str, status: int = 200, **ctx) -> HTMLResponse:
+        # Pre-sign-in pages: no base.html and no inner page() (it would show the nav and the waiting-email count).
+        return HTMLResponse(env.get_template(name).render(**ctx), status_code=status)
+
+    def _signed_in(to: str, account: dict) -> RedirectResponse:
+        r = RedirectResponse(to, status_code=303)
+        r.set_cookie(auth.COOKIE, auth.make_cookie(account), max_age=auth.MAX_AGE, httponly=True, samesite="lax", path="/")
+        r.delete_cookie("aa")  # the old token cookie
+        return r
+
+    def _upgrade_proof(request: Request, t: str = "") -> bool:
+        """An install that had a dashboard password (AUTOAPPLY_TOKEN) and no account yet: only its owner may
+        create the account, shown by the old cookie or the old ?t= link. A fresh install has no token yet."""
+        if not auth.machine_token():
+            return True
+        return auth.token_ok(t) or auth.token_ok(request.cookies.get("aa"))
+
+    @app.get("/account")
+    def account_page(request: Request, t: str = ""):
+        if auth.load(settings.data_dir):
+            return RedirectResponse("/", status_code=303)
+        return _bare("login.html", mode="create", t=t, proof=_upgrade_proof(request, t), min_len=auth.MIN_LEN)
+
+    @app.post("/account")
+    def account_create(request: Request, email: str = Form(""), password: str = Form(""), again: str = Form(""), t: str = Form("")):
+        if auth.load(settings.data_dir):
+            return RedirectResponse("/", status_code=303)
+        if not _upgrade_proof(request, t):
+            return _bare("login.html", 403, mode="create", t="", proof=False, min_len=auth.MIN_LEN)
+        if err := auth.check_new(email, password, again):
+            return _bare("login.html", 400, mode="create", t=t, proof=True, min_len=auth.MIN_LEN, err=err, email=email)
+        auth.save(settings.data_dir, email, password)
+        auth.ensure_token(_Prefs(settings.data_dir, settings.raw))
+        return _signed_in("/", auth.load(settings.data_dir))
+
+    @app.get("/login")
+    def login_page(request: Request, next: str = "/"):  # noqa: A002
+        account = auth.load(settings.data_dir)
+        if not account:
+            return RedirectResponse("/account", status_code=303)
+        if auth.valid_cookie(account, request.cookies.get(auth.COOKIE)):
+            return RedirectResponse(auth.safe_next(next), status_code=303)
+        return _bare("login.html", mode="login", next=auth.safe_next(next))
+
+    @app.post("/login")
+    def login(request: Request, email: str = Form(""), password: str = Form(""), next: str = Form("/")):  # noqa: A002
+        account = auth.load(settings.data_dir)
+        if not account:
+            return RedirectResponse("/account", status_code=303)
+        ip = request.client.host if request.client else "?"
+        nxt = auth.safe_next(next)
+        if throttle.blocked(ip):
+            return _bare("login.html", 429, mode="login", next=nxt, email=email,
+                         err="Too many wrong tries. Wait a few minutes, then try again.")
+        if not auth.verify(account, email, password):
+            throttle.fail(ip)
+            return _bare("login.html", 401, mode="login", next=nxt, email=email, err="That email and password don't match.")
+        throttle.clear(ip)
+        return _signed_in(nxt, account)
+
+    @app.post("/logout")
+    def logout():
+        r = RedirectResponse("/login", status_code=303)
+        r.delete_cookie(auth.COOKIE, path="/")
+        return r
 
     def load(job_id):
         job = db.get(job_id)
@@ -555,7 +637,7 @@ def make_app(settings, db: DB) -> FastAPI:
         return RedirectResponse(f"/setup?msg={quote(msg)}" + (f"#{anchor}" if anchor else ""), status_code=303)
 
     @app.get("/setup")
-    def setup_page(msg: str = "", err: str = "", t: str = ""):
+    def setup_page(msg: str = "", err: str = ""):
         from . import setup
         from .finder import FEEDS
         from .prefs import Prefs
@@ -587,9 +669,8 @@ def make_app(settings, db: DB) -> FastAPI:
                     feeds_on=cfg.get("feeds", list(FEEDS)) if cfg else [*FEEDS, "themuse", "himalayas", "jobicy"], ws=cfg.get("work_search") or {}, states=state_rules(),
                     about=setup.load_about(settings.data_dir), about_fields=setup.ABOUT_FIELDS,
                     resume=setup.base_resume(settings.root), gmail_user=os.environ.get("GMAIL_USER", ""),
-                    gmail_env=pr.from_env("GMAIL_APP_PASSWORD"), token_env=pr.from_env("AUTOAPPLY_TOKEN"),
-                    msg=msg, err=err, link=(os.environ.get("REVIEW_URL") or "/").split("?")[0] + "?t=" + t
-                    if t and t == os.environ.get("AUTOAPPLY_TOKEN") else "")
+                    gmail_env=pr.from_env("GMAIL_APP_PASSWORD"),
+                    msg=msg, err=err)
 
     @app.post("/setup/profile")
     async def setup_profile(request: Request):
@@ -679,19 +760,6 @@ def make_app(settings, db: DB) -> FastAPI:
         if "@" in brief_to and not pr.from_env("BRIEF_TO"):
             pr.set_key("BRIEF_TO", brief_to)
         return _back("Gmail works. Job alerts and replies will be read (read-only), and the brief sent from it.", "agent")
-
-    @app.post("/setup/token")
-    def setup_token():
-        import secrets as _secrets
-        from urllib.parse import quote
-        from .prefs import Prefs
-        pr = Prefs(settings.data_dir, settings.raw)
-        if os.environ.get("AUTOAPPLY_TOKEN"):
-            raise HTTPException(409, "a dashboard password is already set")
-        t = _secrets.token_urlsafe(24)
-        pr.set_key("AUTOAPPLY_TOKEN", t)
-        msg = "Password set. This browser is signed in; open the link below once on each other device."
-        return RedirectResponse(f"/setup?t={quote(t)}&msg={quote(msg)}#token", status_code=303)
 
     @app.get("/dua")
     def dua():

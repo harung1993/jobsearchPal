@@ -9,7 +9,11 @@ python3 -m venv ~/.autoapply-venv
 ~/.autoapply-venv/bin/pip install -q -e .
 # Uses your installed Google Chrome; this only downloads Chromium as a fallback.
 [ -d "/Applications/Google Chrome.app" ] || ~/.autoapply-venv/bin/playwright install chromium
-token=$(ssh "$host" 'grep -E "^AUTOAPPLY_TOKEN=" ~/auto-apply/.env | cut -d= -f2-')
+token=$(ssh "$host" 'grep -E "^AUTOAPPLY_TOKEN=" ~/auto-apply/.env | cut -d= -f2-' || true)
+[ "$token" != "change-me-long-random" ] || token=""  # the old example value is ignored by the server
+# Made automatically with the dashboard account when .env leaves it blank.
+[ -n "$token" ] || token=$(ssh "$host" 'python3 -c "import json;print(json.load(open(\"auto-apply/data/secrets.json\")).get(\"AUTOAPPLY_TOKEN\",\"\"))" 2>/dev/null' || true)
+[ -n "$token" ] || { echo "No AUTOAPPLY_TOKEN on the server yet: create your dashboard account first"; exit 1; }
 url=$(ssh "$host" 'grep -E "^REVIEW_URL=" ~/auto-apply/.env | cut -d= -f2-')
 [ -n "$url" ] || { echo "Set REVIEW_URL in the server's ~/auto-apply/.env first"; exit 1; }
 umask 077

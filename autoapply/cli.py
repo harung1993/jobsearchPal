@@ -25,6 +25,7 @@
   autoapply fill PLAN.json [--job ID] fill the form, upload PDFs, screenshot, stop before Submit
   autoapply brief [--send]            morning brief: today's picks, new replies, application status
   autoapply serve                     review page: check answers, decide consents, press Submit
+  autoapply reset-password [--email E]  forgot the dashboard password: set a new one (signs every browser out)
   autoapply finish JOB_ID             (on your Mac) open the filled form in Chrome; you submit it
 """
 from __future__ import annotations
@@ -129,12 +130,15 @@ def main(argv=None):
     a = sub.add_parser("skills"); a.add_argument("action", choices=["tag", "build", "show"]); a.add_argument("--limit", type=int)
     sub.add_parser("serve")
     sub.add_parser("setup-check")
+    a = sub.add_parser("reset-password"); a.add_argument("--email", default="")
     a = sub.add_parser("finish"); a.add_argument("job_id"); a.add_argument("--server", default=os.environ.get("AUTOAPPLY_SERVER", ""))
     args = ap.parse_args(argv)
     if args.cmd == "finish":
         return finish(args.job_id, args.server)
 
-    s = config.load(args.config, allow_example=args.cmd in ("serve", "setup-check"))
+    s = config.load(args.config, allow_example=args.cmd in ("serve", "setup-check", "reset-password"))
+    if args.cmd == "reset-password":
+        return reset_password(s, args.email)
     if args.cmd == "setup-check":
         from . import setup
         # The daily run stops only without contact details or job interests; the rest are warnings.
@@ -513,6 +517,22 @@ def main(argv=None):
         # In Docker the dashboard listens on all interfaces inside the container; compose decides what's exposed.
         host = os.environ.get("AUTOAPPLY_HOST") or r.get("host", "127.0.0.1")
         uvicorn.run(make_app(s, db), host=host, port=int(os.environ.get("AUTOAPPLY_PORT") or r.get("port", 8787)))
+
+
+def reset_password(s, email: str = "", ask=None, ask_secret=None):
+    """Runs on the server: the only way back in when the password is forgotten. Creates the account if there is none."""
+    import getpass
+    from . import auth
+    from .prefs import Prefs
+    ask, ask_secret = ask or input, ask_secret or getpass.getpass
+    current = auth.load(s.data_dir)
+    email = (email or (current or {}).get("email") or ask("Email for your job search: ")).strip()
+    pw = ask_secret(f"New password (at least {auth.MIN_LEN} characters): ")
+    if err := auth.check_new(email, pw, ask_secret("Type it again: ")):
+        sys.exit(err)
+    auth.save(s.data_dir, email, pw)
+    auth.ensure_token(Prefs(s.data_dir, s.raw))
+    print(f"Password {'changed' if current else 'set'} for {email}. Every browser is signed out; sign in again.")
 
 
 def finish(job_id: str, server: str):

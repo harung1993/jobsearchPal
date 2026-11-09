@@ -3,12 +3,11 @@ import json
 from pathlib import Path
 
 import yaml
-from fastapi.testclient import TestClient
 
 from autoapply.config import Settings
 from autoapply.db import DB
 from autoapply.fillers import fill
-from autoapply.web import make_app
+from web_client import client
 
 from test_fillers import PROFILE, base_url, pdfs  # noqa: F401  (fixtures)
 
@@ -24,7 +23,7 @@ def setup(tmp_path, base_url, pdfs):
     plan = {"url": url, "ats": "greenhouse", "files": pdfs, "answers": {"Why do you want to work here?": "x"}}
     r = fill(plan, PROFILE, s.data_dir / "screenshots")
     db.update("manual:gh", status="filled", plan_json=plan, report_json=r.as_dict(), screenshot=r.screenshot)
-    return db, TestClient(make_app(s, db)), plan
+    return db, client(s, db), plan
 
 
 def test_page_shows_held_consent(tmp_path, base_url, pdfs):
