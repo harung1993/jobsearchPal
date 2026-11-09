@@ -24,11 +24,14 @@ fi
 
 # The run is split into short agent sessions so no session drags a long history along (that is where most
 # tokens go). Plain steps run first without an agent: email sync and the job search.
-progress "syncing email and searching job boards"
-autoapply sync-email --days 3 >/dev/null 2>&1 || autoapply log-run sync-email fail "sync failed; see data/cron.log" || true
-autoapply find >/dev/null 2>&1 || true
-# Optional AI skill matching (Settings > Daily run). Does nothing unless you turned it on.
-autoapply skills tag >/dev/null 2>&1 || true
+# "Rewrite this letter" (AUTOAPPLY_LETTER with AUTOAPPLY_JOB) skips them: it only redoes one cover letter.
+if [ -z "${AUTOAPPLY_LETTER:-}" ]; then
+  progress "syncing email and searching job boards"
+  autoapply sync-email --days 3 >/dev/null 2>&1 || autoapply log-run sync-email fail "sync failed; see data/cron.log" || true
+  autoapply find >/dev/null 2>&1 || true
+  # Optional AI skill matching (Settings > Daily run). Does nothing unless you turned it on.
+  autoapply skills tag >/dev/null 2>&1 || true
+fi
 
 today=data/daily/$(date +%F).md
 if [ "$trigger" = manual ]; then echo "
@@ -86,7 +89,13 @@ if [ -n "${AUTOAPPLY_LEAD:-}" ]; then
   else picked="Auto apply: couldn't find that role on the company's own site (it may be closed, or only on LinkedIn/Indeed)"; ok=0; fi
   echo "- auto apply: $picked" >> "$today"
 fi
-if [ -n "${AUTOAPPLY_JOB:-}" ]; then
+if [ -n "${AUTOAPPLY_JOB:-}" ] && [ -n "${AUTOAPPLY_LETTER:-}" ]; then
+  # Rewrite one cover letter with the person's note, then refill the form from the saved plan (no agent).
+  run_stage letter "$AUTOAPPLY_JOB" || true; picked="$line"
+  progress "refilling $AUTOAPPLY_JOB"
+  autoapply refill "$AUTOAPPLY_JOB" >/dev/null 2>>data/cron.log || { ok=0; picked="$picked (the form refill failed: press Save and refill)"; }
+  echo "- letter: $picked" >> "$today"
+elif [ -n "${AUTOAPPLY_JOB:-}" ]; then
   run_stage apply "$AUTOAPPLY_JOB" || true; picked="$line"
   echo "- prepare: $picked" >> "$today"
 fi

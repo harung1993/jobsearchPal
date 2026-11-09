@@ -126,6 +126,7 @@ def main(argv=None):
     sub.add_parser("resume-outline")
     a = sub.add_parser("build-docs"); a.add_argument("spec", help="docs.json, its folder, or an application slug")
     a = sub.add_parser("fill"); a.add_argument("plan"); a.add_argument("--job")
+    a = sub.add_parser("refill"); a.add_argument("job_id")
     a = sub.add_parser("brief"); a.add_argument("--send", action="store_true")
     a = sub.add_parser("skills"); a.add_argument("action", choices=["tag", "build", "show"]); a.add_argument("--limit", type=int)
     sub.add_parser("serve")
@@ -279,6 +280,14 @@ def main(argv=None):
         text = text.replace("{{DISCOVER}}", (root / "discover.md").read_text() if day and datetime.now().isoweekday() == day else "")
         if args.job_id and not db.get(args.job_id):
             sys.exit(f"no job {args.job_id}")
+        if "{{SLUG}}" in text or "{{NOTE}}" in text:  # the letter stage: one application's folder and the person's note
+            from . import coach, voice
+            job = db.get(args.job_id) if args.job_id else None
+            slug = voice.letter_slug(json.loads(job["plan_json"] or "{}"), s.data_dir) if job else None
+            if not slug:
+                sys.exit(f"no cover letter to rewrite for {args.job_id or 'this job'}")
+            note = (coach.note(db, f"letter-note:{args.job_id}") or {}).get("note") or "(no note: follow voice.md)"
+            text = text.replace("{{SLUG}}", slug).replace("{{NOTE}}", note.replace("</note>", ""))
         print(text.replace("{{JOB_ID}}", args.job_id))
     elif args.cmd == "quick-pick":
         # Picks today's roles with one cheap OpenRouter call. Exits 2 when it's off (daily.sh then runs the rank agent).
@@ -490,6 +499,17 @@ def main(argv=None):
             from . import preflight
             out["checks_failed"] = [f"{c['group']}: {c['name']} ({c['detail']})" for c in preflight.for_job(db, s, args.job) if not c["ok"]]
         _out(out)
+    elif args.cmd == "refill":
+        # Fills the form again from the saved plan, as "Save and refill" does (after a letter rewrite). Never submits.
+        job = db.get(args.job_id) or sys.exit(f"no job {args.job_id}")
+        plan = json.loads(job["plan_json"] or "{}")
+        if not plan.get("url"):
+            sys.exit(f"no plan to refill for {args.job_id}")
+        plan["approved_by_user"] = False
+        report = fill(plan, s.profile, s.data_dir / "screenshots", headless)
+        db.log_run("fill", not report.errors, f"refill {args.job_id}: {len(report.filled)} filled, {len(report.errors)} errors")
+        db.update(args.job_id, status="filled", plan_json=plan, report_json=report.as_dict(), screenshot=report.screenshot)
+        print(f"{len(report.filled)} filled, {len(report.errors)} errors")
     elif args.cmd == "brief":
         from . import brief
         from .web import work_search

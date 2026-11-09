@@ -105,6 +105,17 @@
   </div>{% endif %}
   {% for slot, name in files %}<div class="pane" id="doc-{{ loop.index }}" {% if not loop.first %}hidden{% endif %}>
    <p style="margin:0 0 8px"><a href="/file/{{ slot }}/{{ job.id|urlencode }}" target="_blank">{{ name }}</a></p>
+   {% if 'cover' in slot and letter.can %}<div class="rewrite" id="letter">
+    {% if letter.busy %}<p class="busy" role="status"><span class="dot" aria-hidden="true"></span> Rewriting this letter{% if letter.last and letter.last.note %} with your note{% endif %}. It takes a few minutes; reload the page to see the new one.</p>
+    {% else %}<details {% if letter.last %}open{% endif %}><summary><b>Rewrite this letter</b> <span class="muted">· say what to change</span></summary>
+     <label class="fld"><span class="sr">What to change</span><textarea name="note" form="letter-form" rows="3" maxlength="600"
+      placeholder="For example: warmer and shorter. Open with my biggest project. Leave out the line about my last title."></textarea></label>
+     <div class="row"><label class="tick"><input type="checkbox" name="keep" value="1" form="letter-form"> Keep this for every letter</label>
+      <button class="btn primary" form="letter-form">Rewrite the letter</button></div>
+     <p class="muted small">Uses AI credit. Only the letter changes; the form is filled again after, and nothing is sent.
+      {% if letter.last and letter.last.note %}Last time you asked: “{{ letter.last.note }}”.{% endif %}
+      <a href="/letters">{{ 'How your letters sound' if letter.voice_set else 'Set how all your letters sound' }}</a></p>
+    </details>{% endif %}</div>{% endif %}
    {% if name.lower().endswith('.pdf') %}<iframe class="doc" src="/file/{{ slot }}/{{ job.id|urlencode }}" title="{{ name }}" loading="lazy"></iframe>{% endif %}</div>{% endfor %}
   {% if notes %}<div class="pane" id="notes" {% if files %}hidden{% endif %}><pre style="white-space:pre-wrap;font:14.5px/1.5 ui-monospace,monospace;margin:0">{{ notes }}</pre></div>{% endif %}
   {% if job.screenshot %}<div class="pane" id="shot" {% if files or notes %}hidden{% endif %}><a href="/shot/{{ job.id|urlencode }}" target="_blank"><img class="shot" src="/shot/{{ job.id|urlencode }}" alt="Screenshot of the filled form"></a></div>{% endif %}
@@ -112,7 +123,15 @@
 </div>
 </div>
 </form>
+{% if letter.can and not letter.busy %}<form id="letter-form" method="post" action="/letter/{{ job.id|urlencode }}"></form>{% endif %}
 <style>
+.rewrite{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.rewrite summary{cursor:pointer} .rewrite textarea{width:100%;font:inherit;font-size:15.5px;margin-top:8px}
+.rewrite .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px}
+.rewrite .small{font-size:13.5px;margin:8px 0 0} .rewrite .busy{margin:0;display:flex;gap:8px;align-items:center}
+.rewrite .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}} @media (prefers-reduced-motion:reduce){.rewrite .dot{animation:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .bar{position:sticky;top:0;z-index:4;display:flex;gap:10px 18px;align-items:center;justify-content:space-between;flex-wrap:wrap;
  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px 10px 16px;margin:8px 0 16px;box-shadow:var(--shadow)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}

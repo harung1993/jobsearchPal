@@ -174,6 +174,11 @@
  </form>
 </section>
 
+<section class="card mt" id="letters"><div class="fl-row"><div><h2 style="margin:0 0 4px">How your letters sound</h2>
+ <p class="lead" style="margin:0">Tone, how a letter opens, its length, words to never use, and letters you liked. See an example of each
+  before you choose.</p></div><a class="btn" href="/letters">Open</a></div></section>
+<style>.fl-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}</style>
+
 <section class="card mt step" id="agent">
  <h2><span><span class="n {{ 'done' if s.agent.done }}">{{ "✓" if s.agent.done else "5" }}</span> Sign in to an AI agent</span><span class="count">{{ s.agent.note }}</span></h2>
  <p class="lead">The daily run uses your own subscription through Claude Code or the Codex CLI. Signing in happens once,

@@ -60,7 +60,9 @@ you ─► dashboard ─► check answers, decide consents ─► Submit
 4. **Rank and pick** the best one or two, and skip the clear misses with a reason (the Stats page
    shows why roles were skipped).
 5. **Tailor** a resume and cover letter from your base resume and `CLAUDE.local.md`, plus a
-   `notes.md` with the fit/gap table, form answers and pay ask.
+   `notes.md` with the fit/gap table, form answers and pay ask. Letters follow **How your letters sound**
+   (Settings, then Letters): tone, how a letter opens, length, words to never use, your own notes and letters you
+   liked, each choice shown with a sample line first. It's saved to `materials/context/voice.md`.
 6. **Fill the real form.** Playwright answers the questions, uploads both PDFs, takes a screenshot
    and stops before Submit. Consent and self-ID questions get only your own standing answers, highlighted for you to check.
 7. **Brief.** One email (sent to yourself over Gmail SMTP) with what's ready, interview prep
@@ -238,7 +240,7 @@ Four tabs. The menu's Settings item opens **Setup** first, with a badge while a 
 
 | Tab | What you set |
 |---|---|
-| Setup | resume, contact details, job interests and job sites, notes about you, agent sign-in, Gmail (see Docker below). |
+| Setup | resume, contact details, job interests and job sites, notes about you, how your letters sound (the Letters page), agent sign-in, Gmail (see Docker below). |
 | Email sorting | which sources are on, their order (↑ ↓), the model for each (OpenRouter's list comes with live prices), Jev's minimum confidence, the Ollama address. Each source has a **Test** button that sorts a sample email and shows the answer, time and cost, plus 30-day counts of emails sorted, cost and failures. |
 | Email sorting: OpenRouter key | for Jev and OpenRouter. It's stored in `data/secrets.json` (owner-only) and never shown again. A key in `.env` wins. |
 | Costs and limits | daily caps for tailoring, prep packs and drafts; the monthly budget for paid APIs; 30-day usage and cost by day. |
@@ -255,6 +257,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Leads:** every role from your job-alert emails, plus *Where your jobs come from* (see above).
 - **Review page:** the filled answers, your tailored documents and a screenshot of the form. Pre-submit checks
   (documents present and current, required answers filled, consents confirmed) keep Submit locked until they pass.
+  **Rewrite this letter** on the Cover letter tab takes a note ("warmer and shorter"), rewrites only that letter
+  in the background, and fills the form again; it uses AI credit and never submits. Tick *Keep this for every letter*
+  to add the note to how all your letters sound.
 - **Stats:** response and interview rates, median time to reply, funnels, results by application
   platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends. *Beyond applications*
   counts the weeks you wrote a plan, the people you got in touch with (and interviews at their companies), and
@@ -485,9 +490,10 @@ autoapply/nudges.py      follow-up reminders from sorted emails and your Sent ma
 autoapply/stats.py       dashboard and stats numbers
 autoapply/pal.py         the pal's voice: greeting, celebrations, rejection note, market line
 autoapply/coach.py       what helps a search: weekly plan, contacts, related titles, setback card, reflection, return
+autoapply/voice.py       how your cover letters sound: the Letters page choices, samples, voice.md, recent letters
 autoapply/web.py         dashboard, review page, work-search log
 autoapply/templates/     HTML (no build step, no JavaScript framework)
-prompts/stages/          the daily run's steps (rank, apply, prep, drafts), one agent session each
+prompts/stages/          the daily run's steps (rank, apply, prep, drafts, letter), one agent session each
 AGENTS.md                standing rules for the agent (CLAUDE.md imports it; personal facts go in CLAUDE.local.md)
 tests/                   local fixture forms and tests
 ```
