@@ -114,6 +114,14 @@ def dua_weeks(db: DB, today: date | None = None) -> list[dict]:
         if d and t["kind"] == "resea":
             rows.append({"date": d, "type": "Reemployment appointment (RESEA)", "company": "Career center", "position": t["title"],
                          "how": "In person or online", "contact": "", "pay": "", "result": "Attended", "proof": [], "counts": True})
+    from . import coach  # people you got in touch with about work: networking, if your state counts it
+    counts = coach.contacts_count(db)
+    for c in coach.contacts(db):
+        d = _d(c["at"])
+        if d:
+            rows.append({"date": d, "type": "Networking contact", "company": c["company"] or "", "position": c["note"] or "",
+                         "how": c["how"] or "", "contact": c["name"], "pay": "", "result": "Contacted", "proof": [],
+                         "counts": counts})
     weeks: dict[date, list[dict]] = {}
     for r in rows:
         weeks.setdefault(week_start(r["date"]), []).append(r)
@@ -206,8 +214,14 @@ def detail(db: DB, today: date | None = None, floor: int = 3, weeks: int = 26) -
 
     states = Counter(j["state"] for j in applied)
     skipped = Counter((j["error"] or "no reason").split(":")[0][:40] for j in jobs if j["status"] == "skipped")
+    from . import coach
     return {**base,
             "weeks": weeks,
+            # Beyond applications: counts only, from this install (no visits or opens are ever counted).
+            "planned_weeks": coach.weeks_planned(db),
+            "contacts_total": len(coach.contacts(db)),
+            "contact_interviews": coach.interviews_from_contacts(db),
+            "reflections": len(coach.reflections(db)),
             "found_series": [(wk, f) for wk, f, _ in pipeline],
             "recruiter_series": [(wk, rec_wk.get(wk, 0)) for wk in span],
             "platforms": platforms,

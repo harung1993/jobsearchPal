@@ -92,6 +92,32 @@ draw on research about unemployment and job searching, kept in the palStack rese
   `autoapply/market.yaml`, which maintainers refresh after each monthly jobs report, and it hides itself after
   45 days.
 
+### What helps a search
+
+Beyond the tone, the pal offers a few things that research on job searching supports. Each one is optional, can
+be put away for good, and sends no reminders. Nothing here counts visits or opens; the Stats page shows only counts
+of what you did.
+
+- **Your plan for the week.** A short card on the dashboard: which kinds of roles, which days, and one person to
+  get in touch with. You write it; the dashboard and the morning brief show it back. "Not this week" is a fine answer.
+- **People you know.** Every ready role has an *Anyone you know there?* link. People you get in touch with go on
+  the Work search page and are listed in your log as networking contacts. They count toward your weekly number
+  only if you turn that on, because not every state accepts networking.
+- **Fit first.** The daily run ranks roles on fit, never on reaching the weekly number. Fewer, better
+  applications go further, and contacts and workshops can cover the week.
+- **Titles close to yours.** Skills lists job titles that keep showing up in the roles found for you and share
+  words with your search. After eight weeks on three titles or fewer, the dashboard offers them too. One click adds
+  a title to the search.
+- **Before the hard days.** In the first weeks of a search, and again around week eight, a card says honestly what
+  a long search looks like and what helps on a bad day. You can write your own "When a hard day comes, I will…",
+  and the pal shows it back the next time a rejection arrives.
+- **Fifteen minutes on what matters to you.** Early in a search and before a first interview, the pal offers a
+  short private reflection: pick up to three values and write a few lines about one. Prep packs link to it too.
+- **A gentle return.** After a week or more with nothing done, the dashboard says "Welcome back" and shows what's
+  ready and one to-do. The rest stays folded away until you want it.
+
+The dashboard shows at most one of these cards at a time, so the page never piles up.
+
 ### Where jobs come from
 
 - **Company job boards you watch** (Greenhouse, Lever, Ashby, Workable, SmartRecruiters) through
@@ -230,7 +256,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Review page:** the filled answers, your tailored documents and a screenshot of the form. Pre-submit checks
   (documents present and current, required answers filled, consents confirmed) keep Submit locked until they pass.
 - **Stats:** response and interview rates, median time to reply, funnels, results by application
-  platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends.
+  platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends. *Beyond applications*
+  counts the weeks you wrote a plan, the people you got in touch with (and interviews at their companies), and
+  your reflections.
 - **Skills:** what the roles you matched keep asking for that you don't show yet, most asked first, with the
   roles that ask and a link to each skill's own docs or free course. With Skill matching on, it uses the model's
   must-have and nice-to-have list for each role it read (nothing is read twice); otherwise a fixed list of about 80
@@ -239,7 +267,8 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   training through your state's career center.
 - **Emails:** see above.
 - **Settings:** Setup, Email sorting, Daily run, and Costs & limits tabs (above).
-- **Work search:** see [Unemployment help](#unemployment-help).
+- **Work search:** see [Unemployment help](#unemployment-help). It also holds *People you've been in touch with*.
+- **Reflection** (`/reflect`): the fifteen-minute values reflection, and what you wrote before.
 
 Light and dark mode, and it works on a phone.
 
@@ -454,6 +483,8 @@ autoapply/prefs.py       Settings page choices (data/settings.json) and saved AP
 autoapply/prep.py        interview prep packs: what's due, where they live, safe rendering
 autoapply/nudges.py      follow-up reminders from sorted emails and your Sent mail
 autoapply/stats.py       dashboard and stats numbers
+autoapply/pal.py         the pal's voice: greeting, celebrations, rejection note, market line
+autoapply/coach.py       what helps a search: weekly plan, contacts, related titles, setback card, reflection, return
 autoapply/web.py         dashboard, review page, work-search log
 autoapply/templates/     HTML (no build step, no JavaScript framework)
 prompts/stages/          the daily run's steps (rank, apply, prep, drafts), one agent session each

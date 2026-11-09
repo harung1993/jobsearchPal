@@ -22,11 +22,13 @@
  {% if rejection %}<div class="palnote" role="note">
   <svg class="stone" width="96" height="22" viewBox="0 0 96 22" aria-hidden="true"><path d="M2 16h92" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M24 20h48" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/><ellipse cx="48" cy="13" rx="5" ry="3.4" fill="var(--accent-ink)"/></svg>
   {% if greet.state != 'rejection' %}<p><b>{{ rejection.company }} said no this time.</b> Rejections sting, even when you expect them. It's one stone in a very big ocean: most no's come down to numbers and screening, and one doesn't decide the rest of your search.</p>{% endif %}
+  {% if if_then %}<p class="ifthen">You wrote this for a day like today: <q>{{ if_then }}</q></p>{% endif %}
   <form method="post" action="/pal/seen" class="acts"><input type="hidden" name="key" value="{{ rejection.key }}">
    {% if s.ready or shortlist %}<button class="btn sm primary" name="back" value="/#ready-h">See the roles ready for you</button>{% endif %}
    <button class="btn sm" name="back" value="/">Put it away</button></form>
  </div>{% endif %}
 </section>
+
 <style>.welcome{overflow:hidden;margin-bottom:22px;padding:0}.welcome .hz{border-radius:var(--radius) var(--radius) 0 0}
 .welcome-b{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding:18px 22px 20px}
 .welcome-t{min-width:0;flex:1 1 420px;display:grid;gap:6px}
@@ -79,13 +81,14 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
  {% for j in s.ready %}<div class="ready"><div class="avatar" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
    <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.error %} · <span style="color:var(--bad)">{{ j.error|truncate(80) }}</span>{% endif %}</div>
-   {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}</div>
+   {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}
+   <div class="m"><a class="know" href="/dua?company={{ co(j.company)|striptags|trim|urlencode }}#people">Anyone you know there?</a></div></div>
   <div class="acts">{{ decline(j) }}<a class="btn primary sm" href="/job/{{ j.id|urlencode }}">Review</a></div></div>
  {% endfor %}{% endif %}
  {% if shortlist %}<div class="group-h"><b>Shortlist</b><span>Good matches from today's search, not tailored yet. Prepare the ones you want, decline the rest.</span></div>
  {% for j in shortlist %}<div class="ready short"><div class="avatar todo-av" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
-   <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.why %} · {{ j.why|truncate(90) }}{% endif %} · <a href="/job/{{ j.id|urlencode }}">details</a></div>
+   <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.why %} · {{ j.why|truncate(90) }}{% endif %} · <a href="/job/{{ j.id|urlencode }}">details</a> · <a class="know" href="/dua?company={{ co(j.company)|striptags|trim|urlencode }}#people">anyone you know there?</a></div>
    {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}</div>
   <div class="acts">{{ decline(j) }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-role="{{ j.company }} · {{ j.title }}">
    <button class="btn sm" title="Tailor and fill this one now. Uses credits.">Prepare</button></form>{% endif %}</div></div>
@@ -93,6 +96,55 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
  {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
 </section>
 
+{% macro plan_form() %}<form method="post" action="/plan" class="plan-form">
+ <label class="fld"><span>What kinds of roles?</span><input type="text" name="roles" maxlength="200" value="{{ plan.roles if plan else '' }}" placeholder="e.g. analytics engineer, two at companies I like"></label>
+ <fieldset class="fld days"><legend>Which days will you search?</legend>{% for d in plan_days %}<label class="day"><input type="checkbox" name="days" value="{{ d }}" {% if plan and d in plan.days %}checked{% endif %}><span>{{ d }}</span></label>{% endfor %}</fieldset>
+ <label class="fld"><span>One person to get in touch with</span><input type="text" name="contact" maxlength="120" value="{{ plan.contact if plan else '' }}" placeholder="e.g. Sam from my old team"></label>
+ <div class="acts"><button class="btn sm primary">Save my plan</button>{% if not plan %}<button class="btn sm ghost" name="action" value="skip">Not this week</button>{% endif %}</div>
+</form>{% endmacro %}
+<section class="card plan" id="plan" aria-labelledby="plan-h">
+ {% if plan %}<div class="plan-row"><div><h2 id="plan-h">Your plan this week</h2><p class="plan-line">{{ plan_line }}</p></div>
+  <details class="plan-edit"><summary class="btn ghost sm">Edit</summary>{{ plan_form() }}</details></div>
+ {% elif plan_open and not back %}<h2 id="plan-h">Your week, in your words</h2>
+  <p class="ink2 plan-why">A short plan you write yourself: which roles, which days, and one person to get in touch with. It's yours; nothing reminds you of it.</p>
+  {{ plan_form() }}
+ {% else %}<div class="plan-row"><h2 id="plan-h" class="plan-quiet">No plan this week. That's fine.</h2><details class="plan-edit"><summary class="btn ghost sm">Write one</summary>{{ plan_form() }}</details></div>{% endif %}
+</section>
+
+
+{% if offer %}<section class="card offer offer-{{ offer.kind }}" aria-labelledby="offer-h">
+ <svg class="offer-wave" width="120" height="18" viewBox="0 0 120 18" aria-hidden="true"><path d="M2 12c10-8 18-8 28 0s18 8 28 0 18-8 28 0 18 8 30 0" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity=".55"/></svg>
+ {% if offer.kind == 'setback' %}
+  {% if offer.phase == 'early' %}<h2 id="offer-h">Before the hard days</h2>
+   <p>Searches are long right now, and much of the time is quiet: weeks with no news, and some no's. That's the usual shape of a search, not a sign you're doing it wrong.</p>
+  {% else %}<h2 id="offer-h">If it's started to feel long</h2>
+   <p>Around now, a lot of searches start to feel long. That's common, and it isn't a verdict on you. What you've sent is still out there, and your effort still counts.</p>{% endif %}
+  <p>On a hard day: do one small thing (one application, or one message to someone you know), stop when it's done, and talk to someone you trust.</p>
+  <form method="post" action="/setback" class="offer-form"><input type="hidden" name="key" value="{{ offer.key }}">
+   <label class="fld"><span>When a hard day comes, I will…</span><input type="text" name="if_then" maxlength="200" value="{{ offer.if_then }}" placeholder="e.g. send one message, then go for a walk"></label>
+   <div class="acts"><button class="btn sm primary">Save it</button><button class="btn sm ghost" formaction="/pal/seen" name="back" value="/">Put it away</button></div></form>
+ {% elif offer.kind == 'values' %}<h2 id="offer-h">Fifteen minutes on what matters to you</h2>
+  <p>{% if offer.why == 'interview' %}Before your first interview, {% else %}Early in a search, {% endif %}pick a value or two that matter to you and write a few lines about why. Some people find it steadying. It's private and stays on this server.</p>
+  <form method="post" action="/pal/seen" class="acts"><input type="hidden" name="key" value="{{ offer.key }}"><a class="btn sm primary" href="/reflect?back=/">Start</a><button class="btn sm ghost" name="back" value="/">Put it away</button></form>
+ {% elif offer.kind == 'titles' %}<h2 id="offer-h">Roles close to yours</h2>
+  <p>Your search has looked for the same few titles for a while. These came up often in the roles found for you. Widening a little can open more doors.</p>
+  <ul class="titles">{% for r in offer.titles %}<li><span><b>{{ r.title }}</b> <span class="muted">· seen {{ r.count }} times</span></span>
+   <form method="post" action="/titles/add"><input type="hidden" name="title" value="{{ r.title }}"><input type="hidden" name="back" value="/"><button class="btn sm">Add to my search</button></form></li>{% endfor %}</ul>
+  <form method="post" action="/pal/seen" class="acts"><input type="hidden" name="key" value="{{ offer.key }}"><button class="btn sm ghost" name="back" value="/">Put it away</button></form>
+ {% endif %}
+</section>{% endif %}
+<style>.plan,.offer{margin:22px 0 0}.plan h2,.offer h2{margin:0 0 6px}.plan-row{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.plan-line{margin:0;font-size:16px}.plan-why{margin:0 0 10px;max-width:64ch}.plan-quiet{font-size:15.5px;color:var(--ink-2);font-weight:500}
+.plan-edit{flex:1 1 100%}.plan-edit summary{list-style:none;display:inline-flex}.plan-edit summary::-webkit-details-marker{display:none}.plan-row>.plan-edit{flex:0 0 auto}.plan-edit[open]{flex:1 1 100%}
+.plan-form,.offer-form{display:grid;gap:10px;max-width:640px;margin-top:8px}.plan-form .acts,.offer .acts{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.days{border:0;padding:0;margin:0;display:flex;gap:6px;flex-wrap:wrap}.days legend{padding:0;margin-bottom:6px;font-size:14px;color:var(--ink-2)}
+.day{position:relative}.day input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}.day span{display:inline-block;padding:6px 12px;border-radius:999px;border:1.5px solid var(--line-2);font-size:14.5px}
+.day input:checked+span{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:600}.day input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.offer{background:linear-gradient(180deg,var(--sun-soft),var(--surface) 70%);animation:offer-up .5s ease-out 1}.offer p{margin:0 0 8px;max-width:66ch}.offer-wave{display:block;margin-bottom:6px}
+.titles{list-style:none;padding:0;margin:4px 0 10px;display:grid;gap:6px}.titles li{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.titles form{margin:0}
+.ifthen{color:var(--ink-2)}.ifthen q{font-style:italic}
+@keyframes offer-up{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.offer{animation:none}}</style>
 <section class="grid g4 mt" aria-label="Headline numbers">
  <div class="card tile key"><div class="lbl">{{ ws_label }} this week</div><div class="num">{{ s.this_week }}<small> / {{ s.dua_floor }}</small></div>
   {% if s.dua_floor <= 7 %}<div class="wdots" role="img" aria-label="{{ s.this_week }} of {{ s.dua_floor }} activities this week">{% for n in range(s.dua_floor) %}<i class="{{ 'on' if n < s.this_week }}"></i>{% endfor %}</div>
@@ -116,8 +168,9 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
   <div class="acts">{% if n.compose %}<a class="btn sm" href="{{ n.compose }}" target="_blank" rel="noopener">Reply in Gmail</a>{% endif %}
    <form method="post" action="/nudge/{{ n.key }}"><input type="hidden" name="days" value="3"><button class="btn ghost sm" name="action" value="snooze" title="Hide for 3 days">Snooze</button><button class="btn ghost sm" name="action" value="done">Done</button></form></div>
  </div>{% endmacro %}
- {% for n in todo[:4] %}{{ todo_row(n) }}{% endfor %}
- {% if todo|length > 4 %}<details class="more"><summary>Show {{ todo|length - 4 }} more</summary>{% for n in todo[4:] %}{{ todo_row(n) }}{% endfor %}</details>{% endif %}
+ {% set top = 1 if back else 4 %}
+ {% for n in todo[:top] %}{{ todo_row(n) }}{% endfor %}
+ {% if todo|length > top %}<details class="more"><summary>{% if back %}{{ todo|length - top }} more, when you're ready{% else %}Show {{ todo|length - top }} more{% endif %}</summary>{% for n in todo[top:] %}{{ todo_row(n) }}{% endfor %}</details>{% endif %}
 </section>
 <style>.todo{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.todo:last-child,.todo:last-of-type{border-bottom:0}
 .todo .pill{justify-self:start}.todo .t{font-weight:600}.todo .m{font-size:14px;color:var(--ink-3)}.todo .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.todo form{display:flex;gap:2px;margin:0}

@@ -277,6 +277,27 @@ def save_interests(settings, form: dict) -> dict:
     return {"bad": bad, "missing_keys": missing}
 
 
+def add_title(settings, title: str) -> bool:
+    """Adds one job title to the search (a related title the person chose). False when it's empty or already there."""
+    t = " ".join(str(title or "").lower().split())[:60]
+    root = settings.root
+    cfg = load_config(root)
+    cfg.pop("_from_example", None)
+    search = cfg.setdefault("search", {})
+    current = search.get("title_keywords") or (settings.raw.get("search") or {}).get("title_keywords") or []
+    titles = [str(x).lower() for x in current]  # what the search uses now, even before config.yaml exists
+    if not t or t in titles or len(titles) >= 40:
+        return False
+    search["title_keywords"] = [*titles, t]
+    keep = {k: settings.raw[k] for k in ("data_dir",) if k in settings.raw and k not in cfg}
+    head = ("# Written by the dashboard's Setup page. Edit here or there.\n"
+            "# More boards can live in boards.yaml (`autoapply board add ATS SLUG`).\n")
+    (root / "config.yaml").write_text(head + yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True))
+    settings.raw.clear()
+    settings.raw.update({**cfg, **keep})
+    return True
+
+
 # ---- resume ---------------------------------------------------------------------------------------
 
 def _is_docx(data: bytes) -> bool:

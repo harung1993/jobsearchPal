@@ -77,7 +77,9 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
     t = [g["title"], g["line"], ""]
     if market:
         t += [f"{market['text']} ({market['source']}, checked {market['checked']})", ""]
-    t += [f"{label}: {dua}", ""]
+    from . import coach
+    my_plan = coach.plan_line(coach.plan(db, s["this_week_start"]))  # the person's own words; no nagging when there's none
+    t += [f"{label}: {dua}"] + ([f"Your plan this week: {my_plan}"] if my_plan else []) + [""]
     if todo:
         t.append(f"TO DO ({len(todo)})")
         t += [f"- {n['title']} · {n['about']} · {n['why']}" for n in todo[:8]]
@@ -118,6 +120,8 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
     if market:
         h.append(f"<p style='font-size:14px;background:#fcefd2;padding:8px 12px;border-radius:8px'>{escape(market['text'])}<br>"
                  f"<span style='color:#666'>{escape(market['source'])}, checked {escape(market['checked'])}</span></p>")
+    if my_plan:
+        h.append(f"<p style='font-size:15px;margin:0 0 6px'><b>Your plan this week:</b> {escape(my_plan)}</p>")
     h += [f"<p style='font-size:15px'><b>{escape(label)}:</b> {escape(dua)}</p>",
          f"<h3>Ready for you ({len(ready)})</h3><ul>"]
     h.append(li([f"<b>{escape(_co(j['company']))}</b> · {escape(j['title'])}{' · ' + escape(j['pay']) if j['pay'] else ''}<br>"

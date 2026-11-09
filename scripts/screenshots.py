@@ -21,6 +21,7 @@ try:
         ("dashboard-phone.png", "/", 390, 844, "light", False),
         ("work-search.png", "/dua", 1440, 900, "light", True),
         ("leads.png", "/leads", 1440, 900, "light", True),
+        ("skills.png", "/skills", 1440, 900, "light", True),
         ("stats-dark.png", "/stats", 1440, 900, "dark", True),
         ("emails.png", "/emails?show=all", 1440, 900, "light", False),
         ("settings.png", "/settings", 1440, 900, "light", False),

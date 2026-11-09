@@ -159,7 +159,7 @@ def shortlist(db, settings, n: int = 5, skip_companies=()) -> list[dict]:
 
 QUICK_PROMPT = """You pick which new job postings are worth applying to today, for the person described below.
 Pick at most {n}, at most one per company. Fit to the person comes first, then freshness, then pay. Skip roles they already applied to.
-It's fine to pick fewer, or none, if nothing fits well.
+It's fine to pick fewer, or none, if nothing fits well. Fit decides, never a weekly quota: don't pick a weak fit to make up a count.
 
 About the person:
 {about}

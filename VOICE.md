@@ -57,6 +57,14 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Empty: ready | "You're all caught up. The next daily run looks for more. Resting counts too." |
 | Push, nothing new | "Nothing new to send today. Rest counts too." |
 | Sign in | "Welcome back. Your search is right where you left it." |
+| Back after a week away | "Welcome back. No catch-up list today: just what's ready, and one place to start." |
+| Weekly plan | "Your week, in your words." / "No plan this week. That's fine." |
+| People you know | "Anyone you know there?" / "One message this week is a good start." |
+| Setback card, early | "Searches are long right now, and much of the time is quiet. That's the usual shape of a search, not a sign you're doing it wrong." |
+| Setback card, week 8 | "Around now, a lot of searches start to feel long. That's common, and it isn't a verdict on you." |
+| Rejection, with their plan | "You wrote this for a day like today: ..." |
+| Values reflection | "Fifteen minutes on what matters to you. Some people find it steadying." |
+| Related titles | "Looking a little wider can open more doors." |
 
 ## Motion
 
@@ -67,6 +75,18 @@ The logo's sunrise grown into a horizon (`templates/_horizon.html`):
   - **Interview:** the sun lifts with a ring of light.
   - **Offer:** the full sunrise.
 - With Reduce Motion, the finished picture shows with no movement. No loop runs longer than 5 seconds, and every animation is finite.
+
+## What helps a search (`autoapply/coach.py`)
+
+The evidence on what moves outcomes, turned into optional features. None sends a reminder; each can be put away.
+- **A plan the person writes** (Abel et al., B): roles, days, one contact. Reminders added nothing in the trial, so there are none.
+- **People you know** (Granovetter; referral studies, B): contacts are logged and can count as work search.
+- **Fit before volume** (van Hooft et al. 2021, A): the ranking prompts say fit decides, never the weekly number.
+- **Related titles** for a narrow, long search (Belot, Kircher and Muller, B).
+- **Setback preparation** early and around week 8 (the JOBS programme, A inside a workshop; untested alone).
+- **A short values reflection** early and before a first interview (Pfrombeck et al. 2023, B; the effect faded by 8 weeks,
+  so copy never promises it helps you get hired).
+- **A gentle return** after time away: no catch-up list. "Away" is judged from what the person did, never from visits.
 
 ## Keeping it honest
 - `autoapply/market.yaml` is refreshed monthly, after the jobs report and JOLTS. A line older than 45 days hides itself.
@@ -88,4 +108,7 @@ The logo's sunrise grown into a horizon (`templates/_horizon.html`):
 - Ford et al. (2018) and Dejonckheere et al. (2017, 2022), on pressure to feel positive.
 - Wright and Patrick (2019), on how benefit conditions are experienced.
 - Granovetter (1973), American Journal of Sociology.
+- Abel, Burger, Carranza and Piraino, on written job-search plans (working paper).
+- Belot, Kircher and Muller, on suggesting related occupations, Review of Economic Studies.
+- Pfrombeck et al. (2023), on self-affirmation and reemployment, PNAS.
 - Market data: U.S. Bureau of Labor Statistics (Current Population Survey; Job Openings and Labor Turnover Survey).
