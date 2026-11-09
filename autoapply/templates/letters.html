@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Your letters{% endblock %}
+{% block body %}
+<p style="margin:0 0 10px"><a href="/setup">← Settings</a></p>
+<div class="ph"><div><h1>How your letters sound</h1>
+ <div class="sub">Every cover letter follows this, starting with the next one. To change a letter you already have, open the
+  application and use <b>Rewrite this letter</b> on its Cover letter tab.</div></div></div>
+{% if saved %}<p class="notice good-note" role="status">Saved. The next letter is written this way.</p>{% endif %}
+
+<form method="post" action="/letters" class="voice">
+<div class="grid vgrid">
+<div>
+ <section class="card o1" aria-labelledby="tone-h"><h2 id="tone-h">Tone</h2>
+  <div class="opts">{% for k, label, _, ex in tones %}<label class="opt"><input type="radio" name="tone" value="{{ k }}" {% if v.tone == k %}checked{% endif %}>
+   <span><b>{{ label }}</b><small>{{ ex }}</small></span></label>{% endfor %}</div></section>
+
+ <section class="card mt o2" aria-labelledby="open-h"><h2 id="open-h">How it opens</h2>
+  <div class="opts">{% for k, label, _, ex in openings %}<label class="opt"><input type="radio" name="opening" value="{{ k }}" {% if v.opening == k %}checked{% endif %}>
+   <span><b>{{ label }}</b><small>{{ ex }}</small></span></label>{% endfor %}</div></section>
+
+ <section class="card mt o4" aria-labelledby="len-h"><h2 id="len-h">Length</h2>
+  <div class="opts row3">{% for k, label, _, ex in lengths %}<label class="opt"><input type="radio" name="length" value="{{ k }}" {% if v.length == k %}checked{% endif %}>
+   <span><b>{{ label }}</b><small>{{ ex }}</small></span></label>{% endfor %}</div></section>
+</div>
+
+<div>
+ <section class="card preview o3" aria-labelledby="pv-h" aria-live="polite"><h2 id="pv-h">An opening in this style</h2>
+  <p class="muted small">A made-up example for an operations analyst role, so you can compare styles. Your letters use your own work.</p>
+  <blockquote id="pv">{{ samples[v.tone ~ '|' ~ v.opening] }}</blockquote>
+ </section>
+
+ <section class="card mt o5" aria-labelledby="avoid-h"><h2 id="avoid-h">Words and phrases to never use</h2>
+  <label class="fld"><span class="sr">One per line</span><textarea name="avoid" id="avoid" rows="4" placeholder="One per line">{{ v.avoid|join('\n') }}</textarea></label>
+  <p class="muted small" style="margin:8px 0 6px">Common ones, tap to add:</p>
+  <div class="sugs">{% for p in common %}<button type="button" class="sug" data-p="{{ p }}">{{ p }}</button>{% endfor %}</div></section>
+
+ <section class="card mt o6" aria-labelledby="notes-h"><h2 id="notes-h">Anything else</h2>
+  <label class="fld"><span class="sr">Your notes</span><textarea name="notes" rows="4" maxlength="2000"
+   placeholder="For example: Keep it humble. Mention I'm open to hybrid. Sign off with 'Best,'.">{{ v.notes }}</textarea></label></section>
+
+ <section class="card mt o7" aria-labelledby="sam-h"><details {% if v.samples[0] %}open{% endif %}><summary><h2 id="sam-h" style="display:inline">Letters you wrote and liked</h2> <span class="muted">· optional</span></summary>
+  <p class="muted small">Paste one or two. They set the voice only: facts, numbers and companies in them are never reused.</p>
+  <label class="fld"><span>Letter 1</span><textarea name="sample1" rows="6" maxlength="5000">{{ v.samples[0] }}</textarea></label>
+  <label class="fld" style="margin-top:8px"><span>Letter 2</span><textarea name="sample2" rows="6" maxlength="5000">{{ v.samples[1] }}</textarea></label>
+ </details></section>
+</div>
+</div>
+<div class="savebar"><button class="btn primary">Save how my letters sound</button></div>
+</form>
+
+<section class="card mt" aria-labelledby="recent-h"><h2 id="recent-h">Your recent letters</h2>
+ {% if recent %}<p class="muted small">How your letters open now, to compare with the example above.</p>
+ {% for r in recent %}<div class="past"><div class="muted">{{ r.company }} · {{ r.at }} · {{ r.words }} words, {{ r.paragraphs }} paragraphs</div>
+  <p>{{ r.opening }}</p></div>{% endfor %}
+ {% else %}<p class="muted">No letters yet. They show up here after the first application is prepared.</p>{% endif %}
+</section>
+
+<style>.voice h2{font-size:17px;margin:0 0 10px}.vgrid{grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.vgrid{grid-template-columns:1fr;gap:0}.vgrid>div{display:contents}.vgrid .card{margin-top:16px}.vgrid .o1{margin-top:0}
+.o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}.o7{order:7}.preview{position:static}}
+.opts{display:grid;gap:8px}.opts.row3{grid-template-columns:repeat(3,1fr)}@media (max-width:520px){.opts.row3{grid-template-columns:1fr}}
+.opt{position:relative;display:block;cursor:pointer}.opt input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.opt span{display:grid;gap:2px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line-2);transition:border-color .15s,background .15s}
+.opt small{color:var(--ink-2);font-size:13.5px;line-height:1.4}
+.opt input:checked+span{background:var(--accent-soft);border-color:var(--accent)}.opt input:checked+span b{color:var(--accent-ink)}
+.opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.preview{position:sticky;top:16px}.preview blockquote{margin:0;padding:14px 16px;border-left:3px solid var(--accent);background:var(--surface-2);
+ border-radius:0 12px 12px 0;font-size:16.5px;line-height:1.55;font-family:Georgia,'Times New Roman',serif}
+.small{font-size:13.5px}.voice textarea{width:100%;font:inherit;font-size:15.5px;line-height:1.5}
+.sugs{display:flex;flex-wrap:wrap;gap:6px}.sug{font:inherit;font-size:13.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.sug[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.savebar{margin-top:16px;display:flex;justify-content:flex-end}
+.good-note{background:var(--good-soft)}
+.past{padding:10px 0;border-bottom:1px solid var(--line)}.past:last-child{border-bottom:0}.past p{margin:4px 0 0}
+@media (prefers-reduced-motion:reduce){.opt span{transition:none}}</style>
+<script>(()=>{const S={{ samples|tojson }},pv=document.getElementById('pv'),f=document.querySelector('form.voice');
+const show=()=>{const t=f.tone.value,o=f.opening.value;pv.textContent=S[t+'|'+o]||''};
+f.querySelectorAll('input[name=tone],input[name=opening]').forEach(r=>r.addEventListener('change',show));
+const a=document.getElementById('avoid'),list=()=>a.value.split('\n').map(x=>x.trim()).filter(Boolean);
+const mark=()=>document.querySelectorAll('.sug').forEach(b=>b.setAttribute('aria-pressed',list().some(x=>x.toLowerCase()===b.dataset.p.toLowerCase())));
+document.querySelectorAll('.sug').forEach(b=>b.addEventListener('click',()=>{const l=list(),i=l.findIndex(x=>x.toLowerCase()===b.dataset.p.toLowerCase());
+ if(i>=0)l.splice(i,1);else l.push(b.dataset.p);a.value=l.join('\n');mark()}));a.addEventListener('input',mark);mark()})()</script>
+{% endblock %}

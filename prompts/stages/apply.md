@@ -16,6 +16,8 @@ first). Work only on this role.
    "skills" is the full list in order. Each "experience" list replaces that block's bullets ([] drops a group);
    role, company and date lines never change. If it prints "problems" (resume over 2 pages, cover letter over 1),
    shorten docs.json and run it again. Don't write a python script to build the documents.
+   Write the cover letter the way materials/context/voice.md asks when it's there (tone, length, opening, words to
+   avoid, the person's own notes; sample letters set the voice only, never the facts).
    Also write notes.md (fit/gap table, pay ask, form answers, short screen prep). Keep it to what's true in materials/.
 3. If the posting is on Workday or another site that needs an account, stop here: say "apply by hand" in notes.md.
 4. `autoapply scan <apply url>` for the form's questions.

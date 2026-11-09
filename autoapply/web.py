@@ -374,6 +374,42 @@ def make_app(settings, db: DB) -> FastAPI:
         back = str(f.get("back") or "")
         return RedirectResponse(_auth.safe_next(back) if back else "/reflect#saved", status_code=303)
 
+    @app.get("/letters")
+    def letters_page(saved: str = ""):
+        """How your cover letters sound: choices with sample lines, words to avoid, notes, letters you liked."""
+        from . import voice
+        return page("letters.html", nav="settings", v=voice.load(db), tones=voice.TONES, lengths=voice.LENGTHS,
+                    openings=voice.OPENINGS, samples={f"{t}|{o}": s for (t, o), s in voice.SAMPLES.items()},
+                    common=voice.COMMON_AVOID, recent=voice.recent(settings.data_dir), saved=bool(saved))
+
+    @app.post("/letters")
+    async def letters_save(request: Request):
+        from . import voice
+        f = await request.form()
+        voice.save(db, settings.root, str(f.get("tone") or ""), str(f.get("length") or ""), str(f.get("opening") or ""),
+                   str(f.get("avoid") or ""), str(f.get("notes") or ""), [str(f.get("sample1") or ""), str(f.get("sample2") or "")])
+        return RedirectResponse("/letters?saved=1", status_code=303)
+
+    @app.post("/letter/{job_id:path}")
+    def letter_rewrite(job_id: str, note: str = Form(""), keep: str = Form("")):
+        """Rewrite this one cover letter with your note, then refill the form. Uses credits; never submits."""
+        from . import coach, voice
+        job, plan, _ = load(job_id)
+        note = " ".join(note.split())[:600]
+        slug = voice.letter_slug(plan, settings.data_dir)
+        if job["status"] == "submitted" or not slug:
+            return RedirectResponse(f"/job/{job_id}", status_code=303)
+        coach.touch(db)
+        coach.set_note(db, f"letter-note:{job_id}", {"note": note, "at": datetime.now().strftime("%Y-%m-%d %H:%M")})
+        if keep and note:
+            voice.add_note(db, settings.root, note)
+        if start_run(AUTOAPPLY_JOB=job_id, AUTOAPPLY_LETTER="1"):
+            db.log_run("run-now", True, f"letter: {job_id}")
+            db.update(job_id, error=None)
+        else:
+            db.update(job_id, error="Another run is going. Try the rewrite again when it finishes.")
+        return RedirectResponse(f"/job/{job_id}#letter", status_code=303)
+
     @app.post("/setback")
     def setback_save(if_then: str = Form(""), key: str = Form("")):
         """Saves the person's own plan for a hard day; shown again with the next rejection."""
@@ -455,8 +491,14 @@ def make_app(settings, db: DB) -> FastAPI:
         files = [(slot, Path(p).name) for slot, p in plan.get("files", {}).items() if _servable(p)]
         from . import preflight
         checks = preflight.for_job(db, settings, job_id) if job["status"] != "submitted" else []
+        from . import coach, voice
+        rs = run_state()
+        letter = {"can": job["status"] != "submitted" and bool(voice.letter_slug(plan, settings.data_dir)),
+                  "last": coach.note(db, f"letter-note:{job_id}"),
+                  "busy": bool(rs and rs["step"] in (f"letter {job_id}", f"refilling {job_id}")),
+                  "voice_set": voice.is_set(db)}
         return page("job.html", nav="", job=job, report=report, approved=plan.get("approved", {}), files=files, checks=checks,
-                    blocked=preflight.blocking(checks),
+                    blocked=preflight.blocking(checks), letter=letter,
                     notes=_notes(plan), plan_text=json.dumps(shown, indent=1), handoff=_handoff(job, report))
 
     def _handoff(job: dict, report: dict) -> str:
