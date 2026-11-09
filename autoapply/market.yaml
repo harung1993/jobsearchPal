@@ -1,0 +1,16 @@
+# The honest market line the pal shows on a quiet stretch, after a rejection, on a long search, and in the brief.
+# Maintainers refresh this every month after the jobs report (the first Friday) and JOLTS. Rules (VOICE.md):
+# - text: plain sentences about the market, no figures (copy never quotes a number).
+# - source: who published the figures behind it (a government statistics office, never a job-site survey).
+# - url: where to read them. checked: the date the source was read (YYYY-MM-DD).
+# A line older than 45 days, or without a source, is not shown: a stale "right now" is a false statement.
+# The figures behind this line (BLS Current Population Survey and JOLTS, via FRED series UEMPMED, LNS13025703,
+# JTSHIR and UNRATE). October 2026: median search 11.9 weeks and long-term share 27.6%, both highest since late 2021;
+# hires rate 3.4% (Sep); unemployment 4.1%, so "the market is terrible" would be false: hiring is slow.
+lines:
+  - text: >-
+      Searches are taking longer for most people right now than a few years ago, and hiring has been slow this year.
+      Long waits are normal at the moment. If this feels hard, that's the market as much as anything you're doing.
+    source: U.S. Bureau of Labor Statistics, October 2026 jobs report and September 2026 job openings survey
+    url: https://fred.stlouisfed.org/series/UEMPMED
+    checked: 2026-11-08

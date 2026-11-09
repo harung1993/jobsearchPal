@@ -26,7 +26,9 @@ env.globals["ws_label"] = "Work search"
 env.globals["strptime"] = lambda s: datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
 env.filters["hue"] = lambda s: sum(ord(c) * (i + 7) for i, c in enumerate((s or "?").lower())) % 360  # a steady colour per company
 # "confirmed" (the stored kind) read as a confirmed interview; it only means the application was received.
-env.filters["label"] = lambda k: {"confirmed": "received"}.get(k, k)
+# "rejected" reads as "closed" in lists: the count stays exact, it just stops leading (VOICE.md).
+env.filters["label"] = lambda k: {"confirmed": "received", "rejected": "closed", "no reply": "no reply yet"}.get(k, k)
+env.filters["pillcls"] = lambda k: {"rejected": "closed"}.get(k, k)  # a closed application is a neutral fact, not an alarm (red)
 
 
 SHORTLIST = 5  # roles on "Ready for you" each day: the prepared ones plus the next best to triage
@@ -205,12 +207,36 @@ def make_app(settings, db: DB) -> FastAPI:
         if sk.enabled(Prefs(settings.data_dir, settings.raw)) and (my := sk.mine(settings)):
             for j in [*s["ready"], *more]:
                 j["skill_line"] = sk.summary(sk.for_job(db.get(j["id"]) or j, my))
-        s["now_hour"] = datetime.now().hour
+        now = datetime.now()
+        s["now_hour"] = now.hour
         from . import jobsources
+        from . import pal
         src = jobsources.overview(settings, db)
-        return page("index.html", s=s, shortlist=more, decline_reasons=DECLINE_REASONS, src_on=src["on"], src_total=src["total"], first_name=(settings.profile or {}).get("first_name", ""),
-                    interviews=prep.interviews(db, settings.data_dir)[:6],
+        first_name = (settings.profile or {}).get("first_name", "")
+        cel = pal.celebration(db, s, now.date(), label=work_search(settings)[0])
+        resp = page("index.html", s=s, shortlist=more, decline_reasons=DECLINE_REASONS, src_on=src["on"], src_total=src["total"], first_name=first_name,
+                    interviews=prep.interviews(db, settings.data_dir)[:6], greet=pal.greeting(db, s, now, first_name),
+                    celebrate=cel, rejection=pal.rejection_note(db, now.date()), week_left=_week_left(s, now.date()),
                     todo=todo, nav="dashboard", running=run_state(), picks_default=Prefs(settings.data_dir, settings.raw).limits()["picks_per_day"])
+        if cel:
+            db.set_nudge(cel["key"], "done")  # each celebration plays once
+        return resp
+
+    def _week_left(s: dict, today: date) -> str:
+        """The pal's line for the weekly minimum: quiet when covered, one gentle line when short."""
+        left = max(0, s["dua_floor"] - s["this_week"])
+        if not left:
+            return "This week is covered."
+        when = "today" if today.weekday() == 5 else "by Saturday"  # weeks run Sunday to Saturday
+        return f"{'One more' if left == 1 else f'{left} more'} {when} covers this week."
+
+    @app.post("/pal/seen")
+    def pal_seen(key: str = Form(...), back: str = Form("/")):
+        """Puts away a pal note (a rejection note) so it doesn't come back."""
+        from . import auth as _auth
+        if key.startswith(("pal:", "celebrate:")):
+            db.set_nudge(key, "done")
+        return RedirectResponse(_auth.safe_next(back), status_code=303)
 
     def start_run(**extra) -> bool:
         """Starts scripts/daily.sh in the background (manual trigger). False when a run is already going."""

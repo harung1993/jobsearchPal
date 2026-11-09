@@ -10,7 +10,7 @@
 <header class="top"><div><h1>{{ job.company|title if job.company.islower() else job.company }} · {{ job.title }}</h1>
  <div class="ink2">{{ job.location or "" }}{% if job.pay %} · {{ job.pay }}{% endif %} · <a href="{{ job.url }}" target="_blank">posting</a></div></div>
  {% if job.status == 'submitted' %}<span class="pill {{ job.status }}">{{ job.status|label }}</span>{% endif %}</header>
-{% if report.submitted %}<p class="notice" style="background:var(--good-soft)">Submitted {{ job.submitted_at }}. Confirmation: “{{ report.confirmation }}”</p>{% endif %}
+{% if report.submitted %}<p class="notice" style="background:var(--good-soft)">Sent {{ job.submitted_at }}. That's one more door you knocked on. Confirmation: “{{ report.confirmation }}”</p>{% endif %}
 
 <form method="post" action="/job/{{ job.id|urlencode }}">
 {% set pre_n = report.held|selectattr('prefilled')|list|length %}

@@ -2,7 +2,7 @@
 {% block title %}Skills{% endblock %}
 {% block body %}
 <div class="ph"><div><h1>Skills to learn</h1>
- <div class="sub">What the {{ g.jobs }} roles matched in the last {{ g.days }} days ask for that your resume and notes don't show yet, most asked first.</div></div></div>
+ <div class="sub">What the {{ g.jobs }} roles matched in the last {{ g.days }} days ask for that your resume and notes don't show yet, most asked first. Learning while you search counts as progress too.</div></div></div>
 
 {% macro mark(i, label, value, cls="ghost") %}<form method="post" action="/skills/mark" class="inline"><input type="hidden" name="skill" value="{{ i.name }}"><input type="hidden" name="mark" value="{{ value }}"><button class="btn sm {{ cls }}">{{ label }}</button></form>{% endmacro %}
 {% macro row(i, actions) %}

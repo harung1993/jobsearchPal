@@ -69,6 +69,29 @@ you ─► dashboard ─► check answers, decide consents ─► Submit
    finish on your laptop when a site wants a code. Then the confirmation email arrives and the next
    morning's sync files it.
 
+### The pal
+
+A job search is hard work, and unemploymentPal talks like a friend who knows it. It is honest about the market
+and on your side, and it never promises an outcome. The rules and the phrase bank are in [VOICE.md](VOICE.md). They
+draw on research about unemployment and job searching, kept in the palStack research library.
+
+- **The morning.** The welcome fits how the search is going: someone wrote back, an interview, a quiet stretch, a
+  Monday, the evening. Good news and roles ready to send come first. When it can, the welcome names what you
+  actually did ("Yesterday you sent 3, and that counts").
+- **Rejections.** When one comes in, the pal says so once and kindly ("one stone in a very big ocean"), then
+  points to what's ready. Lists say "closed", and the count stays exact. A rejection is never sent as a phone
+  push; the brief lists them together with "the closed ones need nothing from you".
+- **The weekly minimum.** A quiet tracker that speaks only when you're short: "One more by Saturday covers this week."
+- **Celebrations.** The logo's sunrise grows into a horizon across the top of the dashboard. Each celebration
+  plays once, and with Reduce Motion on you see the finished picture with no movement:
+  - covering the week's minimum: light across the water
+  - a new interview: the sun lifts with a ring of light
+  - an offer: the full sunrise
+- **The market, honestly.** On a quiet stretch, after a rejection, on a long search and once a month in the brief,
+  one dated line about the market with its source. There are no figures in the copy. It comes from
+  `autoapply/market.yaml`, which maintainers refresh after each monthly jobs report, and it hides itself after
+  45 days.
+
 ### Where jobs come from
 
 - **Company job boards you watch** (Greenhouse, Lever, Ashby, Workable, SmartRecruiters) through
@@ -415,6 +438,8 @@ autoapply brief [--send]               the morning summary
 autoapply daily-agent                  the agent and model the daily run will use
 autoapply serve                        the dashboard
 autoapply finish JOB_ID                (laptop) open the filled form in Chrome for you to submit
+autoapply reset-password [--email E]   forgot the dashboard password: set a new one (signs every browser out)
+autoapply pal-line                     the pal's one line for the phone push
 ```
 
 ## Layout

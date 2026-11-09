@@ -215,7 +215,7 @@ def detail(db: DB, today: date | None = None, floor: int = 3, weeks: int = 26) -
             "median_wait": median_wait,
             "interview_rate": round(100 * base["interviews"] / base["applied"]) if base["applied"] else 0,
             "weeks_met": met, "weeks_active": len(active), "streak": streak,
-            "states": [({"confirmed": "Received"}.get(k, k.capitalize()), states.get(k, 0)) for k in ("waiting", "confirmed", "interview", "offer", "rejected", "no reply")],
+            "states": [({"confirmed": "Received", "rejected": "Closed", "no reply": "No reply yet"}.get(k, k.capitalize()), states.get(k, 0)) for k in ("waiting", "confirmed", "interview", "offer", "rejected", "no reply")],
             "skip_reasons": skipped.most_common(6),
             "found_total": sum(found_wk.values()),
             "work_weeks": [(wk, wk_counts.get(wk, 0)) for wk in recent]}

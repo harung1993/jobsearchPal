@@ -130,7 +130,9 @@ fi
 # Optional phone push via ntfy (set NTFY_TOPIC in .env and subscribe in the ntfy app).
 if [ -n "${NTFY_TOPIC:-}" ]; then
   todo=$(autoapply todo-line 2>/dev/null || true)
-  msg=$summary; [ -n "$todo" ] && msg="$summary
+  line=$(autoapply pal-line 2>/dev/null || true)
+  msg=$summary; [ -n "$line" ] && msg="$line
+$summary"; [ -n "$todo" ] && msg="$msg
 $todo"
-  curl -fsS -H "Title: autoapply" -H "Click: ${REVIEW_URL:-}" -d "$msg" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+  curl -fsS -H "Title: unemploymentPal" -H "Click: ${REVIEW_URL:-}" -d "$msg" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
 fi

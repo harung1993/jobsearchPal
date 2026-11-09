@@ -103,7 +103,7 @@ def main(argv=None):
     sub.add_parser("review-emails")
     sub.add_parser("daily-model")
     a = sub.add_parser("daily-agent"); a.add_argument("--stage", default="apply")
-    sub.add_parser("daily-stages"); sub.add_parser("daily-picks"); sub.add_parser("todo-line")
+    sub.add_parser("daily-stages"); sub.add_parser("daily-picks"); sub.add_parser("todo-line"); sub.add_parser("pal-line")
     a = sub.add_parser("daily-prompt"); a.add_argument("stage"); a.add_argument("job_id", nargs="?", default="")
     a = sub.add_parser("candidates"); a.add_argument("--limit", type=int, default=12)
     a = sub.add_parser("quick-pick"); a.add_argument("--alerts", action="store_true")
@@ -236,6 +236,11 @@ def main(argv=None):
         if open_:
             names = "; ".join(n["title"] for n in open_[:4]) + ("; ..." if len(open_) > 4 else "")
             print(f"{len(open_)} to do: {names}")
+    elif args.cmd == "pal-line":
+        # The pal's one line for the top of the phone push (pal.push_line): good news first, never a promise.
+        from . import pal, stats
+        from .web import work_search
+        print(pal.push_line(db, stats.compute(db, floor=work_search(s)[1]), datetime.now()))
     elif args.cmd == "daily-picks":
         from .prefs import Prefs
         try:

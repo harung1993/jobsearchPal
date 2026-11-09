@@ -1,0 +1,36 @@
+{# The pal's face: the logo's sunrise grown into a horizon. play = "" (a gentle rise), "week", "interview" or "offer".
+   Every animation is finite and runs once; with Reduce Motion the finished picture shows with no movement. #}
+{% macro horizon_css() %}<style>
+.hz{position:relative;height:var(--hz-h,112px);overflow:hidden;background:linear-gradient(to bottom,var(--hz-sky-1),var(--hz-sky-2) 68%)}
+.hz svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hz .hz-sun{transform-box:fill-box;transform-origin:center}
+.hz .hz-water{fill:var(--hz-water)}.hz .hz-wave{fill:none;stroke:var(--hz-water-2);stroke-width:1.5;stroke-linecap:round}
+.hz .hz-glint{fill:var(--hz-glint);opacity:.9}.hz .hz-ring{fill:none;stroke:var(--sun);stroke-width:2;opacity:0}
+.hz .hz-ray{stroke:var(--sun);stroke-width:3;stroke-linecap:round;opacity:0}.hz .hz-light{fill:var(--hz-glint);opacity:0}
+:root{--hz-sky-1:#fbe9c9;--hz-sky-2:#e8f2ef;--hz-water:#cfe3dd;--hz-water-2:#b7d5cd;--hz-glint:#fff6dc}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--hz-sky-1:#2b2416;--hz-sky-2:#13201d;--hz-water:#17302b;--hz-water-2:#1e3d37;--hz-glint:#f7d58c}}
+:root[data-theme="dark"]{--hz-sky-1:#2b2416;--hz-sky-2:#13201d;--hz-water:#17302b;--hz-water-2:#1e3d37;--hz-glint:#f7d58c}
+@keyframes hz-rise{from{transform:translateY(46px)}}
+@keyframes hz-ring{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(2.6)}}
+@keyframes hz-ray{0%{opacity:0;transform:scale(.6)}40%{opacity:.95}100%{opacity:.55;transform:scale(1)}}
+@keyframes hz-spread{0%{opacity:0;transform:scaleX(.05)}50%{opacity:.85}100%{opacity:.45;transform:scaleX(1)}}
+.hz .hz-sun{animation:hz-rise 1.4s cubic-bezier(.2,.8,.2,1) 1 backwards}
+.hz.play-interview .hz-ring{transform-box:fill-box;transform-origin:center;animation:hz-ring 1.4s ease-out 2}
+.hz.play-interview .hz-ring.r2{animation-delay:.35s}
+.hz.play-offer .hz-ray{opacity:.55;transform-box:view-box;transform-origin:50% 100%;animation:hz-ray 1.6s .7s ease-out 1 backwards}
+.hz.play-week .hz-light{opacity:.45;transform-box:fill-box;transform-origin:center;animation:hz-spread 1.8s ease-out 1 backwards}
+@media (prefers-reduced-motion:reduce){.hz .hz-sun,.hz .hz-ring,.hz .hz-ray,.hz .hz-light{animation:none!important}}
+</style>{% endmacro %}
+
+{% macro horizon(hour=9, play="") %}{% set lift = [[(hour - 13)|abs * 3, 0]|max, 22]|min %}
+<div class="hz{{ ' play-' ~ play if play }}" aria-hidden="true">
+ <svg viewBox="0 0 1000 120" preserveAspectRatio="xMidYMax slice">
+  {% if play == 'offer' %}<g><path class="hz-ray" d="M500 58V12"/><path class="hz-ray" d="M500 58L446 20"/><path class="hz-ray" d="M500 58L554 20"/><path class="hz-ray" d="M500 58L404 40"/><path class="hz-ray" d="M500 58L596 40"/></g>{% endif %}
+  {% if play == 'interview' %}<circle class="hz-ring" cx="500" cy="74" r="30"/><circle class="hz-ring r2" cx="500" cy="74" r="30"/>{% endif %}
+  <g transform="translate(0 {{ 0 if play in ('interview', 'offer') else lift }})"><circle class="hz-sun" cx="500" cy="{{ 66 if play == 'offer' else (74 if play == 'interview' else 88) }}" r="{{ 34 if play == 'offer' else 30 }}" fill="var(--sun)"/></g>
+  <rect class="hz-water" x="0" y="90" width="1000" height="32"/>
+  <path class="hz-wave" d="M60 100h120M260 106h90M420 98h160M650 107h80M800 100h140"/>
+  <path class="hz-glint" d="M470 95h60v3h-60zM482 103h36v2.5h-36zM490 111h20v2h-20z"/>
+  {% if play == 'week' %}<rect class="hz-light" x="120" y="94" width="760" height="6" rx="3"/><rect class="hz-light" x="220" y="104" width="560" height="4" rx="2"/><rect class="hz-light" x="340" y="112" width="320" height="3" rx="1.5"/>{% endif %}
+ </svg>
+</div>{% endmacro %}

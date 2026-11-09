@@ -1,0 +1,91 @@
+# unemploymentPal voice
+
+**How unemploymentPal talks, for every string: the dashboard, the morning email, phone pushes and every page.** Written 2026-11-08.
+The rules come from a graded review of the research on unemployment and job searching (A is the strongest evidence, D the weakest),
+done for palStack; the main sources are listed at the end. New copy goes into the phrase bank below first, then into the code. Most
+lines live in `autoapply/pal.py`.
+
+## The stance
+
+**A pal who knows a job search is hard work, tells you honestly how the market is, and is on your side.** A long search tends to wear
+people down rather than getting easier. Hiring is slow right now even though unemployment is low. Encouragement only helps when it
+rests on what the person has actually done. So unemploymentPal:
+- names the difficulty
+- credits the effort
+- points to one next thing
+- never promises an outcome
+
+**Ethics line:** we use a psychological lever only if the person would approve of it once it was explained.
+
+## The rules
+
+| # | Rule | Why (grade) | Say | Don't say |
+|---|---|---|---|---|
+| 1 | **Say it is hard, and that it is the situation.** | Unemployment wears on mental health and it doesn't fade with time (A, B); the market data (A) | "Quiet weeks are common right now; it says more about the market than about you." | "You'll get used to it." |
+| 2 | **Encourage from the record, never the future.** | Expectations built on your record went with more offers; positive fantasies with fewer (B/C) | "Yesterday you sent 3, and that counts." / "You've had 4 interviews from this search, so employers do pick you out." | "Your dream job is out there." / "You'll land something soon." |
+| 3 | **A no is one stone in the ocean.** It's not personal, not permanent, and comes with one thing in their control. | Callbacks are mostly screening (B); "it's never you" is untested and sometimes false | "It's one stone in a very big ocean: most no's come down to numbers and screening." | "It's not you, it's them." |
+| 4 | **Good news and open doors first.** | The product's brief; looking should feel safe | "Good news first: Harbor AI wrote back about an interview." | A subject line that opens with a rejection |
+| 5 | **Name what they did, specifically.** | Feedback aimed at the self can lower performance (B) | "Sent. That's one more door you knocked on." | "You're amazing!" |
+| 6 | **Let a bad day be a bad day.** Rest is allowed. | Pressure to feel positive goes with more sadness (B) | "You've done enough for today. Everything here will still be waiting in the morning." | "Stay positive!" / "Look on the bright side." |
+| 7 | **Count up.** No streaks, no comparisons, counts before percentages. | A broken streak lowers effort (B); comparison hurts (B); counts are read better than rates | "3 replies from 41 sent" | "Don't break your streak." / "People like you get..." / "Response rate 7%" as the headline |
+| 8 | **The weekly minimum is a checklist, never a threat.** The state's notice wins. | Benefit rules frighten even people who comply (B) | "One more by Saturday covers this week." | "You'll lose your benefits." / "Only 1 more needed!" |
+| 9 | **Market lines carry a source and a date, and no figures.** "Right now" must be true this month. | Official data (A); house rule | "Searches are taking longer for most people right now than a few years ago, and hiring has been slow this year." | "It takes 12 weeks to find a job." / "The market is terrible." |
+| 10 | **Few messages; bad news batched.** A rejection is never a push. | Frequent bad-news contact harms (graded in the debt doc) | The brief: "The closed ones need nothing from you." | A push per rejection |
+| 11 | **Honest numbers stay honest.** "Closed" is the real rejected count; work-search counts are never softened. | finPal rule 9 | "12 still in play · 5 closed" | Hiding a count |
+| 12 | **Errors are ours, and kind, with a next step.** | House rule | "We couldn't save that. Try again in a moment." | "Failed." |
+
+House rules: no emojis, one exclamation mark at most, "group" never "club", absolute dates in anything that is kept. "Research
+suggests", never "science proves", and copy never quotes a research figure.
+
+## Phrase bank
+
+| Moment | Line |
+|---|---|
+| Morning, someone wrote back | "{Company} wrote back. Let's look at that first." |
+| Morning, interview | "Good news first: {Company} wrote back about an interview." |
+| Morning, after a rejection | "{Company} said no this time. Rejections sting, even when you expect them. It's one stone in a very big ocean: most no's come down to numbers and screening, and one doesn't decide the rest of your search." |
+| Morning, quiet stretch | "No news is the hardest part of a search. What you've sent is still out there." |
+| Monday | "New week. Last week's effort still counts." |
+| Evening | "Searching is real work. It's fine to stop for today." |
+| First run | "Starting a search is a lot. We'll take it one morning at a time." |
+| Celebration, week covered | "That's this week covered. {n} activities logged for your {label}. The rest of the week is yours." |
+| Celebration, interview | "{Company} wants to talk. You got their attention. A prep pack with likely questions and your best stories is on its way." |
+| Celebration, offer | "An offer from {Company}. You did this. Every application, every follow-up and every hard morning led here. Take a breath before you decide." |
+| After Submit | "Sent. That's one more door you knocked on." |
+| Follow-up | "Applied 14 days ago · no reply yet. Following up is normal." |
+| Empty: emails | "All sorted. Nothing needs you right now." |
+| Empty: ready | "You're all caught up. The next daily run looks for more. Resting counts too." |
+| Push, nothing new | "Nothing new to send today. Rest counts too." |
+| Sign in | "Welcome back. Your search is right where you left it." |
+
+## Motion
+
+The logo's sunrise grown into a horizon (`templates/_horizon.html`):
+- The sun's height follows the time of day.
+- Three celebrations, each scaled to its size and played once per event:
+  - **Week covered:** light spreads across the water.
+  - **Interview:** the sun lifts with a ring of light.
+  - **Offer:** the full sunrise.
+- With Reduce Motion, the finished picture shows with no movement. No loop runs longer than 5 seconds, and every animation is finite.
+
+## Keeping it honest
+- `autoapply/market.yaml` is refreshed monthly, after the jobs report and JOLTS. A line older than 45 days hides itself.
+- Do not claim (the evidence doesn't support it): "people adapt to unemployment", "any job fixes it", "it takes N weeks",
+  "N% of applications get a reply", "gaps don't matter right now", "more applications get you a better job", "telling people a
+  rejection isn't personal helps them".
+
+## Main sources
+
+- Paul and Moser (2009), Journal of Vocational Behavior.
+- Paul (2005), a meta-analysis of how distress changes with time out of work.
+- Liu, Huang and Wang (2014), Psychological Bulletin.
+- Vinokur et al. (2000), the JOBS programme follow-up, Journal of Occupational Health Psychology.
+- van Hooft et al. (2021), Journal of Applied Psychology.
+- Oettingen and Mayer (2002), Journal of Personality and Social Psychology.
+- Kroft, Lange and Notowidigdo (2013), Quarterly Journal of Economics.
+- Silverman and Barasch (2023), on broken streaks and later effort, Journal of Consumer Research.
+- Kluger and DeNisi (1996), Psychological Bulletin.
+- Ford et al. (2018) and Dejonckheere et al. (2017, 2022), on pressure to feel positive.
+- Wright and Patrick (2019), on how benefit conditions are experienced.
+- Granovetter (1973), American Journal of Sociology.
+- Market data: U.S. Bureau of Labor Statistics (Current Population Survey; Job Openings and Labor Turnover Survey).
