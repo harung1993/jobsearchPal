@@ -133,10 +133,12 @@ def check(job: dict, plan: dict, report: dict, profile: dict, root: Path, other_
     add("Form", "Required consents chosen by you", not held_open, "; ".join(held_open[:4]))
     errs = [f"{e.get('label')}: {e.get('error')}" for e in report.get("errors", [])]
     add("Form", "No fill errors", not errs, "; ".join(errs[:3]))
-    filled = {f.get("label", "").lower(): str(f.get("value", "")) for f in report.get("filled", [])}
+    # A list, not a dict: two fields can share a label (Ashby's "Phone" number and its "Phone" text-consent question).
+    filled = [(f.get("label", "").lower(), str(f.get("value", ""))) for f in report.get("filled", [])]
     for key, pat in (("email", "e-mail|email"), ("phone", "phone")):
         want = str(profile.get(key) or "")
-        got = [v for lbl, v in filled.items() if re.search(pat, lbl)]
+        got = [v for lbl, v in filled if re.search(pat, lbl)
+               and (key != "phone" or re.sub(r"\D", "", v))]  # the consent answer has no digits: not a phone number
         if want and got:
             same = any(re.sub(r"\D", "", v) == re.sub(r"\D", "", want) if key == "phone" else v.strip().lower() == want.lower() for v in got)
             add("Form", f"{key.capitalize()} matches your profile", same, f"form has {got[0]}" if not same else "")

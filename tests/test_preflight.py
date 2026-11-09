@@ -55,3 +55,12 @@ def test_problems_lock_submit(tmp_path, monkeypatch):
     assert any(c["name"] == "No other company's name" and not c["ok"] and not c["hard"] for c in checks)
     missing = next(c for c in checks if c["name"] == "Every job date from your base resume")["detail"]
     assert "jan 2017 - feb 2019" in missing
+
+
+def test_phone_check_ignores_a_same_label_consent_answer(tmp_path, monkeypatch):
+    # Ashby: "Phone" (the number) and "Phone" (text-message consent) both end up in the filled list.
+    _, plan = setup(tmp_path, monkeypatch, GOOD, "Dear Kestrel team, Jane Doe jane@example.com")
+    report = {"filled": [{"label": "Phone", "value": "(555) 010-0000"},
+                         {"label": "Phone", "value": "No - I do not consent to receiving text messages"}]}
+    checks = preflight.check({"company": "Kestrel"}, plan, report, PROFILE, tmp_path, [])
+    assert next(c for c in checks if c["name"] == "Phone matches your profile")["ok"]

@@ -171,3 +171,19 @@ def test_submit_without_visible_button_reports_instead_of_raising(base_url, pdfs
     r = submit({"url": f"{base_url}/no-submit/", "ats": "generic", "approved_by_user": True}, PROFILE, tmp_path)
     assert not r.submit_clicked and not r.submitted
     assert any("Submit button" in e["error"] for e in r.errors)
+
+
+def test_same_label_choice_question_does_not_take_the_phone_number():
+    # Ashby (Instructure): a "Phone" text field and a "Phone" text-message consent radio on one form.
+    from autoapply.fillers.base import resolve, norm
+    prof = {"phone": "(978) 555-0100", "rules": [{"match": "phone", "key": "phone"}]}
+    consent = {"label": "Phone", "kind": "radio",
+               "options": [{"text": "Yes - I consent to receiving text messages"}, {"text": "No - I do not consent to receiving text messages"}]}
+    text = {"label": "Phone", "kind": "text"}
+    assert resolve(consent, {}, prof) == (None, "")  # left for the person, not a fill error
+    assert resolve(text, {}, prof) == ("(978) 555-0100", "profile")
+    # The person picks a consent answer under "Phone": it goes to the radio, never into the number field.
+    plan = {"answers": {"Phone": "No - I do not consent to receiving text messages"}}
+    sib = {norm(o["text"]) for o in consent["options"]}
+    assert resolve(consent, plan, prof, sib)[1] == "plan"
+    assert resolve(text, plan, prof, sib) == ("(978) 555-0100", "profile")
