@@ -138,7 +138,7 @@ def status(settings, environ: dict) -> dict:
         "resume": {"done": bool(resume), "note": resume.name if resume else "not uploaded"},
         "about": {"done": has_about, "note": "written" if has_about else "optional, but it makes answers much better"},
         "gmail": {"done": bool(environ.get("GMAIL_USER") and environ.get("GMAIL_APP_PASSWORD")),
-                  "note": environ.get("GMAIL_USER") or "optional: job alerts, replies and the morning brief"},
+                  "note": _email_note(environ)},
         "agent": agent_ready(_prefs(settings)),
     }
     left = [k for k in REQUIRED if not steps[k]["done"]]
@@ -428,18 +428,18 @@ def save_about(root: Path, data_dir: Path, form: dict):
     out.write_text("\n".join(md))
 
 
+def _email_note(environ) -> str:
+    from . import mailboxes
+    user = environ.get("GMAIL_USER")
+    if not user:
+        return "optional: job alerts, replies and the morning brief"
+    more = len(mailboxes.extras()) + len(mailboxes.forwarded())
+    return user + (f" + {more} more" if more else "")
+
+
 # ---- gmail ----------------------------------------------------------------------------------------
 
-def test_gmail(user: str, pw: str) -> str:
-    """'' when the login works, else a short reason."""
-    import imaplib
-    try:
-        with imaplib.IMAP4_SSL("imap.gmail.com", timeout=20) as m:
-            m.login(user, pw)
-        return ""
-    except imaplib.IMAP4.error as e:
-        msg = str(e)
-        return ("Gmail refused the login. Use an app password (Google Account > Security > App passwords), "
-                "not your normal password.") if "AUTH" in msg.upper() or "credentials" in msg.lower() else msg[:200]
-    except OSError as e:
-        return f"couldn't reach Gmail: {e}"[:200]
+def test_gmail(user: str, pw: str, provider: str = "gmail") -> str:
+    """'' when the login works, else a short reason. Any provider in mailboxes.PROVIDERS (the name is historical)."""
+    from . import mailboxes
+    return mailboxes.test(provider, user, pw)

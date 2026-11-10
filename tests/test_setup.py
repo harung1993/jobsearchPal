@@ -117,11 +117,11 @@ def test_account_comes_first_and_then_sign_in_is_required(fresh):
 
 def test_gmail_saved_only_after_login_works(fresh, monkeypatch):
     s, c = fresh
-    monkeypatch.setattr(setup, "test_gmail", lambda u, p: "Gmail refused the login.")
+    monkeypatch.setattr(setup, "test_gmail", lambda u, p, *a: "Gmail refused the login.")
     assert "Not saved" in c.post("/setup/gmail", data={"gmail_user": "a@gmail.com", "gmail_password": "abcd efgh"}).text
     assert not (s.data_dir / "secrets.json").exists()
     seen = {}
-    monkeypatch.setattr(setup, "test_gmail", lambda u, p: seen.update(u=u, p=p) or "")
+    monkeypatch.setattr(setup, "test_gmail", lambda u, p, *a: seen.update(u=u, p=p) or "")
     c.post("/setup/gmail", data={"gmail_user": "a@gmail.com", "gmail_password": "abcd efgh ijkl mnop"})
     assert seen["p"] == "abcdefghijklmnop" and os.environ["GMAIL_APP_PASSWORD"] == "abcdefghijklmnop"
     assert "abcdefghijklmnop" not in c.get("/setup").text  # never shown again

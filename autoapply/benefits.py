@@ -47,6 +47,7 @@ RESOURCES = [
 # Letters from the agency. Gmail search (read-only) plus a check on each message.
 AGENCY_QUERIES = ['(from:gov OR from:masshire OR from:jobquest) (unemployment OR RESEA OR reemployment OR "work search" '
                   'OR claimant OR "benefit year" OR correspondence OR determination OR appeal OR hearing) -subject:"Job search brief"']
+AGENCY_SEARCH_WORDS = ["unemployment", "RESEA", "reemployment", "work search", "benefit year"]  # non-Gmail inboxes
 AGENCY_WORDS = re.compile(r"unemployment|\bresea\b|reemployment|work search|claimant|benefit year|correspondence"
                           r"|determination|appeal|hearing|weekly (benefit )?(claim|certification)|masshire|jobquest|your claim|disqualif|eligibility", re.I)
 DENIAL = re.compile(r"\b(denied|disqualif\w*|ineligible|not eligible|overpayment|benefits? (have been |were |are )?(stopped|suspended))\b", re.I)
