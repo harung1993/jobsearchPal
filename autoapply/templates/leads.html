@@ -1,23 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Leads{% endblock %}
 {% block body %}{% from "macros.html" import applied_btn %}
-<div class="ph"><div><h1>Leads</h1>
+<div class="ph ph-leads"><div><h1>Leads</h1>
  <div class="sub">Every role from your LinkedIn, Indeed and other job-alert emails, best fit first. Star the ones that feel right; you don't have to look at all of them.</div>
  <details class="how"><summary>How leads work</summary><p>After each email sync, the top leads are looked up on the company's own job board
   (Greenhouse, Lever, Ashby, Workable; no AI). Matches join the roles the daily run can tailor. <b>Star</b> a lead and the next run searches the web for it;
   <b>Auto apply</b> does that for one role right away and uses credits. <b>Score</b> is a rough fit from your titles and resume.</p></details></div>
- <button type="button" class="btn applied-open" title="Log an application you sent on LinkedIn, a company site or by email">Applied elsewhere</button></div>
+ <details class="addmenu"><summary class="btn primary" aria-haspopup="menu">+ Add job</summary><div class="addmenu-list" role="menu">
+  <button type="button" class="btn ghost" role="menuitem" data-open-paste><b>Paste a job post</b><span>A LinkedIn page, a careers page, an email or a link</span></button>
+  <button type="button" class="btn ghost applied-open" role="menuitem" title="Log an application you sent on LinkedIn, a company site or by email"><b>Applied elsewhere</b><span>Log one you already sent</span></button>
+ </div></details></div>
 <style>.how{margin-top:6px;font-size:14.5px;color:var(--ink-2)}.how summary{cursor:pointer;color:var(--accent-ink);font-weight:600}.how p{margin:6px 0 0;max-width:760px}</style>
 
 {% with open=src_open %}{% include "_sources.html" %}{% endwith %}
 {% if running %}<p class="notice" role="status" style="margin:0 0 14px"><span class="grow">A run is going{% if running.at %} (since {{ running.at }}){% endif %}{% if running.label %}: {{ running.label }}{% endif %}. Auto apply is available again when it finishes, and what it found shows under the role.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
  <script>setTimeout(()=>location.reload(),20000)</script>{% endif %}
-<details class="card add-job" {% if not rows and show == 'open' %}open{% endif %}><summary><b>Add a job</b> <span class="muted">· paste a post you found anywhere</span></summary>
- <form method="post" action="/leads/paste" data-native><textarea name="text" rows="6" maxlength="200000" required
-  placeholder="Paste the whole job post (a LinkedIn page, a careers page, an email) or a link"></textarea>
-  <div class="add-row"><span class="muted">You check the details before anything is saved.</span><button class="btn primary">Read it</button></div></form></details>
-<style>.add-job{margin:0 0 14px}.add-job summary{cursor:pointer}.add-job textarea{width:100%;font:inherit;font-size:15px;margin-top:10px}
-.add-job .add-row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:8px}</style>
+<dialog id="pastejob" class="ask pastejob" aria-labelledby="pastejob-t">
+ <h2 id="pastejob-t">Paste a job post</h2>
+ <div class="ask-b"><p>Found a role somewhere else? Paste the whole post (on LinkedIn, select the page with Cmd+A and copy it), a careers page, an email, or a link. You check the details before anything is saved.</p></div>
+ <form method="post" action="/leads/paste" data-native><textarea name="text" rows="10" maxlength="200000" required
+  placeholder="Paste the job post or a link here"></textarea>
+  <div class="ask-acts"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Read it</button></div></form>
+</dialog>
+<style>.ph-leads{flex-wrap:nowrap;align-items:flex-start}.ph-leads>div:first-child{flex:1 1 auto;min-width:0}
+.addmenu{position:relative;flex:none}@media (max-width:600px){.ph-leads{flex-wrap:wrap}}.addmenu summary{list-style:none;cursor:pointer}.addmenu summary::-webkit-details-marker{display:none}
+.addmenu-list{position:absolute;right:0;top:calc(100% + 6px);z-index:6;display:grid;gap:2px;min-width:250px;padding:6px;background:var(--surface);
+ border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg)}
+.addmenu-list .btn{display:grid;justify-items:start;justify-content:start;gap:1px;width:100%;text-align:left;padding:8px 10px;height:auto;white-space:normal}
+.addmenu-list .btn span{font-size:13px;font-weight:400;color:var(--ink-3)}
+.pastejob{width:min(640px,calc(100vw - 32px))}.pastejob textarea{width:100%;font:inherit;font-size:15px}</style>
+<script>(()=>{const d=document.getElementById("pastejob");if(!d||!d.showModal)return;
+ const menu=document.querySelector(".addmenu");
+ document.addEventListener("click",e=>{if(menu&&menu.open&&!menu.contains(e.target))menu.open=false;
+  if(e.target.closest("[data-open-paste]")){e.preventDefault();if(menu)menu.open=false;d.showModal();d.querySelector("textarea").focus()}
+  if(e.target.closest("#pastejob [data-close]"))d.close()});
+ document.querySelectorAll(".applied-open").forEach(b=>b.addEventListener("click",()=>{if(menu)menu.open=false}));
+ if(location.hash==="#add")d.showModal()})();</script>
 <nav class="tabs" aria-label="Filter">
  {% for key, label, n in tabs %}<a href="/leads?show={{ key }}" {% if key == show %}aria-current="page"{% endif %}>{{ label }} <span class="count">{{ n }}</span></a>{% endfor %}
 </nav>
@@ -58,7 +76,7 @@ Heads up: {{ r.applied }}.{% endif %}">
    {% if r.status == 'dismissed' %}<button class="btn ghost sm" name="status" value="new">Restore</button>
    {% elif not r.job_id %}<button class="btn ghost sm" name="status" value="dismissed" title="Not interested">Dismiss</button>{% endif %}</form></div></td>
  </tr>{% endfor %}</tbody></table>
- {% else %}<div class="empty-state"><b>No leads here yet.</b><span>They come in with each email sync, from the job-alert emails in Gmail.
+ {% else %}<div class="empty-state"><b>No leads here yet.</b><span><button type="button" class="btn sm primary" data-open-paste>Paste a job post</button> They also come in with each email sync, from the job-alert emails in Gmail.
   Set up job alerts on LinkedIn or Indeed, and connect Gmail on Settings &gt; Setup.</span></div>{% endif %}
 </section>
 <style>
