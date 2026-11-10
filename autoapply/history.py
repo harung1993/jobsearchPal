@@ -12,6 +12,7 @@ import json
 import re
 from datetime import date, datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .db import DB
 from .rank import _norm, _url, company_key
@@ -61,11 +62,19 @@ def find(db: DB, company: str, title: str, url: str = "") -> dict | None:
     return hits[0] if hits else None
 
 
+def _web(url: str) -> str:
+    """A posting link only if it is an ordinary web address: it becomes a link on the dashboard, so a
+    javascript: or data: value from an imported file must never get there."""
+    url = (url or "").strip()
+    p = urlparse(url)
+    return url if p.scheme.lower() in ("http", "https") and p.netloc else ""
+
+
 def log(db: DB, company: str, title: str, url: str = "", applied_on: str = "", pay: str = "", via: str = "",
         location: str = "", notes: str = "") -> dict:
     """Records one application you sent outside the tool. Returns {"id", "status": "added"|"marked"|"already"}:
     already = this role was tracked as applied before, and nothing changed."""
-    company, title = company.strip(), title.strip()
+    company, title, url = company.strip(), title.strip(), _web(url)
     if not company or not title:
         raise ValueError("A company and a role title are needed.")
     when = _date(applied_on) if applied_on else datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -123,6 +132,7 @@ def import_rows(db: DB, rows: list[list[str]]) -> int:
     n = 0
     for raw in rows[1:]:
         r = read(raw)
+        r["url"] = _web(r.get("url", ""))
         company, title = r.get("company", ""), r.get("title", "")
         when = _date(r.get("applied", ""))
         if not (company and when):

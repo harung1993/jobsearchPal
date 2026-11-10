@@ -164,3 +164,18 @@ def test_hand_logged_rows_are_a_record_not_a_review_page(tmp_path):
     html = c.get("/").text
     assert f'/job/{a["id"]}' not in html and f'/job/{b["id"]}' not in html
     assert 'href="https://initech.example/jobs/3"' in html
+
+
+def test_only_web_links_are_kept(tmp_path):
+    """A javascript: link in an imported file or the form must never become a link on the dashboard."""
+    from autoapply import history
+    from autoapply.db import DB
+    (tmp_path / "data").mkdir()
+    db = DB(tmp_path / "data" / "autoapply.db")
+    r = history.log(db, "Acme", "Analyst", url="javascript:alert(1)", applied_on="2026-11-01")
+    assert r["job"]["url"] == "" and r["job"]["apply_url"] == ""
+    history.import_rows(db, [["Company", "Position", "Date Applied", "Link"],
+                             ["Beta", "Engineer", "2026-11-02", "JavaScript:alert(1)"],
+                             ["Gamma", "Engineer", "2026-11-02", "https://jobs.example.com/1"]])
+    urls = {j["company"]: j["url"] for j in db.all() if j["company"] in ("Beta", "Gamma")}
+    assert urls == {"Beta": "", "Gamma": "https://jobs.example.com/1"}

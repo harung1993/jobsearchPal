@@ -221,7 +221,7 @@ pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--su
  </div>
  {% macro row(j) %}<tr><td><b style="font-weight:600">{{ co(j.company) }}</b></td>
   {# Only roles the tool filled have a review page worth opening; imported and hand-logged ones are just a record. #}
-  <td>{% if j.plan_json %}<a href="/job/{{ j.id|urlencode }}">{{ j.title }}</a>{% elif j.apply_url or j.url %}<a href="{{ j.apply_url or j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}</td>
+  <td>{% if j.plan_json %}<a href="/job/{{ j.id|urlencode }}">{{ j.title }}</a>{% elif (j.apply_url or j.url or '').lower().startswith(('http://', 'https://')) %}<a href="{{ j.apply_url or j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}</td>
   <td class="ink2" style="white-space:nowrap">{{ j.applied_label }}</td><td class="ink2 hide-sm">{{ j.pay or "" }}</td>
   <td><span class="pill {{ j.state|pillcls }}">{{ j.state|label }}</span></td></tr>{% endmacro %}
  <table><thead><tr><th>Company</th><th>Role</th><th>Applied</th><th class="hide-sm">Pay</th><th>Status</th></tr></thead><tbody>
