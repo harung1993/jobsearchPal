@@ -245,7 +245,8 @@ def tag(db, settings, prefs, limit: int | None = None) -> dict:
     search, terms = settings.raw.get("search") or {}, profile_terms(settings.root)
     applied = Applied(db, int(prefs.data.get("reapply_after_days", 90) or 0))
     todo = sorted((j for j in db.by_status("new")
-                   if not j.get("skills_json") and (j.get("description") or "").strip() and not applied.why(j["company"])),
+                   if not j.get("skills_json") and (j.get("description") or "").strip()
+                   and not applied.why(j["company"], j["title"], j.get("apply_url") or j.get("url"))),
                   key=lambda j: score(j, search, terms), reverse=True)[:limit]
     done = errors = 0
     for i in range(0, len(todo), BATCH):

@@ -11,6 +11,7 @@ import time
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -191,7 +192,7 @@ def make_app(settings, db: DB) -> FastAPI:
                                                           setup_left=len(setup.status(settings, os.environ)["left"]), **ctx))
 
     @app.get("/")
-    def index():
+    def index(msg: str = "", log: str = ""):
         if settings.raw.get("_from_example"):
             return RedirectResponse("/setup", status_code=303)  # fresh install
         from . import prep
@@ -224,7 +225,8 @@ def make_app(settings, db: DB) -> FastAPI:
                     plan_open=not wk_plan and f"pal:plan-skip:{s['this_week_start'].isoformat()}" not in db.nudge_states(),
                     offer=None if back else coach.offer(db, settings, s, now.date(), bool(ivs)), back=back, if_then=coach.if_then(db),
                     celebrate=cel, rejection=pal.rejection_note(db, now.date()), week_left=_week_left(s, now.date()),
-                    todo=todo, nav="dashboard", running=run_state(), picks_default=Prefs(settings.data_dir, settings.raw).limits()["picks_per_day"])
+                    todo=todo, nav="dashboard", running=run_state(), picks_default=Prefs(settings.data_dir, settings.raw).limits()["picks_per_day"],
+                    msg=msg[:300], open_log=log == "1", today=now.date().isoformat())
         if cel:
             db.set_nudge(cel["key"], "done")  # each celebration plays once
         return resp
@@ -236,6 +238,53 @@ def make_app(settings, db: DB) -> FastAPI:
             return "This week is covered."
         when = "today" if today.weekday() == 5 else "by Saturday"  # weeks run Sunday to Saturday
         return f"{'One more' if left == 1 else f'{left} more'} {when} covers this week."
+
+    @app.post("/applications/log")
+    def log_application(company: str = Form(""), title: str = Form(""), url: str = Form(""), applied_on: str = Form(""),
+                        via: str = Form(""), pay: str = Form("")):
+        """One application you sent outside the tool. The same role is never added twice."""
+        from . import history
+        try:
+            r = history.log(db, company, title, url=url.strip(), applied_on=applied_on.strip(), via=via, pay=pay.strip())
+        except ValueError as e:
+            return RedirectResponse(f"/?log=1&msg={quote(str(e))}#applications", status_code=303)
+        j = r["job"]
+        if r["status"] == "already":
+            when = (j.get("submitted_at") or "")[:10]
+            msg = f"You already have {j['title']} at {j['company']}{' from ' + when if when else ''}, so nothing was added."
+        else:
+            msg = (f"Added {j['title']} at {j['company']}. That's one more door you knocked on. It counts toward your week,"
+                   " and the daily run won't offer that role again.")
+        return RedirectResponse(f"/?msg={quote(msg)}#applications", status_code=303)
+
+    @app.post("/applications/import")
+    async def import_applications(file: UploadFile = File(...)):
+        from . import history
+        raw = await file.read()
+        if len(raw) > 2_000_000:
+            return RedirectResponse(f"/?msg={quote('That file is over 2 MB. Export just the tracker sheet as CSV.')}#applications",
+                                    status_code=303)
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("latin-1")
+        before = len(db.by_status("submitted"))
+        try:
+            added = history.import_csv(db, text)
+        except Exception as e:  # a malformed CSV shouldn't take the dashboard down
+            return RedirectResponse(f"/?msg={quote('Could not read that CSV: ' + str(e)[:120])}#applications", status_code=303)
+        marked = len(db.by_status("submitted")) - before - added
+        msg = (f"Imported {added} application{'' if added == 1 else 's'}"
+               + (f", and marked {marked} the tool already knew as applied" if marked > 0 else "")
+               + ". Ones you already had were left as they were." if added or marked > 0 else
+               "Nothing new in that file: every application in it is already here, or it has no Company, Position and Date Applied columns.")
+        return RedirectResponse(f"/?msg={quote(msg)}#applications", status_code=303)
+
+    @app.get("/applications.csv")
+    def export_applications():
+        from . import history
+        return Response(history.export_csv(db), media_type="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="applications-{date.today().isoformat()}.csv"'})
 
     @app.post("/pal/seen")
     def pal_seen(key: str = Form(...), back: str = Form("/")):
@@ -435,7 +484,7 @@ def make_app(settings, db: DB) -> FastAPI:
         every = leads.rows(db)
         applied = Applied(db, int(Prefs(settings.data_dir, settings.raw).data.get("reapply_after_days", 90) or 0))
         for r in every:
-            r["applied"] = "" if r["job_id"] else applied.why(r["company"])
+            r["applied"] = "" if r["job_id"] else applied.why(r["company"], r["title"], r["url"])
         groups = {"open": [r for r in every if r["status"] in ("new", "starred") and not r["job_id"]],
                   "starred": [r for r in every if r["status"] == "starred"],
                   "tracked": [r for r in every if r["job_id"]],
