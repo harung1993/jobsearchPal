@@ -88,3 +88,26 @@ def test_in_page_form_errors_come_back_for_the_dialog(tmp_path):
     assert r.status_code == 400 and r.json()["title"].startswith("That request")
     html = c.get("/").text
     assert "X-In-Page" in html and "sendInPage" in html
+
+
+def test_applied_elsewhere_from_any_page_and_one_click_on_a_lead(tmp_path):
+    s, db, c = make(tmp_path)
+    leads.ensure(db)
+    db.conn.execute("insert into leads (key, title, company, status, last_seen, score, url) values "
+                    "('acme|data engineer', 'Data Engineer', 'Acme', 'new', '2026-11-06', 5, 'https://example.org/j/1')")
+    db.conn.commit()
+    html = c.get("/leads").text
+    assert 'id="logapp"' in html and "applied-open" in html and "Yes, I applied" in html
+    r = c.post("/applications/log", data={"company": "Acme", "title": "Data Engineer", "url": "https://example.org/j/1",
+                                          "back": "/leads?show=open#leads"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/leads?show=open&done=Added") and r.headers["location"].endswith("#leads")
+    assert leads.get(db, "acme|data engineer")["status"] == "applied" and leads.get(db, "acme|data engineer")["job_id"]
+    assert "Yes, I applied" not in c.get("/leads?show=all").text  # no Applied button on an applied lead
+    # from the popup, a different date; a missing role is an error for the dialog, not a redirect
+    r = c.post("/applications/log", data={"company": "SafelyYou", "title": "Data Integration Engineer", "applied_on": "2026-11-10",
+                                          "via": "Teamtailor", "back": "/stats"}, follow_redirects=False)
+    assert r.headers["location"].startswith("/stats?done=")
+    r = c.post("/applications/log", data={"company": "X", "title": "", "back": "/stats"}, headers={"x-in-page": "1"})
+    assert r.status_code == 400 and "role title" in r.json()["detail"]
+    r = c.post("/applications/log", data={"company": "Y", "title": "Z", "back": "//evil.example"}, follow_redirects=False)
+    assert r.headers["location"].startswith("/?msg=")  # only same-site paths are followed

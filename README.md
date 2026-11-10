@@ -315,6 +315,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Run log** (`/runs`, linked from the Running badge and the status strip): what each run did, step by step, read
   from `data/daily/*.md`. **Auto apply** on a lead also leaves its result under that lead (for example "the posting
   says it has been filled"). Confirmations and errors show in the app's own dialog, not browser popups.
+- **Applied elsewhere** (sidebar on every page, and the Dashboard and Leads headers): a short popup to log an
+  application you sent on LinkedIn, a company site or by email. Each lead and each Ready or Shortlist role also has an
+  **Applied** button that marks that exact role as applied today.
 - **Your applications** (bottom of the Dashboard) are the tracker, kept in the local database: no spreadsheet or
   Google account needed. **Log one you sent elsewhere** adds an application you made on LinkedIn, a company site or
   by email, so it counts toward your week and is never offered again. **Bring in your old tracker** imports a CSV
