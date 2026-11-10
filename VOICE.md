@@ -52,6 +52,13 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Celebration, interview | "{Company} wants to talk. You got their attention. A prep pack with likely questions and your best stories is on its way." |
 | Celebration, offer | "An offer from {Company}. You did this. Every application, every follow-up and every hard morning led here. Take a breath before you decide." |
 | After Submit | "Sent. That's one more door you knocked on." |
+| Logged by hand | "Added {role} at {Company}. That's one more door you knocked on. It counts toward your week, and the daily run won't offer that role again." |
+| First application | "Your first application is out. Starting is often the hardest part, and you've started." |
+| Milestone (10, 25, 50...) | "{n} applications sent. Each one took reading, tailoring and deciding. That's {n} doors you knocked on." |
+| A run didn't finish | "{Run} didn't finish {when}. That's on us, not you." |
+| Empty: recruiters | "No recruiters yet. When one gets in touch, they show up here." |
+| Create account | "Welcome. Let's set you up. Starting a search is a lot. We'll take it one morning at a time." |
+| Credit | "Part of palStack" (sidebar, sign-in, Settings, the brief's footer), the same words as the other pals. |
 | Follow-up | "Applied 14 days ago · no reply yet. Following up is normal." |
 | Empty: emails | "All sorted. Nothing needs you right now." |
 | Empty: ready | "You're all caught up. The next daily run looks for more. Resting counts too." |

@@ -3,18 +3,20 @@
 <title>{% block title %}Dashboard{% endblock %} · unemploymentPal</title>
 <script>try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
-/* Design tokens. Calm and legible for people in a stressful stretch: the system font at a comfortable size, a deep evergreen rail, one teal accent for every action, and sunrise gold
-   used only for this week's progress. Green, amber, red and violet are for status only.
+/* Design tokens. Calm, warm and legible for people in a stressful stretch: the system font at a comfortable size, warm paper surfaces (not clinical grey), a deep
+   evergreen rail with a little morning light, one teal accent for every action, and sunrise gold for progress and deadlines. Green, amber, red and violet are for
+   status only, and red only for what is urgent.
    Spacing 4/8/12/16/24/32, radius 14 cards / 9 controls, borders instead of shadows (one lifted card per page). */
 :root{color-scheme:light;
- --bg:#f1f4f2;--surface:#ffffff;--surface-2:#eef2f0;--surface-3:#e2e8e5;--line:#dfe5e2;--line-2:#d3dbd7;
- --ink:#14211d;--ink-2:#41504b;--ink-3:#64736e;
- --accent:#0f6e66;--accent-ink:#0b5650;--on-accent:#fff;--accent-soft:#dcefeb;--series-1:#0f6e66;--track:#e3e9e6;--axis:#c3ccc8;
+ --bg:#f6f2ea;--surface:#fffdf9;--surface-2:#f3eee5;--surface-3:#e9e2d5;--line:#e8e1d4;--line-2:#dcd3c3;
+ --ink:#1d2420;--ink-2:#474d46;--ink-3:#686c64;
+ --accent:#0f6e66;--accent-ink:#0b5650;--on-accent:#fff;--accent-soft:#dfeee8;--series-1:#0f6e66;--track:#ece5d9;--axis:#cdc4b4;
  --sun:#e9a420;--sun-soft:#fcefd2;
  --rail:#12302b;--rail-ink:#d7e6e1;--rail-ink-2:#93b0a8;--rail-hover:#1b3f39;--rail-active:#22504a;
  --good:#17692b;--good-dot:#22a447;--good-soft:#e2f3e6;--warn:#8a5300;--warn-dot:#f0a91b;--warn-soft:#fdf2d8;
  --bad:#b42318;--bad-dot:#dc4a3d;--bad-soft:#fdeceA;--violet:#6941c6;--violet-dot:#8a63f0;--violet-soft:#efeafd;
- --shadow:none;--shadow-lg:0 10px 30px -16px rgba(15,60,52,.35);--radius:14px;--r-ctl:9px;--focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+ --shadow:none;--shadow-lg:0 12px 32px -18px rgba(70,50,20,.32);--radius:14px;--r-ctl:9px;--focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);
+ --glow:rgba(242,181,68,.16)}
 @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
  --bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--surface-3:#24352f;--line:#24332f;--line-2:#2e403a;
  --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;
@@ -23,7 +25,7 @@
  --rail:#0a1311;--rail-ink:#d7e6e1;--rail-ink-2:#7f988f;--rail-hover:#13221f;--rail-active:#1a3330;
  --good:#5fd07a;--good-dot:#22a447;--good-soft:#132a19;--warn:#f2c14e;--warn-dot:#f0a91b;--warn-soft:#2c230e;
  --bad:#f38a80;--bad-dot:#dc4a3d;--bad-soft:#341815;--violet:#b9a2fb;--violet-dot:#8a63f0;--violet-soft:#231a3d;
- --shadow:none;--shadow-lg:0 10px 30px -16px rgba(0,0,0,.7)}}
+ --shadow:none;--shadow-lg:0 10px 30px -16px rgba(0,0,0,.7);--glow:rgba(242,181,68,.07)}}
 :root[data-theme="dark"]{color-scheme:dark;
  --bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--surface-3:#24352f;--line:#24332f;--line-2:#2e403a;
  --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;
@@ -32,7 +34,7 @@
  --rail:#0a1311;--rail-ink:#d7e6e1;--rail-ink-2:#7f988f;--rail-hover:#13221f;--rail-active:#1a3330;
  --good:#5fd07a;--good-dot:#22a447;--good-soft:#132a19;--warn:#f2c14e;--warn-dot:#f0a91b;--warn-soft:#2c230e;
  --bad:#f38a80;--bad-dot:#dc4a3d;--bad-soft:#341815;--violet:#b9a2fb;--violet-dot:#8a63f0;--violet-soft:#231a3d;
- --shadow:none;--shadow-lg:0 10px 30px -16px rgba(0,0,0,.7)}
+ --shadow:none;--shadow-lg:0 10px 30px -16px rgba(0,0,0,.7);--glow:rgba(242,181,68,.07)}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
 body{font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
@@ -44,7 +46,11 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
 
 /* layout */
 .app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh;background:linear-gradient(to right,var(--rail) 232px,transparent 232px)}
-.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:2px;padding:18px 14px;background:var(--rail);color:var(--rail-ink)}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:2px;padding:18px 14px;color:var(--rail-ink);
+ background:radial-gradient(140% 38% at 18% 0%,var(--glow,rgba(242,181,68,.16)),transparent 70%),var(--rail)}
+.by{display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 4px 0;font-size:13px;color:var(--rail-ink-2)}
+.by b{font-weight:700;color:var(--rail-ink)}.by:hover{color:var(--rail-ink);text-decoration:none}.by:hover b{text-decoration:underline;text-underline-offset:2px}
+.by svg{flex:none}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;padding:4px 8px 20px;color:#fff}
 .brand:hover{text-decoration:none}.brand svg{flex:none}
 .nav{display:grid;gap:2px}
@@ -64,7 +70,7 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
  .app{grid-template-columns:minmax(0,1fr);background:none}
  .side{position:sticky;z-index:6;height:auto;flex-direction:row;align-items:center;padding:10px 16px;background:var(--rail)}
  .brand{padding:0}.side .nav{display:none}
- .side .foot{margin:0 0 0 auto;flex-direction:row}.side .foot .seg,.sync-lbl{display:none}
+ .side .foot{margin:0 0 0 auto;flex-direction:row}.side .foot .seg,.sync-lbl,.side .foot .by{display:none}
  .main{padding:20px 16px 96px}
  /* Bottom tab bar on phones: the five places, always one tap away. */
  .tabbar{display:grid;grid-template-columns:repeat(6,1fr);position:fixed;left:0;right:0;bottom:0;z-index:7;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
@@ -117,6 +123,7 @@ header.top h1{font-size:22px;line-height:1.3;margin:0;letter-spacing:-.02em;font
 .pill.ignored,.pill.unsure,.pill.skipped{background:var(--surface-2);color:var(--ink-3)}
 .pill.guess{background:transparent;border:1px dashed var(--line-2)}
 .pill.waiting{background:var(--warn-soft);color:var(--warn)} .pill.waiting::before{background:var(--warn-dot)}
+.pill.deadline{background:var(--sun-soft);color:var(--warn)} .pill.deadline::before{background:var(--sun)}
 .badge{margin-left:auto;font-size:12.5px;font-weight:700;background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:1px 7px;font-variant-numeric:tabular-nums}
 
 /* run status: one line when all is well, the details on demand */
@@ -187,7 +194,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
 @media (max-width:640px){.hbars .row{grid-template-columns:minmax(0,110px) minmax(0,1fr) 36px}}
 #tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:550;padding:6px 10px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:9;max-width:260px}
 </style></head><body>
-{% set nav = nav|default('') %}
+{% from "_palstack.html" import palstack_mark %}{% set nav = nav|default('') %}
 <div class="app">
 <aside class="side">
  <a class="brand" href="/" aria-label="unemploymentPal home"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>unemploymentPal</span></a>
@@ -204,6 +211,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
   <form method="post" action="/sync" style="margin:0"><button class="btn sm" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg><span class="sync-lbl">Sync email</span></button></form>
   <form method="post" action="/logout" style="margin:0"><button class="btn sm" title="Sign out" aria-label="Sign out" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="sync-lbl">Sign out</span></button></form>
   <div class="seg" role="group" aria-label="Theme"><button data-t="">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button></div>
+  <a class="by" href="https://palstack.io" target="_blank" rel="noopener">{{ palstack_mark(16) }}<span>Part of <b>palStack</b></span></a>
  </div>
 </aside>
 <main class="main">{% block body %}{% endblock %}</main>

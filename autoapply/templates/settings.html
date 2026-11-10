@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
-{% block body %}
+{% block body %}{% from "_palstack.html" import about_card %}
 {% set tab_sub = {'sorting': 'Each job email goes to the first source that is on; if it fails or is unsure, to the next.',
                   'daily': 'The morning pass: finds roles, tailors your materials and fills forms. It never submits.',
                   'costs': 'What the daily pass may do each day, and what it all costs.'}[tab] %}
@@ -277,4 +277,5 @@
 .notice{margin:12px 0 0}
 .tokens{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--ink);font-size:14.5px}.tokens.on{background:var(--surface-2)}
 </style>
+{{ about_card() }}
 {% endblock %}

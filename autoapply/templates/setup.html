@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Setup · Settings{% endblock %}
-{% block body %}
+{% block body %}{% from "_palstack.html" import about_card %}
 <style>.ws-rule{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:15px}.ws-rule p{margin:0 0 4px}.ws-rule p:last-child{margin:0}</style>
 {% set s = st.steps %}
 {% set req_done = 4 - st.left|length %}
@@ -251,4 +251,5 @@ input[type=file]{font:inherit;font-size:14.5px;max-width:100%}
   h.addEventListener("click",ev=>{if(ev.target.closest("a,button,input,select,label"))return;sec.classList.toggle("collapsed")})});
  addEventListener("hashchange",()=>{const s=document.getElementById(location.hash.slice(1));if(s)s.classList.remove("collapsed")});
  document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener("click",()=>{const s=document.getElementById(a.getAttribute("href").slice(1));if(s)s.classList.remove("collapsed")}));})();</script>
+{{ about_card() }}
 {% endblock %}

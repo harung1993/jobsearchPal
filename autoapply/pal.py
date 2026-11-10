@@ -167,7 +167,32 @@ def celebration(db, s: dict, today: date, label: str = "work search") -> dict | 
         if key not in seen:
             return {"key": key, "kind": "week", "title": "That's this week covered",
                     "line": f"{done} activities logged for your {label}. The rest of the week is yours."}
-    return None
+    return milestone(db, s, today)
+
+
+# Applications sent, counted up. Small moments that credit effort from the record (VOICE rules 2, 5 and 7): never a target,
+# never a streak, and nothing is said between them.
+MILESTONES = (1, 10, 25, 50, 75, 100, 150, 200, 300)
+
+
+def milestone(db, s: dict, today: date) -> dict | None:
+    """The newest milestone of applications sent, once, and only when the application that reached it went out in the
+    last CELEBRATE_DAYS (a first deploy on a long search doesn't announce old ones)."""
+    sent = sorted(str(j.get("submitted_at") or "")[:10] for j in (s.get("applications") or []) if j.get("submitted_at"))
+    reached = [m for m in MILESTONES if len(sent) >= m]
+    if not reached:
+        return None
+    m = reached[-1]
+    if sent[m - 1] < (today - timedelta(days=CELEBRATE_DAYS)).isoformat():
+        return None
+    key = f"celebrate:milestone:{m}"
+    if key in db.nudge_states():
+        return None
+    if m == 1:
+        return {"key": key, "kind": "milestone", "title": "Your first application is out",
+                "line": "Starting is often the hardest part, and you've started."}
+    return {"key": key, "kind": "milestone", "title": f"{m} applications sent",
+            "line": f"Each one took reading, tailoring and deciding. That's {m} doors you knocked on."}
 
 
 def rejection_note(db, today: date) -> dict | None:
