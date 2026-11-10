@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Run log{% endblock %}
+{% block body %}
+<div class="ph"><div><h1>Run log</h1>
+ <div class="sub">What each run did, step by step: the morning run, Run now, Auto apply and Prepare. Newest first.</div></div></div>
+{% if running %}<p class="notice" role="status" style="margin:0 0 14px"><span class="grow"><span class="live" aria-hidden="true"></span>
+ Running now{% if running.at %}, since {{ running.at }}{% endif %}{% if running.label %}: {{ running.label }}{% endif %}.
+ This page refreshes itself; the step's result shows here when it finishes.</span></p>
+ <script>setTimeout(()=>location.reload(),15000)</script>{% endif %}
+{% for d in days %}<section class="card mt runday">
+ <h2>{{ strptime(d.date).strftime("%A, %B %-d") }}</h2>
+ {% for r in d.runs %}<div class="run-block">
+  <div class="run-h"><b>{{ r.kind }}</b>{% if r.at %} · {{ r.at }}{% endif %}
+   {% if not r.ok %}<span class="pill rejected" style="text-transform:none">something stopped</span>{% endif %}</div>
+  <ol class="steps">{% for st in r.steps %}<li><span class="stage">{{ st.stage or "note" }}</span>
+   <span class="txt">{{ st.text }}{% if st.job %} <a href="/job/{{ st.job|urlencode }}">Open role</a>{% endif %}</span></li>{% endfor %}</ol>
+ </div>{% endfor %}
+</section>{% else %}
+<section class="card mt"><div class="empty-state"><b>No runs logged yet.</b><span>The first morning run, or Run now on the dashboard, shows up here.</span></div></section>
+{% endfor %}
+<style>.runday h2{margin:0 0 6px;font-size:17px}.run-block{padding:10px 0;border-top:1px solid var(--line)}.run-block:first-of-type{border-top:0}
+.run-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.steps{margin:0;padding:0;list-style:none;display:grid;gap:6px}.steps li{display:grid;grid-template-columns:130px 1fr;gap:10px;font-size:15px}
+.steps .stage{color:var(--ink-3);font-size:13.5px;padding-top:2px}.steps .txt{white-space:pre-line;overflow-wrap:anywhere}
+.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}@media (prefers-reduced-motion:reduce){.live{animation:none}}
+@media (max-width:600px){.steps li{grid-template-columns:1fr;gap:0}}</style>
+{% endblock %}

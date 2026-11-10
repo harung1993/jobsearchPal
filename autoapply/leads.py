@@ -83,7 +83,9 @@ def parse(text: str) -> list[dict]:
 def ensure(db):
     db.conn.executescript(SCHEMA)
     have = {r[1] for r in db.conn.execute("pragma table_info(leads)")}
-    for col in ("apply_url", "ats_checked"):  # added 11/4: the company's own posting, found without AI
+    # apply_url, ats_checked (11/4): the company's own posting, found without AI.
+    # tried_at, note (11/10): when Auto apply last ran on this lead and what it found, shown on the Leads page.
+    for col in ("apply_url", "ats_checked", "tried_at", "note"):
         if col not in have:
             db.conn.execute(f"alter table leads add column {col} text")
 
@@ -158,6 +160,14 @@ def set_status(db, k: str, status: str):
         raise ValueError(status)
     ensure(db)
     db.conn.execute("update leads set status = ? where key = ?", (status, k))
+    db.conn.commit()
+
+
+def set_note(db, k: str, text: str, when: datetime | None = None):
+    """What the last Auto apply on this lead found (e.g. "the posting says it has been filled"), with the time."""
+    ensure(db)
+    when = (when or datetime.now()).strftime("%Y-%m-%d %H:%M")
+    db.conn.execute("update leads set tried_at = ?, note = ? where key = ?", (when, (text or "").strip()[:400], k))
     db.conn.commit()
 
 

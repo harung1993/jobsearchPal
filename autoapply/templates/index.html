@@ -13,7 +13,7 @@
    {% if greet.market %}<p class="market">{{ greet.market.text }} <small>{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener">{{ greet.market.source }}</a>{% else %}{{ greet.market.source }}{% endif %}, checked {{ strptime(greet.market.checked).strftime("%b %-d, %Y") }}</small></p>{% endif %}
    <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div>
   </div>
- <div class="ph-acts">{% if running %}<span class="running" role="status"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.step %} · {{ running.step }}{% endif %}</span>
+ <div class="ph-acts">{% if running %}<a class="running" role="status" href="/runs" title="See what it's doing"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.label %} · {{ running.label }}{% endif %}</a>
   <script>setTimeout(()=>location.reload(),20000)</script>
  {% else %}<form method="post" action="/run" class="runnow" onsubmit="this.querySelector('button').disabled=true">
   <label class="ink2" for="picks">Roles</label><select id="picks" name="picks">{% for n in range(1, 6) %}<option {% if n == picks_default %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
@@ -42,7 +42,7 @@
 @media (max-width:600px){.welcome-b{padding:16px}.welcome h1{font-size:23px}.palnote{margin:0 16px 16px}}</style>
 <style>.wdots{display:flex;gap:6px;margin-top:8px}.wdots i{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2)}.wdots i.on{background:var(--sun);border-color:var(--sun)}
 .ph-acts{display:flex;gap:8px;align-items:center}.runnow{display:flex;gap:6px;align-items:center;margin:0}.runnow select{width:auto;min-width:60px}
-.running{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;color:var(--ink-2);background:var(--accent-soft);border-radius:999px;padding:6px 12px}
+.running{text-decoration:none!important;display:inline-flex;gap:8px;align-items:center;font-size:14.5px;color:var(--ink-2);background:var(--accent-soft);border-radius:999px;padding:6px 12px}
 .running i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}@media (prefers-reduced-motion:reduce){.running i{animation:none}}
 .ready .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.ready .acts form{margin:0}
@@ -52,10 +52,7 @@
 .decline .pop span{font-size:13.5px;padding:0 4px 2px}.decline .pop .btn{justify-content:flex-start;text-align:left}
 .skillm{color:var(--accent-ink)}.avatar.todo-av{opacity:.55}.group-h{display:flex;flex-direction:column;gap:2px;margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--line)}.group-h:first-of-type{border-top:0;padding-top:0;margin-top:4px}
 .group-h b{font-size:15.5px;color:var(--ink)}.group-h span{font-size:14px;color:var(--ink-3)}@media (max-width:600px){.ready{flex-wrap:wrap}.ready .acts{width:100%;justify-content:flex-start;padding-left:50px}.decline .pop{right:auto;left:0}}</style>
-<script>document.addEventListener("submit",e=>{const f=e.target;if(!f.matches("form.prepare"))return;
- if(!confirm("Prepare: "+f.dataset.role+"\n\nThis runs the agent now: it tailors your resume and cover letter and fills the form. "+
-  "It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit."))e.preventDefault()});
-document.addEventListener("click",e=>{document.querySelectorAll("details.decline[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});</script>
+<script>document.addEventListener("click",e=>{document.querySelectorAll("details.decline[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});</script>
 
 {% if setup_left %}<div class="notice" style="margin:0 0 20px"><span class="grow">Setup isn't finished: {{ setup_left }} required step{{ '' if setup_left == 1 else 's' }} left. The daily run needs them.</span><a class="btn sm" href="/setup">Finish setup</a></div>{% endif %}
 {% if src_total and src_on < src_total // 2 %}<div class="notice" style="margin:0 0 16px"><span class="grow">You're using {{ src_on }} of {{ src_total }} job sources. LinkedIn, Indeed and HigherEdJobs alerts, job sites and company boards all add matches.</span><a class="btn sm" href="/leads#sources">See job sources</a></div>{% endif %}
@@ -64,6 +61,7 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
  {% if bad %}{{ bad|map(attribute='label')|join(', ') }} didn't finish {{ bad[0].when }}. That's on us, not you{% elif late %}{{ late|map(attribute='label')|join(', ') }} overdue{% else %}Everything ran on time{% endif %} <u>· details</u></summary>
  <section class="runs" aria-label="When things last ran">
  {% for r in s.runs %}<span class="run {{ r.state }}" title="{{ r.summary }}"><i aria-hidden="true"></i><b>{{ r.label }}</b> {{ r.when }}{% if r.state == 'fail' %} · didn't finish{% elif r.state == 'stale' %} · overdue{% endif %}</span>{% endfor %}
+ <a class="run" href="/runs">Run log: what each run did</a>
  </section></details>
 
 {% macro decline(j) %}<details class="decline"><summary class="btn ghost sm">Decline</summary>
@@ -90,7 +88,10 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
    <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.why %} · {{ j.why|truncate(90) }}{% endif %} · <a href="/job/{{ j.id|urlencode }}">details</a> · <a class="know" href="/dua?company={{ co(j.company)|striptags|trim|urlencode }}#people">anyone you know there?</a></div>
    {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}</div>
-  <div class="acts">{{ decline(j) }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-role="{{ j.company }} · {{ j.title }}">
+  <div class="acts">{{ decline(j) }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-confirm-title="Prepare: {{ j.company }} · {{ j.title }}" data-confirm-ok="Prepare"
+   data-confirm="This runs the agent now: it tailors your resume and cover letter and fills the form.
+
+It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit.">
    <button class="btn sm" title="Tailor and fill this one now. Uses credits.">Prepare</button></form>{% endif %}</div></div>
  {% endfor %}{% endif %}
  {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
