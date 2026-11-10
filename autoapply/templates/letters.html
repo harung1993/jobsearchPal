@@ -24,9 +24,23 @@
 </div>
 
 <div>
- <section class="card preview o3" aria-labelledby="pv-h" aria-live="polite"><h2 id="pv-h">An opening in this style</h2>
-  <p class="muted small">A made-up example for an operations analyst role, so you can compare styles. Your letters use your own work.</p>
-  <blockquote id="pv">{{ samples[v.tone ~ '|' ~ v.opening] }}</blockquote>
+ <section class="card preview o3" id="examples" aria-labelledby="pv-h"><h2 id="pv-h"><span>An opening in this style</span>
+  {% if mine %}<span class="pv-src" role="group" aria-label="Example from">
+   <button type="button" data-src="mine" aria-pressed="true">Your resume</button><button type="button" data-src="sample" aria-pressed="false">Sample</button></span>{% endif %}</h2>
+  {% if mine %}
+  <p class="muted small" id="pv-note" data-mine="Written from your resume{% if mine.company %}, for {{ mine.role }} at {{ mine.company }}{% elif mine.role %}, for a {{ mine.role }} role{% endif %}. Facts come only from your resume."
+     data-sample="A made-up example for an operations analyst role, the same for everyone.">Written from your resume{% if mine.company %}, for {{ mine.role }} at {{ mine.company }}{% elif mine.role %}, for a {{ mine.role }} role{% endif %}. Facts come only from your resume.</p>
+  <blockquote id="pv" aria-live="polite">{{ mine.samples.get(v.tone ~ '|' ~ v.opening) or samples[v.tone ~ '|' ~ v.opening] }}</blockquote>
+  <div class="pv-foot">{% if mine.stale %}<span class="muted small">Your resume changed since these were written.</span>{% endif %}
+   <button class="btn sm ghost" form="ex-form">{{ 'Refresh from my new resume' if mine.stale else 'Write them again' }}</button></div>
+  {% else %}
+  <p class="muted small" id="pv-note">A made-up example for an operations analyst role, so you can compare styles.</p>
+  <blockquote id="pv" aria-live="polite">{{ samples[v.tone ~ '|' ~ v.opening] }}</blockquote>
+  {% if has_resume %}<div class="pv-ask"><button class="btn sm" form="ex-form">Show these with my resume</button>
+   <span class="muted small">Writes all 12 once from your resume, with the AI set up for skill matching. Saved, so switching styles stays free.</span></div>
+  {% else %}<p class="muted small" style="margin:10px 0 0"><a href="/setup#resume">Upload your resume</a> to see these written from your own work.</p>{% endif %}
+  {% endif %}
+  {% if ex_err %}<p class="notice bad-note small" role="alert">{{ ex_err }}</p>{% elif ex_done %}<p class="notice good-note small" role="status">Done. These examples now use your own work.</p>{% endif %}
  </section>
 
  <section class="card mt o5" aria-labelledby="avoid-h"><h2 id="avoid-h">Words and phrases to never use</h2>
@@ -47,6 +61,7 @@
 </div>
 <div class="savebar"><button class="btn primary">Save how my letters sound</button></div>
 </form>
+<form method="post" action="/letters/examples" id="ex-form" hidden></form>
 
 <section class="card mt" aria-labelledby="recent-h"><h2 id="recent-h">Your recent letters</h2>
  {% if recent %}<p class="muted small">How your letters open now, to compare with the example above.</p>
@@ -70,12 +85,19 @@
 .sugs{display:flex;flex-wrap:wrap;gap:6px}.sug{font:inherit;font-size:13.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);cursor:pointer}
 .sug[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
 .savebar{margin-top:16px;display:flex;justify-content:flex-end}
-.good-note{background:var(--good-soft)}
+.good-note{background:var(--good-soft)}.bad-note{background:var(--bad-soft,#fde8e8)}
+.preview h2{flex-wrap:wrap}.pv-src{display:inline-flex;border:1px solid var(--line-2);border-radius:999px;padding:2px;gap:2px}
+.pv-src button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--ink-2);padding:4px 10px;border-radius:999px;cursor:pointer}
+.pv-src button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+.pv-foot,.pv-ask{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;margin-top:10px}.pv-foot{justify-content:space-between}
 .past{padding:10px 0;border-bottom:1px solid var(--line)}.past:last-child{border-bottom:0}.past p{margin:4px 0 0}
 @media (prefers-reduced-motion:reduce){.opt span{transition:none}}</style>
-<script>(()=>{const S={{ samples|tojson }},pv=document.getElementById('pv'),f=document.querySelector('form.voice');
-const show=()=>{const t=f.tone.value,o=f.opening.value;pv.textContent=S[t+'|'+o]||''};
+<script>(()=>{const S={{ samples|tojson }},M={{ (mine.samples if mine else {})|tojson }},pv=document.getElementById('pv'),f=document.querySelector('form.voice');
+let src=Object.keys(M).length?'mine':'sample';const note=document.getElementById('pv-note');
+const show=()=>{const k=f.tone.value+'|'+f.opening.value;pv.textContent=(src==='mine'&&M[k])||S[k]||''};
 f.querySelectorAll('input[name=tone],input[name=opening]').forEach(r=>r.addEventListener('change',show));
+document.querySelectorAll('.pv-src button').forEach(b=>b.addEventListener('click',()=>{src=b.dataset.src;
+ document.querySelectorAll('.pv-src button').forEach(x=>x.setAttribute('aria-pressed',x===b));if(note&&note.dataset[src])note.textContent=note.dataset[src];show()}));
 const a=document.getElementById('avoid'),list=()=>a.value.split('\n').map(x=>x.trim()).filter(Boolean);
 const mark=()=>document.querySelectorAll('.sug').forEach(b=>b.setAttribute('aria-pressed',list().some(x=>x.toLowerCase()===b.dataset.p.toLowerCase())));
 document.querySelectorAll('.sug').forEach(b=>b.addEventListener('click',()=>{const l=list(),i=l.findIndex(x=>x.toLowerCase()===b.dataset.p.toLowerCase());

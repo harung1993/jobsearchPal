@@ -48,9 +48,8 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
 .app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh;background:linear-gradient(to right,var(--rail) 232px,transparent 232px)}
 .side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:2px;padding:18px 14px;color:var(--rail-ink);
  background:radial-gradient(140% 38% at 18% 0%,var(--glow,rgba(242,181,68,.16)),transparent 70%),var(--rail)}
-.by{display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 4px 0;font-size:13px;color:var(--rail-ink-2)}
-.by b{font-weight:700;color:var(--rail-ink)}.by:hover{color:var(--rail-ink);text-decoration:none}.by:hover b{text-decoration:underline;text-underline-offset:2px}
-.by svg{flex:none}
+.side .ps-credit.by{margin-top:8px;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12);color:var(--rail-ink-2)}
+.side .ps-credit.by small{color:var(--rail-ink-2)}.side .ps-credit.by b{color:var(--rail-ink)}.side .ps-credit.by:hover{border-color:rgba(255,255,255,.3)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;padding:4px 8px 20px;color:#fff}
 .brand:hover{text-decoration:none}.brand svg{flex:none}
 .nav{display:grid;gap:2px}
@@ -194,7 +193,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
 @media (max-width:640px){.hbars .row{grid-template-columns:minmax(0,110px) minmax(0,1fr) 36px}}
 #tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:550;padding:6px 10px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:9;max-width:260px}
 </style></head><body>
-{% from "_palstack.html" import palstack_mark %}{% set nav = nav|default('') %}
+{% from "_palstack.html" import palstack_mark, credit, credit_css %}{{ credit_css() }}{% set nav = nav|default('') %}
 <div class="app">
 <aside class="side">
  <a class="brand" href="/" aria-label="jobsearchPal home"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>jobsearchPal</span></a>
@@ -211,7 +210,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
   <form method="post" action="/sync" style="margin:0"><button class="btn sm" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg><span class="sync-lbl">Sync email</span></button></form>
   <form method="post" action="/logout" style="margin:0"><button class="btn sm" title="Sign out" aria-label="Sign out" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="sync-lbl">Sign out</span></button></form>
   <div class="seg" role="group" aria-label="Theme"><button data-t="">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button></div>
-  <a class="by" href="https://palstack.io" target="_blank" rel="noopener">{{ palstack_mark(16) }}<span>Part of <b>palStack</b></span></a>
+  {{ credit("by") }}
  </div>
 </aside>
 <main class="main">{% block body %}{% endblock %}</main>

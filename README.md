@@ -17,7 +17,7 @@ small always-on computer you own and does two jobs:
 It reads your job email (read-only), files every reply, reminds you who to follow up with and drafts the reply,
 and writes an interview prep pack when an interview comes in.
 
-jobsearchPal is part of [palStack](https://palstack.io), a family of privacy-first tools built to make everyday
+jobsearchPal is part of [palStack.io](https://palstack.io), a family of privacy-first tools built to make everyday
 life a little easier. Like the other pals, it runs on your own computer: no tracking, no ads, nothing sold.
 
 ![Dashboard](docs/dashboard.png)
@@ -159,9 +159,10 @@ The dashboard shows at most one of these cards at a time, so the page never pile
   company's own job board (no AI) and join the roles the daily run can tailor; star others and the next run
   searches the web for them. Parsing is plain Python, from the "View job" blocks these emails use.
 
-**See every source in one place.** The Leads page opens with *Where your jobs come from*: each source marked on,
-off or "needs a step" (a missing key, Gmail not connected), how many roles it brought in, and a one-line how-to
-for the ones you haven't set up. The dashboard nudges you when fewer than half are on.
+**See every source in one place.** The Leads page opens with *Where your jobs come from*: the sources finding
+jobs now (with how many roles each brought in), the ones that need a step (a missing key, Gmail not connected),
+and everything not on yet in one line. **See list** shows every company you watch, with a filter. The dashboard
+nudges you when fewer than half are on.
 
 Each run saves what every source returned to `data/sources.json`; the Setup page shows the counts, and a
 source that failed, next to its name.
@@ -358,6 +359,8 @@ usage limits). Jev, OpenRouter models and a monthly budget cap are optional.
 
 **How do I make the cover letters sound more like me?** Settings, then **How your letters sound**: pick a
 tone, an opening and a length (each shows an example), list words to never use, and paste a letter you liked.
+**Show these with my resume** writes the examples once from your own resume, for your latest application (one
+small AI call, saved; only facts from your resume), so you see each style with your own work.
 To fix one letter, open the application and use **Rewrite this letter** on its Cover letter tab.
 
 **Submit is greyed out.** Something in *Fix before you submit* needs you: usually a required question, a
@@ -532,7 +535,8 @@ which walks through everything in a browser:
 
 1. **Base resume**: upload your .docx (a PDF is made for you). Tailored resumes are built from it.
 2. **Contact details and standard answers** (prefilled from the resume), saved to `profile.yaml`.
-3. **Job interests**: titles to look for and skip, US-only, companies to watch (paste careers-page URLs from
+3. **Job interests**: titles to look for and skip, US-only, the levels you want (entry, mid, senior, lead,
+   manager: read from the title, so "Data Engineer" is mid-level), companies to watch (paste careers-page URLs from
    Greenhouse, Lever, Ashby, Workable or SmartRecruiters) and job sites, saved to `config.yaml`.
 4. **About you** (optional, recommended): roles and level, pay ask, where you'll work, work authorization,
    what to emphasize and avoid, saved to `materials/context/setup.md`.

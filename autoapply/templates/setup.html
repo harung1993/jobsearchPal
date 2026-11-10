@@ -7,7 +7,9 @@
 {% set tab_sub = ("Starting a search is a lot. Set this up once, and it works for you every morning. " if not st.ready else "") ~ "Come back and change any of it." %}
 {% include "_tabs.html" %}
 
-<div class="setup-top">
+{% set step_rows = [('resume','Base resume',1),('profile','Contact details',1),('interests','Job interests',1),('about','About you',0),('agent','AI agent',1),('gmail','Gmail',0)] %}
+{% set done_rows = [] %}{% for r in step_rows if s[r[0]].done %}{% set _ = done_rows.append(r) %}{% endfor %}
+{% if not st.ready %}<div class="setup-top">
 <div class="prog" aria-label="{{ req_done }} of 4 required steps done"><b>{{ req_done }}</b> of 4 required done
   <div class="meter {{ 'ok' if st.ready }}"><span style="width:{{ (100 * req_done / 4)|round }}%"></span></div></div>
 <nav class="rail" aria-label="Setup steps">
@@ -15,7 +17,7 @@
  <a href="#{{ key }}" class="{{ 'done' if s[key].done }}"><i aria-hidden="true">{{ '✓' if s[key].done else loop.index }}</i>{{ label }}{% if not req %}<small>optional</small>{% endif %}</a>
  {% endfor %}
 </nav>
-</div>
+</div>{% endif %}
 
 {% if st.ready %}
 <section class="card mt good">
@@ -28,6 +30,14 @@
   Email sorting, the daily-run agent, limits and costs are in the other tabs above.</p>
 </section>
 {% endif %}
+
+<section class="card mt checklist" aria-labelledby="cl-h"><h2 id="cl-h"><span>Your setup</span><span class="count">{{ done_rows|length }} of 6 done</span></h2>
+ <ul>{% for key, label, req in done_rows %}<li><span class="ok" aria-hidden="true">✓</span><b>{{ label }}</b>
+  <span class="what">{{ s[key].note }}</span><a class="edit-link" href="#{{ key }}" data-open="{{ key }}">Edit<span class="sr"> {{ label }}</span></a></li>{% endfor %}
+  <li class="letters-row"><span class="ok pen" aria-hidden="true">✎</span><b>How your letters sound</b><span class="what">tone, how it opens, length</span>
+   <a class="edit-link" href="/letters">Open</a></li></ul>
+ {% if not done_rows %}<p class="muted small" style="margin:8px 0 0">Steps you finish show up here, with what you saved.</p>{% endif %}
+</section>
 
 <section class="card mt step" id="resume">
  <h2><span><span class="n {{ 'done' if s.resume.done }}">{{ "✓" if s.resume.done else "1" }}</span> Base resume</span><span class="count">{{ s.resume.note }}</span></h2>
@@ -92,6 +102,11 @@
     <textarea name="exclude" rows="3" placeholder="intern, junior, sales">{{ exclude }}</textarea></label>
   </div>
   <label class="check mt"><input type="checkbox" name="us_only" value="1" {% if us_only %}checked{% endif %}> US roles only (and Remote roles that name no other country)</label>
+
+  <fieldset class="fld mt"><legend style="font-size:14px;font-weight:600;color:var(--ink-2);padding:0;margin-bottom:6px">Levels to look at</legend>
+   <div class="checks">{% for k, label in level_opts %}<label class="check"><input type="checkbox" name="level::{{ k }}" value="1" {% if k in levels %}checked{% endif %}> {{ label }}</label>{% endfor %}</div>
+   <small class="muted">Read from the title: "Data Engineer" is mid-level, "Senior Data Engineer" is senior. Picked levels rank a little
+    higher and the rest a little lower; nothing is hidden. None picked: senior titles get a small lift.</small></fieldset>
 
   <label class="fld mt"><span>Companies to watch</span>
    <textarea name="companies" rows="6" placeholder="https://job-boards.greenhouse.io/gitlab&#10;https://jobs.lever.co/netflix&#10;https://jobs.ashbyhq.com/ramp&#10;greenhouse airbnb">{{ boards }}</textarea>
@@ -174,10 +189,7 @@
  </form>
 </section>
 
-<section class="card mt" id="letters"><div class="fl-row"><div><h2 style="margin:0 0 4px">How your letters sound</h2>
- <p class="lead" style="margin:0">Tone, how a letter opens, its length, words to never use, and letters you liked. See an example of each
-  before you choose.</p></div><a class="btn" href="/letters">Open</a></div></section>
-<style>.fl-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}</style>
+
 
 <section class="card mt step" id="agent">
  <h2><span><span class="n {{ 'done' if s.agent.done }}">{{ "✓" if s.agent.done else "5" }}</span> Sign in to an AI agent</span><span class="count">{{ s.agent.note }}</span></h2>
@@ -242,14 +254,28 @@ input[type=file]{font:inherit;font-size:14.5px;max-width:100%}
 .step{scroll-margin-top:16px} .sub3{font-size:14.5px;font-weight:650;margin:20px 0 6px} code.sel{user-select:all;word-break:break-all}
 </style>
 
-<style>.step.collapsed>*:not(h2){display:none}.step.collapsed{padding-bottom:14px}.step h2{cursor:pointer}
-.step h2 .edit{display:none;font-size:14px;font-weight:600;color:var(--accent-ink);margin-left:10px}.step.collapsed h2 .edit{display:inline}
-.step.collapsed h2 .count{display:none}</style>
-<script>(()=>{const steps=[...document.querySelectorAll("section.step")];const target=location.hash.slice(1);
- steps.forEach(sec=>{const h=sec.querySelector("h2");if(!h)return;const e=document.createElement("span");e.className="edit";e.textContent="Edit";h.firstElementChild.appendChild(e);
-  if(sec.querySelector("h2 .n.done")&&sec.id!==target)sec.classList.add("collapsed");
-  h.addEventListener("click",ev=>{if(ev.target.closest("a,button,input,select,label"))return;sec.classList.toggle("collapsed")})});
- addEventListener("hashchange",()=>{const s=document.getElementById(location.hash.slice(1));if(s)s.classList.remove("collapsed")});
- document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener("click",()=>{const s=document.getElementById(a.getAttribute("href").slice(1));if(s)s.classList.remove("collapsed")}));})();</script>
+<style>
+/* Finished steps live as rows in "Your setup"; their forms open in place from Edit and close again with Done. */
+.checklist ul{list-style:none;margin:0;padding:0}
+.checklist li{display:grid;grid-template-columns:26px minmax(130px,190px) minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.checklist li:last-child{border-bottom:0}
+.checklist .ok{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:var(--good-soft);color:var(--good);font-size:13.5px;font-weight:700}
+.checklist .ok.pen{background:var(--accent-soft);color:var(--accent-ink)}
+.checklist .what{color:var(--ink-3);font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.checklist .edit-link{font-size:14.5px;font-weight:600;padding:4px 10px;border-radius:8px}.checklist .edit-link:hover{background:var(--surface-2);text-decoration:none}
+.checklist .small{font-size:13.5px}
+@media (max-width:600px){.checklist li{grid-template-columns:26px minmax(0,1fr) auto}.checklist .what{grid-column:2/4;grid-row:2;white-space:normal}}
+.step.folded{display:none}.step .done-btn{font-size:14px;margin-left:8px}
+.step h2{justify-content:flex-start}.step h2 .count{margin-left:auto}
+</style>
+<script>(()=>{const steps=[...document.querySelectorAll("section.step")],target=location.hash.slice(1);
+ const open=id=>{const s=document.getElementById(id);if(s&&s.classList.contains("step")){s.classList.remove("folded");s.scrollIntoView({block:"start"})}};
+ steps.forEach(sec=>{if(!sec.querySelector("h2 .n.done"))return;
+  const h=sec.querySelector("h2"),b=document.createElement("button");b.type="button";b.className="btn sm ghost done-btn";b.textContent="Done";
+  b.addEventListener("click",()=>{sec.classList.add("folded");const r=document.querySelector('[data-open="'+sec.id+'"]');if(r)r.focus()});
+  if(h)h.appendChild(b);if(sec.id!==target)sec.classList.add("folded")});
+ document.querySelectorAll("[data-open]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault();history.replaceState(null,"","#"+a.dataset.open);open(a.dataset.open)}));
+ document.querySelectorAll('a[href^="#"]:not([data-open])').forEach(a=>a.addEventListener("click",()=>open(a.getAttribute("href").slice(1))));
+ addEventListener("hashchange",()=>open(location.hash.slice(1)));})();</script>
 {{ about_card() }}
 {% endblock %}

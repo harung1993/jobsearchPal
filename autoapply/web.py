@@ -424,12 +424,25 @@ def make_app(settings, db: DB) -> FastAPI:
         return RedirectResponse(_auth.safe_next(back) if back else "/reflect#saved", status_code=303)
 
     @app.get("/letters")
-    def letters_page(saved: str = ""):
+    def letters_page(saved: str = "", ex: str = "", err: str = ""):
         """How your cover letters sound: choices with sample lines, words to avoid, notes, letters you liked."""
         from . import voice
+        from .setup import base_resume
         return page("letters.html", nav="settings", v=voice.load(db), tones=voice.TONES, lengths=voice.LENGTHS,
                     openings=voice.OPENINGS, samples={f"{t}|{o}": s for (t, o), s in voice.SAMPLES.items()},
+                    mine=voice.examples(settings), has_resume=bool(base_resume(settings.root)),
+                    ex_done=ex == "1", ex_err=err[:200],
                     common=voice.COMMON_AVOID, recent=voice.recent(settings.data_dir), saved=bool(saved))
+
+    @app.post("/letters/examples")
+    async def letters_examples():
+        """Writes the style examples from your own resume: one model call, saved for next time."""
+        from . import voice
+        try:
+            await run_in_threadpool(voice.build_examples, settings, _Prefs(settings.data_dir, settings.raw), db)
+        except RuntimeError as e:
+            return RedirectResponse("/letters?err=" + quote(str(e)[:200]) + "#examples", status_code=303)
+        return RedirectResponse("/letters?ex=1#examples", status_code=303)
 
     @app.post("/letters")
     async def letters_save(request: Request):
@@ -861,7 +874,8 @@ def make_app(settings, db: DB) -> FastAPI:
         return page("setup.html", nav="settings", tab="setup", st=st, standing=setup.STANDING, decline=setup.DECLINE,
                     stand=setup.standing_values(prof), prof=prof, fields=setup.PROFILE_FIELDS, yes_no=setup.YES_NO,
                     titles=", ".join(search.get("title_keywords") or []), exclude=", ".join(search.get("exclude_keywords") or []),
-                    us_only=search.get("us_only", True), boards=boards, rss=rss, rss_presets=RSS_PRESETS, src_stats=src_stats,
+                    us_only=search.get("us_only", True), levels=search.get("levels") or [],
+                    level_opts=__import__("autoapply.rank", fromlist=["x"]).LEVELS, boards=boards, rss=rss, rss_presets=RSS_PRESETS, src_stats=src_stats,
                     keys={k: pr.key_hint(k) for k in ("ADZUNA_APP_ID", "ADZUNA_APP_KEY", "USAJOBS_API_KEY", "USAJOBS_EMAIL")}, feeds=setup.FEED_LABELS,
                     feeds_on=cfg.get("feeds", list(FEEDS)) if cfg else [*FEEDS, "themuse", "himalayas", "jobicy"], ws=cfg.get("work_search") or {}, states=state_rules(),
                     about=setup.load_about(settings.data_dir), about_fields=setup.ABOUT_FIELDS,

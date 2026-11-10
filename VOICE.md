@@ -58,7 +58,7 @@ suggests", never "science proves", and copy never quotes a research figure.
 | A run didn't finish | "{Run} didn't finish {when}. That's on us, not you." |
 | Empty: recruiters | "No recruiters yet. When one gets in touch, they show up here." |
 | Create account | "Welcome. Let's set you up. Starting a search is a lot. We'll take it one morning at a time." |
-| Credit | "Part of palStack" (sidebar, sign-in, Settings, the brief's footer), the same words as the other pals. |
+| Credit | "Part of palStack.io" (small p, capital S), the palStack mark with "Part of" over "palStack.io": sidebar, sign-in, the footer of Settings and Setup, the brief's footer. Links to https://palstack.io. |
 | Follow-up | "Applied 14 days ago · no reply yet. Following up is normal." |
 | Empty: emails | "All sorted. Nothing needs you right now." |
 | Empty: ready | "You're all caught up. The next daily run looks for more. Resting counts too." |

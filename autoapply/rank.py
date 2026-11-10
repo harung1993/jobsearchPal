@@ -48,11 +48,26 @@ def profile_terms(root: Path, limit: int = 120) -> set[str]:
     return {w for w, _ in c.most_common(limit)}
 
 
+# Seniority read from a title. "mid" is a title with none of these words (Data Engineer, Analytics Engineer II).
+LEVELS = [("entry", "Entry"), ("mid", "Mid-level"), ("senior", "Senior and staff"), ("lead", "Lead and principal"),
+          ("manager", "Manager and up")]
+_LEVEL_RX = [("manager", r"\b(manager|director|head|vp|vice president|chief)\b"), ("lead", r"\b(lead|principal)\b"),
+             ("senior", r"\b(senior|sr\.?|staff)\b"), ("entry", r"\b(junior|jr\.?|entry|associate|graduate|new grad|intern)\b")]
+
+
+def level_of(title: str) -> str:
+    t = (title or "").lower()
+    return next((lvl for lvl, rx in _LEVEL_RX if re.search(rx, t)), "mid")
+
+
 def score(job: dict, search: dict, terms: set[str], now: datetime | None = None, my_skills: list | None = None) -> float:
     title = (job.get("title") or "").lower()
     s = 3.0 * sum(1 for k in search.get("title_keywords") or [] if k in title)
-    if re.search(r"\b(senior|sr\.?|staff|lead|principal|head|manager|director)\b", title):
-        s += 1.0
+    levels = search.get("levels") or []
+    if levels:  # the levels you picked on Setup: a small lift for those, a small drop for the rest
+        s += 1.0 if level_of(title) in levels else -1.0
+    elif re.search(r"\b(senior|sr\.?|staff|lead|principal|head|manager|director)\b", title):
+        s += 1.0  # nothing picked: the old lean toward senior titles
     desc = set(_words(job.get("description") or ""))
     if terms and desc:
         s += 6.0 * len(desc & terms) / max(20, min(len(terms), 80))

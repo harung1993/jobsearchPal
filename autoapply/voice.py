@@ -168,3 +168,121 @@ def letter_slug(plan: dict, data_dir: Path) -> str | None:
             except OSError:
                 return None
     return None
+
+
+# ---- examples written from your own resume -------------------------------------------------------------------
+# The fixed SAMPLES above are about a made-up role. These are the same 12 openings (tone x opening) written once
+# from your resume, for the role you most recently prepared, so you can see what each choice does with your own
+# work. One model call through the source chosen for skill matching; saved, so switching styles costs nothing.
+
+EXAMPLES_PROMPT = """Write sample opening lines for cover letters, so a job seeker can compare letter styles.
+
+Candidate's resume and notes:
+<<<
+{resume}
+>>>
+
+The letter is for: {target}.
+
+Write one opening (one or two sentences, first person, at most 45 words) for EACH combination below.
+Tones:
+{tones}
+Openings:
+{openings}
+
+Rules:
+- Use only facts that appear in the resume above: real titles, employers, tools and numbers. Never invent a metric,
+  title, date or employer. If the resume has no number for something, describe it without one.
+- Plain words. No exclamation marks, no em dashes, no "I am excited", no "passionate".
+- For "why" openings, say something specific about the kind of work the role involves; do not invent facts about
+  the company.
+
+Reply with JSON only, keys exactly "<tone>|<opening>", for example:
+{{"plain|role": "...", "plain|result": "...", ...}} (all {n} keys)."""
+
+
+def examples_path(data_dir: Path) -> Path:
+    return data_dir / "voice_examples.json"
+
+
+def _resume_stamp(root: Path) -> str:
+    import hashlib
+    from .setup import base_resume
+    r = base_resume(root)
+    try:
+        return hashlib.sha1(r.read_bytes()).hexdigest()[:12] if r else ""
+    except OSError:
+        return ""
+
+
+def target_role(db, settings) -> dict:
+    """The role the examples are written for: your latest prepared or sent application, else your first job title."""
+    rows = [j for j in db.all() if j.get("plan_json") or j["status"] in ("filled", "submitted")]
+    rows.sort(key=lambda j: j.get("submitted_at") or j.get("found_at") or "", reverse=True)
+    if rows:
+        return {"title": rows[0]["title"], "company": rows[0]["company"]}
+    titles = (settings.raw.get("search") or {}).get("title_keywords") or []
+    return {"title": str(titles[0]) if titles else "", "company": ""}
+
+
+def examples(settings) -> dict | None:
+    """Saved examples from your resume, with "stale" when the resume changed since they were written."""
+    try:
+        d = json.loads(examples_path(settings.data_dir).read_text())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(d.get("samples"), dict) or not d["samples"]:
+        return None
+    d["stale"] = d.get("resume") != _resume_stamp(settings.root)
+    return d
+
+
+def _clean(s) -> str:
+    s = re.sub(r"\s+", " ", str(s or "")).strip().strip('"')
+    s = s.replace(" — ", ", ").replace("—", ", ").replace("!", ".")
+    return s[:400]
+
+
+def build_examples(settings, prefs, db) -> dict:
+    """One model call: the 12 openings from your resume. Raises RuntimeError with a plain reason when it can't."""
+    import time
+    from . import skills
+    from .rank import profile_text
+    text = profile_text(settings.root)[:16000]
+    if not text.strip():
+        raise RuntimeError("Upload your base resume on Setup first.")
+    import copy
+    via = prefs.data.get("skills_via")
+    if not via:  # not chosen for skill matching: use the Claude subscription when the daily run or email sorting does
+        uses_claude = prefs.data.get("daily_agent") == "claude" or "claude" in (prefs.data.get("enabled") or [])
+        via = "claude" if uses_claude or not prefs.key("OPENROUTER_API_KEY") else "openrouter"
+        prefs = copy.copy(prefs)
+        prefs.data = {**prefs.data, "skills_via": via}
+    if via != "claude":
+        if not prefs.key("OPENROUTER_API_KEY"):
+            raise RuntimeError("No AI is set up for this yet. Add an OpenRouter key, or pick your Claude subscription "
+                               "for skill matching (Settings, Daily run).")
+        if db.spend_this_month() >= float(prefs.data.get("monthly_api_budget") or 0):
+            raise RuntimeError("This month's AI budget is used up (Settings, Costs & limits).")
+    t = target_role(db, settings)
+    target = (f"the {t['title']} role at {t['company']}" if t["company"] else
+              f"a {t['title']} role" if t["title"] else "a role that fits this resume")
+    prompt = EXAMPLES_PROMPT.format(resume=text, target=target, n=len(SAMPLES),
+                                    tones="\n".join(f"- {k}: {d}" for k, _, d, _ in TONES),
+                                    openings="\n".join(f"- {k}: {d}" for k, _, d, _ in OPENINGS))
+    t0 = time.time()
+    try:
+        reply, u = skills._ask(prompt, prefs)
+        got = skills._json(reply)
+    except Exception as e:  # noqa: BLE001 - shown to the person as a plain reason
+        db.log_usage("letters", prefs.data.get("skills_model") or via, 1, 0, 0.0, int((time.time() - t0) * 1000), str(e)[:200])
+        raise RuntimeError(f"Couldn't write the examples: {str(e)[:160]}") from e
+    keys = {f"{a}|{b}" for a, b in SAMPLES}
+    samples = {k: _clean(v) for k, v in (got.items() if isinstance(got, dict) else []) if k in keys and _clean(v)}
+    db.log_usage("letters", u["model"], 1, len(samples), u["cost"], int((time.time() - t0) * 1000), None, u["est"], u["tokens"])
+    if len(samples) < len(keys) // 2:
+        raise RuntimeError("The model's reply was missing most of the examples. Try again.")
+    d = {"samples": samples, "role": t["title"], "company": t["company"], "resume": _resume_stamp(settings.root),
+         "model": u["model"], "at": datetime.now().strftime("%Y-%m-%d %H:%M")}
+    examples_path(settings.data_dir).write_text(json.dumps(d, indent=1))
+    return d

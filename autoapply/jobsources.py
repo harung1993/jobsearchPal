@@ -7,7 +7,8 @@ through alert emails. This is read-only: it looks at config.yaml, saved keys, th
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+import re
+from datetime import date, datetime, timedelta
 
 # Alert emails people can set up, with where to do it. Order is roughly how many roles each brings in.
 ALERTS = [
@@ -59,7 +60,8 @@ def overview(settings, db) -> dict:
     last = _last_search(settings)
     groups = []
 
-    n_boards = len(boards(settings))
+    blist = boards(settings)
+    n_boards = len(blist)
     groups.append({"title": "Company job boards", "blurb": "Checked first every day, straight from each company's own careers page.",
                    "items": [{"name": f"{n_boards} companies watched" if n_boards else "No companies yet",
                               "status": "on" if n_boards else "off",
@@ -96,7 +98,7 @@ def overview(settings, db) -> dict:
         if not gmail:
             status, detail = "needs", "Connect Gmail first, then set up the alert. " + how
         elif n:
-            status, detail = "on", f"{n} roles from its emails in the last 2 weeks."
+            status, detail = "on", f"{n} role{'s' if n != 1 else ''} from its emails in the last 2 weeks."
         else:
             status, detail = "off", how
         items.append({"name": name, "status": status, "detail": detail, "action": "" if status == "on" else "How",
@@ -105,4 +107,26 @@ def overview(settings, db) -> dict:
                    "come in through their alert emails. Each good role is then looked up on the company's own site.", "items": items})
 
     every = [i for g in groups for i in g["items"]]
-    return {"groups": groups, "on": sum(i["status"] == "on" for i in every), "total": len(every)}
+    return {"groups": groups, "on": sum(i["status"] == "on" for i in every), "total": len(every),
+            "companies": _companies(blist, db), "boards": groups[0]["items"][0],
+            "working": [i for g in groups[1:] for i in g["items"] if i["status"] == "on"],
+            "needs": [i for g in groups[1:] for i in g["items"] if i["status"] == "needs"],
+            "off": [i for g in groups[1:] for i in g["items"] if i["status"] == "off"]}
+
+
+def _pretty(slug: str) -> str:
+    """'gohighlevel' -> 'Gohighlevel', 'red-hat' -> 'Red Hat'; names that already have capitals stay as they are."""
+    s = re.sub(r"[-_]+", " ", slug).strip()
+    return s if any(ch.isupper() for ch in s) else s.title()
+
+
+def _companies(blist: list[dict], db) -> list[dict]:
+    """Each watched company, A to Z, with how many roles were found on its board in the last 30 days."""
+    since = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    try:
+        found = {(a, (c or "").lower()): n for a, c, n in db.conn.execute(
+            "select ats, lower(company), count(*) from jobs where found_at >= ? group by 1, 2", (since,))}
+    except Exception:  # noqa: BLE001 - counts are a nicety
+        found = {}
+    out = [{"name": _pretty(b["slug"]), "ats": b["ats"], "roles": found.get((b["ats"], b["slug"].lower()), 0)} for b in blist]
+    return sorted(out, key=lambda c: c["name"].lower())
