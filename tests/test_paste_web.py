@@ -135,7 +135,8 @@ def test_leads_page_has_paste_box_and_lead_links(tmp_path):
     s, db, _ = make(tmp_path)
     leads.add_pasted(db, s, {"company": "Hooli", "title": "Data Lead", "description": "d"})
     t = client(s, db).get("/leads").text
-    assert "Add a job" in t and 'href="/lead/hooli%7Cdata%20lead"' in t
+    assert "+ Add job" in t and "Paste a job post" in t and "applied-open" in t and 'href="/lead/hooli%7Cdata%20lead"' in t
+    assert 'action="/leads/paste"' in t and "<details class=\"card add-job\"" not in t
 
 
 def test_decline_works_on_a_prepped_row(tmp_path):
