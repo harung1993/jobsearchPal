@@ -303,6 +303,11 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   Decline, with a reason), your work-search count for the week, a to-do list (replies owed, follow-ups, claim day,
   RESEA and other deadlines), interviews with their prep packs, latest replies, recruiters, applications per week
   and the full application list. **Run now** starts another batch any time.
+- **Your applications** (bottom of the Dashboard) are the tracker, kept in the local database: no spreadsheet or
+  Google account needed. **Log one you sent elsewhere** adds an application you made on LinkedIn, a company site or
+  by email, so it counts toward your week and is never offered again. **Bring in your old tracker** imports a CSV
+  (Google Sheets: File, Download, CSV; Excel: Save As CSV), finding columns by name. **Download CSV** gives you the
+  whole list back, and it imports cleanly again. The same role is only ever kept once, however it arrives.
 - **Leads:** every role from your job-alert emails, plus *Where your jobs come from* (see above).
 - **Review page:** the filled answers, your tailored documents and a screenshot of the form. Pre-submit checks
   (documents present and current, required answers filled, consents confirmed) keep Submit locked until they pass.
@@ -349,6 +354,16 @@ To fix one letter, open the application and use **Rewrite this letter** on its C
 
 **Submit is greyed out.** Something in *Fix before you submit* needs you: usually a required question, a
 consent, or a document check. Answer it and press **Save and refill**. Optional questions can stay blank.
+
+**Will it apply to the same job twice?** No. A role you applied to, or filled a form for, is never offered again,
+whether the run found it, you logged it by hand, or it came in from your old tracker. The same role is matched by
+company and title (so "Sigma Computing, Inc." and a job board's "sigmacomputing" are one company) or by the posting
+link. Other roles at a company you applied to come back after 90 days (`reapply_after_days` in `data/settings.json`;
+0 keeps the whole company off for good).
+
+**Do I still need my Google Sheet?** No. Import it once with **Bring in your old tracker** on the Dashboard, then log
+anything you send outside the tool with **Log one you sent elsewhere**. **Download CSV** gives you a spreadsheet
+copy whenever you want one.
 
 **A reply was filed wrong.** Change it on the Emails page. Your choice is kept through later syncs and
 `sync-email --rebuild`.
@@ -542,7 +557,8 @@ autoapply alerts [--days N]            job-alert emails as text
 autoapply sync-email [--days N] [--rebuild]   replies and recruiter emails → sorted → dashboard and proof
 autoapply review-emails                sort emails still waiting, through the Settings page's sources
 autoapply emails [--pending]           filed emails as JSON;  emails set ID KIND  settles one by hand
-autoapply import-history FILE.json     load past applications (tracker rows)
+autoapply import-history FILE          load past applications from your old tracker (.csv or JSON rows)
+autoapply export-applications          every application as CSV
 autoapply add URL / list / show ID / skip ID
 autoapply list --prep                  interviews that need a prep pack
 autoapply list --nudges / --limits     follow-ups that need a draft; today's caps

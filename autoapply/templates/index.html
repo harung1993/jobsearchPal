@@ -193,9 +193,35 @@ pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--su
   {{ week_bars(s.series, 'application', 'Applications submitted per Sunday-to-Saturday week, last ' ~ s.series|length ~ ' weeks, with the weekly minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, W=1000, H=150, every=1) }}
 </section>
 
-<section class="card mt"><h2>Applications <span class="count">{{ s.applications|length }}</span></h2>
+<section class="card mt" id="applications"><h2>Applications <span class="count">{{ s.applications|length }}</span></h2>
+ {% if msg %}<p class="app-msg" role="status">{{ msg }}</p>{% endif %}
+ <style>.app-tools{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px}.app-tool{flex:1 1 100%}.app-tool:not([open]){flex:0 0 auto}
+ .app-tool>summary{list-style:none}.app-tool>summary::-webkit-details-marker{display:none}.app-tool[open]>summary{margin-bottom:10px}
+ .app-tool p{margin:0 0 12px;max-width:68ch}
+ .app-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px}.app-form .acts{grid-column:1/-1}
+ @media (max-width:700px){.app-form{grid-template-columns:1fr}}
+ .app-msg{margin:0 0 12px;padding:10px 14px;border-radius:var(--r-ctl);background:var(--accent-soft);color:var(--ink)}</style>
+ <div class="app-tools">
+ <details class="app-tool" {% if open_log %}open{% endif %}><summary class="btn sm">Log one you sent elsewhere</summary>
+  <p class="muted">Applied on LinkedIn, a company site or by email? Add it here so it counts, and so the daily run never offers you that role again.</p>
+  <form method="post" action="/applications/log" class="app-form">
+   <label class="fld"><span>Company</span><input type="text" name="company" required maxlength="120" autocomplete="off"></label>
+   <label class="fld"><span>Role</span><input type="text" name="title" required maxlength="200" autocomplete="off"></label>
+   <label class="fld"><span>Date applied</span><input type="date" name="applied_on" value="{{ today }}" max="{{ today }}"></label>
+   <label class="fld"><span>Link to the posting <i class="muted">(optional)</i></span><input type="url" name="url" maxlength="500" placeholder="https://"></label>
+   <label class="fld"><span>Where you applied <i class="muted">(optional)</i></span><input type="text" name="via" maxlength="60" placeholder="e.g. LinkedIn, Workday, email"></label>
+   <label class="fld"><span>Pay range <i class="muted">(optional)</i></span><input type="text" name="pay" maxlength="60" placeholder="e.g. $150K–$170K"></label>
+   <div class="acts"><button class="btn primary sm">Add to my applications</button></div>
+  </form></details>
+ <details class="app-tool"><summary class="btn sm ghost">Bring in your old tracker</summary>
+  <p class="muted">Keep a spreadsheet already? In Google Sheets use File, Download, Comma-separated values (.csv); in Excel, Save As CSV. Columns are found by name (Position, Company, Date Applied, Salary, Applied via, Notes, Link). Rows without a date applied are left out, and importing the same file twice adds nothing.</p>
+  <form method="post" action="/applications/import" enctype="multipart/form-data" class="acts">
+   <input type="file" name="file" accept=".csv,text/csv" required><button class="btn sm">Import</button></form></details>
+ {% if s.applications %}<a class="btn sm ghost" href="/applications.csv" download>Download CSV</a>{% endif %}
+ </div>
  {% macro row(j) %}<tr><td><b style="font-weight:600">{{ co(j.company) }}</b></td>
-  <td>{% if not j.id.startswith('tracker:') %}<a href="/job/{{ j.id|urlencode }}">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}</td>
+  {# Only roles the tool filled have a review page worth opening; imported and hand-logged ones are just a record. #}
+  <td>{% if j.plan_json %}<a href="/job/{{ j.id|urlencode }}">{{ j.title }}</a>{% elif (j.apply_url or j.url or '').lower().startswith(('http://', 'https://')) %}<a href="{{ j.apply_url or j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}</td>
   <td class="ink2" style="white-space:nowrap">{{ j.applied_label }}</td><td class="ink2 hide-sm">{{ j.pay or "" }}</td>
   <td><span class="pill {{ j.state|pillcls }}">{{ j.state|label }}</span></td></tr>{% endmacro %}
  <table><thead><tr><th>Company</th><th>Role</th><th>Applied</th><th class="hide-sm">Pay</th><th>Status</th></tr></thead><tbody>

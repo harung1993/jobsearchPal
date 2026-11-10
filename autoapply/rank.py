@@ -80,21 +80,43 @@ class Applied:
     def __init__(self, db, days: int = 90, now: datetime | None = None):
         now = now or datetime.now()
         cutoff = (now - timedelta(days=days)).strftime("%Y-%m-%d") if days else "0000"
-        self.jobs = {}
+        self.jobs = {}   # company key -> an application inside the re-apply window
+        self.roles = {}  # (company key, title) -> any application ever: the same role is never applied to twice
+        self.urls = {}   # posting link -> the same, for a role whose title changed
         for j in db.by_status("submitted", "filled"):
             when = str(j.get("submitted_at") or j.get("found_at") or "")[:10]
+            hit = (j["status"], when, j["title"])
+            ck = company_key(j["company"])
+            self.roles.setdefault((ck, _norm(j["title"])), hit)
+            for u in (j.get("url"), j.get("apply_url")):
+                if _url(u):
+                    self.urls.setdefault(_url(u), hit)
             if j["status"] == "filled" or not when or when >= cutoff:
-                self.jobs.setdefault(_norm(j["company"]), (j["status"], when, j["title"]))
+                self.jobs.setdefault(ck, hit)
         self.mail = " | ".join(_norm(f"{e['sender']} {e['subject']}") for e in db.events()
                                if e["kind"] in self.EVENT_KINDS and str(e["at"])[:10] >= cutoff)
 
-    def why(self, company: str) -> str:
-        """Why to skip this company ("" = fine)."""
+    def same_role(self, company: str, title: str = "", url: str = "") -> str:
+        """Why this exact role is off the table ("" = it isn't): applied or filled before, by title or by link."""
+        role = self.roles.get((company_key(company), _norm(title))) if title else None
+        role = role or (self.urls.get(_url(url)) if _url(url) else None)
+        if not role:
+            return ""
+        st, when, t = role
+        return (f"already {'applied' if st == 'submitted' else 'filled a form'} for this role at {company}"
+                f" ({t}{', ' + when if when else ''})")
+
+    def why(self, company: str, title: str = "", url: str = "") -> str:
+        """Why to skip this role ("" = fine). The same role is skipped forever; the company only inside the window."""
         c = _norm(company)
         if not c:
             return ""
-        if c in self.jobs:
-            st, when, title = self.jobs[c]
+        role = self.same_role(company, title, url)
+        if role:
+            return role
+        ck = company_key(company)
+        if ck in self.jobs:
+            st, when, title = self.jobs[ck]
             return f"already {'applied' if st == 'submitted' else 'filled a form'} at {company} ({title}{', ' + when if when else ''})"
         if len(c) >= 3 and re.search(rf"(^| ){re.escape(c)}( |$)", self.mail):
             return f"already applied at {company} (from your email)"
@@ -113,7 +135,7 @@ def candidates(db, settings, limit: int = 12, desc_chars: int = 1200) -> list[di
     my = skills.mine(settings) if skills.enabled(prefs) else []
     rows = []
     for j in db.by_status("new"):
-        why = applied.why(j["company"])
+        why = applied.why(j["company"], j["title"], j.get("apply_url") or j.get("url"))
         if why:
             db.update(j["id"], status="skipped", error=why)
             continue
@@ -148,7 +170,7 @@ def shortlist(db, settings, n: int = 5, skip_companies=()) -> list[dict]:
     seen, out = {_norm(c) for c in skip_companies}, []
     for j in pool:
         c = _norm(j["company"])
-        if j["status"] != "new" or not c or c in seen or applied.why(j["company"]):
+        if j["status"] != "new" or not c or c in seen or applied.why(j["company"], j["title"], j.get("apply_url") or j.get("url")):
             continue
         seen.add(c)
         out.append({**j, "why": why.get(j["id"], "")})
@@ -236,6 +258,35 @@ Reply with JSON only, no prose:
 
 def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+
+
+# Endings that don't make a company different: "Acme, Inc." is Acme, and a job board slug "acmecom" or "acmehq" is too.
+_LEGAL = {"inc", "llc", "ltd", "corp", "corporation", "co", "company", "plc", "gmbh"}
+_SLUG_TAILS = ("com", "hq")
+
+
+def company_key(name: str) -> str:
+    """One key per company across sources. Board slugs come lower-case and run together ("sigmacomputing", "nichecom");
+    a tracker row says "Sigma Computing, Inc.". Spaces and legal endings go, and a trailing "com"/"hq" when 3+ letters stay."""
+    words = _norm(name).split()
+    while len(words) > 1 and words[-1] in _LEGAL:
+        words.pop()
+    k = "".join(words)
+    for tail in _SLUG_TAILS:
+        if k.endswith(tail) and len(k) - len(tail) >= 3:
+            return k[: -len(tail)]
+    return k
+
+
+def _url(u: str | None) -> str:
+    """A posting link without scheme, www, fragment, utm tags or trailing slash, so one posting matches however it was
+    copied. The rest of the query stays: some boards put the job id there (?gh_jid=, ?currentJobId=)."""
+    u = (u or "").strip().lower().split("#")[0]
+    if not u.startswith("http"):
+        return ""
+    u = re.sub(r"^https?://(www\.)?", "", u)
+    u = re.sub(r"[?&]utm_[^&]*", "", u).replace("/?", "?").rstrip("?&/")
+    return u
 
 
 def alert_roles(db, settings, emails: list[dict], model: str, key: str, limit: int = 8) -> tuple[list[dict], dict]:

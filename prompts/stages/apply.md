@@ -32,4 +32,6 @@ first). Work only on this role.
    pre-submit checks (stale or over-long PDFs, missing job dates, placeholders, unanswered required questions).
    Fix what you can (edit docs.json and rerun build-docs, answer a question) and fill again (max 2 more tries).
    Consent and self-ID checks are the person's to settle: leave those.
+   If fill stops with "Not filled: already applied for this role", the person applied to it already (by hand or
+   another way). That is not an error: don't retry or work around it; print "<Company>: already applied, skipped".
 7. Print one line, naming any check still failing: "<Company> (<title>): ready to review" or "<Company>: apply by hand" or what went wrong.

@@ -12,7 +12,9 @@
   autoapply emails [--pending]        filed emails with their kind, as JSON
   autoapply emails set ID KIND [--job JOB_ID|none]  settle one by hand (confirmed, interview, rejected,
                                       offer, recruiter, ignored)
-  autoapply import-history FILE.json  load past applications (tracker rows) into the dashboard
+  autoapply import-history FILE       load past applications from your old tracker (.csv from Google Sheets or Excel,
+                                      or JSON rows); the same role is never added twice
+  autoapply export-applications       every application as CSV (also the dashboard's Download CSV)
   autoapply log-run KIND ok|fail [MSG]  record a run (daily.sh uses it) for the dashboard
   autoapply add URL [--company C --title T]   track a role found elsewhere
   autoapply list [--status S]         show tracked roles
@@ -113,6 +115,7 @@ def main(argv=None):
     a = sub.add_parser("emails"); a.add_argument("action", nargs="?", choices=["set"]); a.add_argument("event_id", nargs="?")
     a.add_argument("kind", nargs="?"); a.add_argument("--job", default=""); a.add_argument("--pending", action="store_true")
     a = sub.add_parser("import-history"); a.add_argument("file")
+    sub.add_parser("export-applications")
     a = sub.add_parser("log-run"); a.add_argument("kind"); a.add_argument("result", choices=["ok", "fail"]); a.add_argument("msg", nargs="?", default="")
     a = sub.add_parser("add"); a.add_argument("url"); a.add_argument("--company", default=""); a.add_argument("--title", default="")
     a = sub.add_parser("list"); a.add_argument("--status"); a.add_argument("--prep", action="store_true"); a.add_argument("--nudges", action="store_true"); a.add_argument("--limits", action="store_true")
@@ -259,7 +262,7 @@ def main(argv=None):
                 continue
             if rank._norm(j["company"]) in companies:  # one role per company per run: the rest stay on the shortlist
                 continue
-            why = applied.why(j["company"])
+            why = applied.why(j["company"], j["title"], j.get("apply_url") or j.get("url"))
             if why:  # last guard before an apply session spends tokens
                 db.update(j["id"], status="skipped", error=why)
                 continue
@@ -404,6 +407,9 @@ def main(argv=None):
     elif args.cmd == "import-history":
         from . import history
         print(f"imported {history.import_file(db, Path(args.file))} past applications")
+    elif args.cmd == "export-applications":
+        from . import history
+        sys.stdout.write(history.export_csv(db))
     elif args.cmd == "add":
         jid = "manual:" + hashlib.sha1(args.url.encode()).hexdigest()[:10]
         db.upsert_job({"id": jid, "ats": detect(args.url).name, "company": args.company, "title": args.title,
@@ -488,6 +494,12 @@ def main(argv=None):
         # Consent answers and the go-ahead only ever come from you on the review page.
         plan.pop("approved_by_user", None)
         plan.pop("approved", None)
+        if args.job and (j := db.get(args.job)) and j["status"] not in ("filled", "submitted"):
+            from .rank import Applied
+            dup = Applied(db, 0).same_role(j["company"], j["title"], plan.get("url") or j["apply_url"] or j["url"])
+            if dup:  # the same role reached the run another way (a lead, an alert, `add`): never fill it twice
+                db.update(args.job, status="skipped", error=dup)
+                sys.exit(f"Not filled: {dup}.")
         if args.job and not plan.get("url"):
             plan["url"] = db.get(args.job)["apply_url"]
         report = fill(plan, s.profile, s.data_dir / "screenshots", headless)
