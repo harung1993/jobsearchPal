@@ -76,6 +76,7 @@ def verify(account: dict, email: str, password: str) -> bool:
 
 
 def _key(account: dict) -> bytes:
+    # The old product name stays in this key on purpose: changing it would sign everyone out.
     return hashlib.sha256(b"unemploymentpal-session\0" + account["hash"].encode()).digest()
 
 

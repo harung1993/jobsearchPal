@@ -19,7 +19,7 @@ from .db import DB
 LABELS = {"confirmed": "received", "rejected": "closed"}  # same words as the dashboard
 
 
-FOOTER_TEXT = "unemploymentPal, part of palStack (https://palstack.io): privacy-first tools that run on your own computer."
+FOOTER_TEXT = "jobsearchPal, part of palStack (https://palstack.io): privacy-first tools that run on your own computer."
 
 
 def _recent_events(db: DB, hours: int = 30) -> list[dict]:
@@ -154,7 +154,7 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
         h.append("<p style='color:#b42318'><b>Check:</b> " + escape("; ".join(f"{r['label']} {r['state']} ({r['when']})" for r in stale)) + "</p>")
     if base:
         h.append(f"<p><a href='{escape(base)}/'>Open the dashboard</a></p>")
-    h.append("<p style='color:#888;font-size:12px;border-top:1px solid #eee;padding-top:10px;margin-top:20px'>unemploymentPal, part of "
+    h.append("<p style='color:#888;font-size:12px;border-top:1px solid #eee;padding-top:10px;margin-top:20px'>jobsearchPal, part of "
              "<a href='https://palstack.io' style='color:#888'>palStack</a>: privacy-first tools that run on your own computer.</p>")
     html = "<div style='font:14px/1.5 -apple-system,Segoe UI,Arial,sans-serif;max-width:640px'>" + "".join(h) + "</div>"
     return subject, text, html

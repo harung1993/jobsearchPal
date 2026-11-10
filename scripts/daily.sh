@@ -143,5 +143,5 @@ if [ -n "${NTFY_TOPIC:-}" ]; then
   msg=$summary; [ -n "$line" ] && msg="$line
 $summary"; [ -n "$todo" ] && msg="$msg
 $todo"
-  curl -fsS -H "Title: unemploymentPal" -H "Click: ${REVIEW_URL:-}" -d "$msg" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+  curl -fsS -H "Title: jobsearchPal" -H "Click: ${REVIEW_URL:-}" -d "$msg" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
 fi

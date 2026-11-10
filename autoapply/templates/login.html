@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>{{ 'Create your account' if mode == 'create' else 'Sign in' }} · unemploymentPal</title>
+<title>{{ 'Create your account' if mode == 'create' else 'Sign in' }} · jobsearchPal</title>
 <script>try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 /* Stands alone on purpose: no base.html, so nothing about the person's search shows before sign-in. Same tokens as base.html. */
@@ -38,7 +38,7 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
 .foot{color:var(--ink-3);font-size:14px;margin:14px 2px 0}
 </style>{% from "_horizon.html" import horizon, horizon_css %}{% from "_palstack.html" import palstack_mark %}{{ horizon_css() }}</head><body>
 <main class="box">
- <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>unemploymentPal</span></div>
+ <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>jobsearchPal</span></div>
  <div class="card">{{ horizon(13) }}<div class="in">
  {% if mode == 'create' %}
   <h1>Welcome. Let's set you up.</h1>

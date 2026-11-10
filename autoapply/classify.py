@@ -165,8 +165,8 @@ def _ask_codex(prompt: str, model: str) -> str:
 
 
 def _post(url: str, body: dict, key: str | None, timeout: int = 120) -> dict:
-    headers = {"content-type": "application/json", "x-title": "unemploymentPal",
-               "http-referer": "https://github.com/harung1993/unemploymentPal"}
+    headers = {"content-type": "application/json", "x-title": "jobsearchPal",
+               "http-referer": "https://github.com/harung1993/jobsearchPal"}
     if key:
         headers["authorization"] = f"Bearer {key}"
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
@@ -297,7 +297,7 @@ def test_source(name: str, prefs: Prefs) -> dict:
 # ---- what's available, for the Settings page ---------------------------------------------------------
 
 def _get_json(url: str, timeout: int = 8) -> dict:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"user-agent": "unemploymentPal"}), timeout=timeout) as r:
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"user-agent": "jobsearchPal"}), timeout=timeout) as r:
         return json.loads(r.read())
 
 
@@ -305,7 +305,7 @@ def openrouter_spent(key: str) -> float | None:
     """Total credits this OpenRouter key has used, in dollars (None if it can't be read)."""
     try:
         req = urllib.request.Request("https://openrouter.ai/api/v1/key",
-                                     headers={"Authorization": f"Bearer {key}", "user-agent": "unemploymentPal"})
+                                     headers={"Authorization": f"Bearer {key}", "user-agent": "jobsearchPal"})
         with urllib.request.urlopen(req, timeout=20) as r:
             return float((json.loads(r.read()).get("data") or {}).get("usage") or 0)
     except Exception:

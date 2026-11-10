@@ -1,6 +1,6 @@
-# unemploymentPal voice
+# jobsearchPal voice
 
-**How unemploymentPal talks, for every string: the dashboard, the morning email, phone pushes and every page.** Written 2026-11-08.
+**How jobsearchPal talks, for every string: the dashboard, the morning email, phone pushes and every page.** Written 2026-11-08.
 The rules come from a graded review of the research on unemployment and job searching (A is the strongest evidence, D the weakest),
 done for palStack; the main sources are listed at the end. New copy goes into the phrase bank below first, then into the code. Most
 lines live in `autoapply/pal.py`.
@@ -9,7 +9,7 @@ lines live in `autoapply/pal.py`.
 
 **A pal who knows a job search is hard work, tells you honestly how the market is, and is on your side.** A long search tends to wear
 people down rather than getting easier. Hiring is slow right now even though unemployment is low. Encouragement only helps when it
-rests on what the person has actually done. So unemploymentPal:
+rests on what the person has actually done. So jobsearchPal:
 - names the difficulty
 - credits the effort
 - points to one next thing
