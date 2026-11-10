@@ -197,8 +197,8 @@ def review_event(db: DB, event_id: str, kind: str, job_id: str | None = "", manu
     if new_job and kind in RANK:
         cur = db.get(new_job)
         at = ev["at"]
-        if kind == "confirmed" and cur["status"] == "filled":
-            # Submit was pressed but the page never confirmed; the ATS email settles it.
+        if kind == "confirmed" and cur["status"] in ("filled", "prepped"):
+            # Submit was pressed but the page never confirmed (or you applied by hand from the kit); the ATS email settles it.
             db.update(new_job, status="submitted", submitted_at=at, error=None)
         if RANK[kind] >= RANK.get(cur.get("outcome") or "", 0):
             db.update(new_job, outcome=kind, outcome_at=at)
@@ -253,7 +253,7 @@ def sync_sent(db: DB, days: int = 60) -> int:
 
 def sync(db: DB, days: int = 60, extra_senders: list[str] | None = None, proof_root: Path | None = None,
          state_domain: str = "") -> dict:
-    jobs = db.by_status("submitted", "filled")
+    jobs = db.by_status("submitted", "filled", "prepped")
     counts: dict[str, int] = {}
     try:
         sync_sent(db, days)

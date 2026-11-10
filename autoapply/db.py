@@ -12,7 +12,7 @@ create table if not exists jobs (
   description text,
   found_at text default current_timestamp,
   score integer, score_reason text,
-  status text default 'new',       -- new, skipped, filled, submitted, failed
+  status text default 'new',       -- new, skipped, prepped, filled, submitted, failed
   plan_json text,                  -- answers + file paths; editable on the review page
   report_json text,                -- last fill/submit report
   screenshot text, error text,
@@ -49,7 +49,7 @@ create table if not exists usage (   -- one row per call to an email-sorting mod
 # Columns added after v0.1; ALTERed into older databases on open.
 MIGRATIONS = {"pay": "text", "outcome": "text", "outcome_at": "text", "skills_json": "text"}
 
-STATUSES = ["new", "skipped", "filled", "submitted", "failed"]
+STATUSES = ["new", "skipped", "prepped", "filled", "submitted", "failed"]  # prepped: files and answers, no form filled
 
 
 class DB:

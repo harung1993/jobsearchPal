@@ -72,7 +72,7 @@ SAMPLE_APPS = [{"id": "sample:acme", "company": "Acme", "title": "Senior Analyti
 
 def _apps(db: DB) -> list[dict]:
     return [{"id": j["id"], "company": j["company"], "title": j["title"], "applied": (j["submitted_at"] or "")[:10]}
-            for j in db.by_status("submitted", "filled")]
+            for j in db.by_status("submitted", "filled", "prepped")]
 
 
 def _email_text(ev: dict) -> str:

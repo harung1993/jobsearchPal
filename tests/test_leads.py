@@ -220,3 +220,66 @@ def test_job_sources_are_grouped_by_what_needs_doing(tmp_path, monkeypatch):
     assert "Not on yet:" in html and "Needs a step" in html
     if o["companies"]:
         assert 'id="co-filter"' in html and "See list" in html
+
+
+# ---------- Paste a job (11/10) ----------
+
+PASTED = {"company": "Hooli", "title": "Senior Analytics Engineer", "location": "", "work_setting": "remote",
+          "pay": "$150K", "url": "", "description": "dbt and Snowflake"}
+
+
+def test_paste_adds_then_updates(tmp_path):
+    s, db, _ = make(tmp_path)
+    assert leads.add_pasted(db, s, PASTED)["result"] == "added"
+    r = leads.add_pasted(db, s, {**PASTED, "description": "longer text"})
+    assert r["result"] == "updated"
+    row = leads.get(db, r["key"])
+    assert row["description"] == "dbt and Snowflake" and "pasted" in row["source"] and row["work_setting"] == "remote"
+
+
+def test_paste_fills_in_an_alert_lead(tmp_path):
+    s, db, _ = make(tmp_path)
+    leads.save(db, leads.parse(LINKEDIN), "LinkedIn", datetime(2026, 11, 3, 9), {}, set())
+    r = leads.add_pasted(db, s, PASTED)
+    row = leads.get(db, r["key"])
+    assert r["result"] == "updated" and row["source"] == "LinkedIn, pasted" and row["description"] == "dbt and Snowflake"
+
+
+def test_paste_of_applied_role_adds_nothing(tmp_path):
+    s, db, _ = make(tmp_path)
+    db.update("gh:a:1", status="submitted", submitted_at="2026-10-30 10:00")
+    r = leads.add_pasted(db, s, {**PASTED, "company": "Acme", "title": "Senior Analytics Engineer"})
+    assert r["result"] == "applied" and "2026-10-30" in r["why"] and leads.get(db, r["key"]) is None
+
+
+def test_paste_needs_company_and_title(tmp_path):
+    s, db, _ = make(tmp_path)
+    import pytest
+    with pytest.raises(ValueError):
+        leads.add_pasted(db, s, {**PASTED, "company": " "})
+
+
+def test_from_paste_makes_a_job(tmp_path):
+    s, db, _ = make(tmp_path)
+    k = leads.add_pasted(db, s, {**PASTED, "title": "Data Lead", "location": "Boston, MA", "pay": "$1",
+                                 "url": "javascript:x", "description": "the post"})["key"]
+    jid = leads.from_paste(db, k)
+    j = db.get(jid)
+    assert jid.startswith("manual:") and j["ats"] == "manual" and j["description"] == "the post"
+    assert j["url"] == "" and j["pay"] == "$1" and j["location"] == "Boston, MA"
+    assert leads.get(db, k)["job_id"] == jid and leads.from_paste(db, k) == jid
+
+
+def test_from_paste_needs_the_post(tmp_path):
+    s, db, _ = make(tmp_path)
+    k = leads.add_pasted(db, s, {**PASTED, "description": ""})["key"]
+    assert leads.from_paste(db, k) is None and leads.from_paste(db, "no|such") is None
+
+
+def test_prepped_is_ready_but_not_applied(tmp_path):
+    s, db, _ = make(tmp_path)
+    db.update("gh:a:1", status="prepped")
+    from autoapply import rank, stats
+    assert not rank.Applied(db, 90).same_role("Acme", "Senior Analytics Engineer", "u")
+    assert "gh:a:1" in [j["id"] for j in stats.compute(db)["ready"]]
+    assert "gh:a:1" not in [j["id"] for j in rank.shortlist(db, s, 5)]
