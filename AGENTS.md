@@ -13,6 +13,9 @@ agent you are (the file keeps that name for both).
 
 ## Hard rules
 - Run each shell command on its own. Commands chained with `;`, `&&` or `|` are refused and stop the step.
+- Open web pages with WebFetch (or WebSearch), never `curl` or `wget`; read PDFs and .docx files with the Read
+  tool, never `pdftotext` or `pdfinfo`. Those shell commands are refused, and a refused command marks the whole
+  step as stopped.
 - Never submit an application. There is no CLI command for it on purpose. Do not click Submit
   with any other tool, and do not edit the code to add one.
 - Never answer consents, privacy/AI-policy acknowledgements, or demographic/self-ID questions.

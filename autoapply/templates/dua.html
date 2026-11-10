@@ -58,8 +58,15 @@
  <form method="post" action="/dua/task" class="add-task"><input type="text" name="title" placeholder="e.g. Upload ID to the claim portal" aria-label="New appointment or deadline">
   <input type="date" name="due" aria-label="Due"><button class="btn sm" name="action" value="add">Add</button></form>
  {% if not tasks|selectattr('kind', 'equalto', 'resea')|list %}<form method="post" action="/dua/task" style="margin-top:8px"><button class="btn ghost sm" name="action" value="resea">Asked to do RESEA? Add its steps</button></form>{% endif %}
- {% if letters %}<h3 class="mt" style="font-size:14.5px;margin-bottom:4px">Letters from the agency</h3>
-  {% for e in letters %}<div class="ink2" style="font-size:14.5px;padding:3px 0">{{ e.at[5:10]|replace('-', '/') }} · {{ e.subject|truncate(70) }}{% if e.proof %} · <a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</div>{% endfor %}{% endif %}
+ <h3 class="mt" style="font-size:15px;margin-bottom:2px">Unemployment and RESEA emails <span class="count">{{ letters|length }}</span></h3>
+ <p class="muted" style="margin:0 0 6px;font-size:13.5px">Found in your email (agency, career centers, RESEA), kept as proof. A RESEA date in one
+  becomes a RESEA step above. Missing one? Make sure the address it went to is under Setup, Email.</p>
+ {% for e in letters %}<div class="letter"><span class="ink2">{{ e.at[5:10]|replace('-', '/') }}</span>
+  <span><b>{{ e.subject|truncate(80) }}</b>{% if e.resea %} <span class="pill waiting" style="text-transform:none">RESEA</span>{% endif %}{% if e.denial %} <span class="pill rejected" style="text-transform:none">decision</span>{% endif %}
+   <span class="ink2"> · {{ e['from']|truncate(40) }}{% if e.when %} · <b>{{ e.when }}</b>{% endif %}</span>
+   {% if e.proof %} · <a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</span></div>
+ {% else %}<p class="muted" style="margin:0;font-size:14px">None yet. Letters from your state's unemployment agency or career center show up here after an email sync.</p>{% endfor %}
+ <style>.letter{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:14.5px;padding:4px 0;border-top:1px solid var(--line)}.letter:first-of-type{border-top:0}</style>
 </section></div>
 
 <section class="card people" id="people" aria-labelledby="people-h"><h2 id="people-h"><span>People you've been in touch with</span><span class="count">{{ people|length }}</span></h2>
