@@ -57,12 +57,14 @@ def test_part_of_palstack_everywhere(tmp_path):
     s, db, c = _app(tmp_path)
     for path in ("/", "/stats", "/settings", "/setup"):
         html = c.get(path).text
-        assert 'href="https://palstack.io"' in html and "Part of <b>palStack</b>" in html, path
+        # palStack.io: small p, capital S (Harun, 2026-11-09); the link is the lower-case domain.
+        assert 'href="https://palstack.io"' in html and "<small>Part of</small><b>palStack.io</b>" in html, path
+        assert "palstack.io</b>" not in html and "Part of <b>palStack</b>" not in html, path
     assert "a family of privacy-first tools" in c.get("/settings").text
-    assert "a family of privacy-first tools" in c.get("/setup").text
+    assert 'class="ps-foot"' in c.get("/setup").text and 'class="card mt about-ps"' not in c.get("/setup").text
     c.post("/logout")
     login = c.get("/login").text
-    assert "Part of <a href=\"https://palstack.io\"" in login and 'class="hz' in login
+    assert "<b>palStack.io</b>" in login and 'class="hz' in login
 
 
 def test_brief_footer_and_subject(tmp_path):
@@ -87,3 +89,12 @@ def test_warm_tokens_and_reduced_motion_still_hold(tmp_path):
     html = c.get("/").text
     assert "--bg:#f6f2ea" in html and "--bg:#f1f4f2" not in html
     assert "prefers-reduced-motion:reduce" in html and " forwards" not in html
+
+
+def test_setup_lists_finished_steps_in_one_checklist(tmp_path):
+    """Finished steps are rows (what you saved, Edit), their forms folded until opened; letters is a row too."""
+    s, db, c = _app(tmp_path)
+    html = c.get("/setup").text
+    assert 'class="card mt checklist"' in html and "Your setup" in html
+    assert 'href="/letters">Open</a>' in html and 'id="letters"' not in html
+    assert 'id="resume"' in html  # the form is still on the page, opened in place from Edit

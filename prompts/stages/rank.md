@@ -12,6 +12,8 @@ Already done before you started: email sync and `autoapply find` (new roles from
    Feed roles (ats "feed") you want to pick need the same hop to the real posting first.
 {{DISCOVER}}
 4. Pick the best N by fit (against materials/ and CLAUDE.local.md), then freshness, then pay; at most one role per company.
+   Levels: when config.yaml lists `search.levels`, every level there is equally wanted. A mid-level title ("Data
+   Engineer", no Senior) is not a weaker fit than a senior one, and a lower posted range alone is no reason to skip it.
    Fit decides, never the weekly work-search number: don't pick a weak fit to make up a count. Fewer, better applications
    go further, and the person can log other activities (contacts, workshops) for the week. Skip anything
    already applied to (`autoapply list --status submitted`, materials/applications/). `autoapply skip <id> [<id> ...]

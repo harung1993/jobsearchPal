@@ -226,6 +226,12 @@ def save_interests(settings, form: dict) -> dict:
     search["title_keywords"] = [t.lower() for t in _lines(form.get("titles", ""))][:40]
     search["exclude_keywords"] = [t.lower() for t in _lines(form.get("exclude", ""))][:40]
     search["us_only"] = bool(form.get("us_only"))
+    from .rank import LEVELS
+    levels = [k for k, _ in LEVELS if form.get(f"level::{k}")]
+    if levels:
+        search["levels"] = levels
+    else:
+        search.pop("levels", None)
     boards, bad = [], []
     for line in str(form.get("companies") or "").splitlines():
         if not line.strip():

@@ -203,3 +203,20 @@ def test_job_sources_overview(tmp_path, monkeypatch):
     assert 0 <= o["on"] <= o["total"] == len(names)
     html = client(s, db).get("/leads").text
     assert "Where your jobs come from" in html and "HigherEdJobs" in html
+
+
+def test_job_sources_are_grouped_by_what_needs_doing(tmp_path, monkeypatch):
+    """Working sources in a grid, ones needing a step on rows, every off source in one line; the watched
+    companies can be listed."""
+    from autoapply import jobsources
+    monkeypatch.delenv("GMAIL_USER", raising=False)
+    monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
+    s, db, cfg = make(tmp_path)
+    o = jobsources.overview(s, db)
+    assert {i["status"] for i in o["working"]} <= {"on"} and {i["status"] for i in o["off"]} <= {"off"}
+    assert len(o["working"]) + len(o["needs"]) + len(o["off"]) == o["total"] - 1  # minus the company boards row
+    assert [c["name"] for c in o["companies"]] == sorted((c["name"] for c in o["companies"]), key=str.lower)
+    html = client(s, db).get("/leads").text
+    assert "Not on yet:" in html and "Needs a step" in html
+    if o["companies"]:
+        assert 'id="co-filter"' in html and "See list" in html

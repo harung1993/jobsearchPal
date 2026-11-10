@@ -140,3 +140,87 @@ def test_refill_after_a_rewrite_uses_the_saved_plan_and_never_submits(tmp_path, 
         assert saved["approved_by_user"] is False and job["status"] == "filled"
     finally:
         srv.shutdown()
+
+
+def _resume(tmp_path, text="Lead Data Scientist at Northeastern. Built dbt models used by 40 analysts."):
+    from docx import Document
+    m = tmp_path / "materials"
+    m.mkdir(exist_ok=True)
+    d = Document()
+    d.add_paragraph(text)
+    d.save(str(m / "Doe Resume - Base.docx"))
+
+
+def test_examples_from_your_resume_are_written_once_and_saved(tmp_path, db, monkeypatch):
+    """One model call writes the 12 openings from your resume, for your latest application; switching is free after."""
+    from autoapply import skills
+    from autoapply.prefs import Prefs
+    _resume(tmp_path)
+    _letter_job(tmp_path, db)
+    calls = []
+
+    def fake(prompt, prefs):
+        calls.append(prompt)
+        return json.dumps({f"{t}|{o}": f"{t} {o} — about my dbt work!" for t, _, _, _ in voice.TONES for o, _, _, _ in voice.OPENINGS}
+                          | {"bogus|key": "x"}), {"model": "claude:haiku", "cost": 0.0, "est": 0.01, "tokens": 900}
+    monkeypatch.setattr(skills, "_ask", fake)
+    s = _settings(tmp_path)
+    prefs = Prefs(s.data_dir, s.raw)
+    prefs.data["skills_via"] = "claude"
+    d = voice.build_examples(s, prefs, db)
+    assert len(calls) == 1 and "dbt models used by 40 analysts" in calls[0] and "at Globex" in calls[0]
+    assert set(d["samples"]) == {f"{t}|{o}" for (t, o) in voice.SAMPLES}  # unknown keys dropped
+    assert all("—" not in v and "!" not in v for v in d["samples"].values())
+    got = voice.examples(s)
+    assert got["company"] == "Globex" and got["stale"] is False
+    _resume(tmp_path, "A different resume now.")
+    assert voice.examples(s)["stale"] is True
+    assert db.conn.execute("select count(*) from usage where source = 'letters'").fetchone()[0] == 1
+
+
+def test_examples_need_a_resume_and_respect_the_budget(tmp_path, db):
+    from autoapply.prefs import Prefs
+    s = _settings(tmp_path)
+    prefs = Prefs(s.data_dir, s.raw)
+    with pytest.raises(RuntimeError, match="resume"):
+        voice.build_examples(s, prefs, db)
+    _resume(tmp_path)
+    prefs.data["skills_via"] = "openrouter"
+    prefs.key = lambda k: None  # no key anywhere, whatever other tests left in the environment
+    with pytest.raises(RuntimeError, match="No AI is set up"):
+        voice.build_examples(s, prefs, db)
+    prefs.key = lambda k: "sk-test" if k == "OPENROUTER_API_KEY" else None
+    prefs.data["monthly_api_budget"] = 0
+    with pytest.raises(RuntimeError, match="budget"):
+        voice.build_examples(s, prefs, db)
+
+
+def test_examples_use_the_claude_subscription_when_nothing_was_picked(tmp_path, db, monkeypatch):
+    from autoapply import skills
+    from autoapply.prefs import Prefs
+    _resume(tmp_path)
+    seen = []
+    monkeypatch.setattr(skills, "_ask", lambda prompt, prefs: (seen.append(prefs.data.get("skills_via")) or
+                        json.dumps({"plain|role": "I build models."} | {f"{t}|{o}": "x y" for t, o in voice.SAMPLES}),
+                        {"model": "claude:haiku", "cost": 0.0, "est": 0.0, "tokens": 1}))
+    s = _settings(tmp_path)
+    prefs = Prefs(s.data_dir, s.raw)
+    prefs.data.pop("skills_via", None)
+    prefs.data["daily_agent"] = "claude"
+    voice.build_examples(s, prefs, db)
+    assert seen == ["claude"] and "skills_via" not in prefs.data  # the saved settings are untouched
+
+
+def test_letters_page_switches_between_your_resume_and_the_sample(tmp_path, db):
+    _resume(tmp_path)
+    c = _app(tmp_path, db)
+    html = c.get("/letters").text
+    assert "Show these with my resume" in html and 'action="/letters/examples"' in html
+    (tmp_path / "data" / "voice_examples.json").write_text(json.dumps(
+        {"samples": {"plain|role": "I build dbt models analysts trust."}, "role": "Data Engineer", "company": "Globex",
+         "resume": voice._resume_stamp(tmp_path)}))
+    html = c.get("/letters").text
+    assert "I build dbt models analysts trust." in html and "Your resume" in html and "for Data Engineer at Globex" in html
+    assert "Show these with my resume" not in html
+    r = c.post("/letters/examples", follow_redirects=False)  # no AI set up in tests: a plain reason comes back
+    assert r.status_code == 303 and "/letters?" in r.headers["location"]

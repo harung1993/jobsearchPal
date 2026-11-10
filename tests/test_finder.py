@@ -137,3 +137,17 @@ def test_rss_bot_check_page_is_a_clear_error(monkeypatch):
     monkeypatch.setattr(sources.httpx, "get", lambda url, **k: R(None))
     with pytest.raises(RuntimeError, match="job-alert emails"):
         sources.rss("https://example.org/feed")
+
+
+def test_levels_you_pick_shape_the_ranking():
+    """Mid-level titles (no level word) can rank with senior ones once you pick both; nothing picked keeps the old lean."""
+    from autoapply.rank import level_of, score
+    assert [level_of(t) for t in ("Data Engineer", "Analytics Engineer II", "Senior Data Engineer", "Staff Analytics Engineer",
+                                  "Lead Data Architect", "Head of Data", "Junior Data Analyst", "Data Solutions Architect")] == \
+        ["mid", "mid", "senior", "senior", "lead", "manager", "entry", "mid"]
+    base = {"title_keywords": ["data engineer"]}
+    mid, sr = {"title": "Data Engineer", "found_at": "x"}, {"title": "Senior Data Engineer", "found_at": "x"}
+    assert score(sr, base, set()) > score(mid, base, set())
+    both = {**base, "levels": ["mid", "senior"]}
+    assert score(sr, both, set()) == score(mid, both, set())
+    assert score({"title": "Data Engineering Manager", "found_at": "x"}, both, set()) < score(mid, both, set())

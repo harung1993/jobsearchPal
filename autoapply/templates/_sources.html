@@ -1,16 +1,48 @@
-{# Every job source with its status. Included on Leads; `src` comes from jobsources.overview(). #}
+{# Every job source with its status. Included on Leads; `src` comes from jobsources.overview().
+   Working sources in a compact grid, ones that need a step on their own rows, everything off in one line. #}
 <details class="card sources" id="sources" {% if open %}open{% endif %}>
  <summary><h2 style="margin:0"><span>Where your jobs come from</span><span class="count">{{ src.on }} of {{ src.total }} on</span></h2>
-  <span class="muted">More sources, more good matches. Anything not on yet has a one-line how-to.</span></summary>
- {% for g in src.groups %}<div class="src-group"><h3>{{ g.title }}</h3><p class="muted">{{ g.blurb }}</p>
-  <ul>{% for i in g["items"] %}<li class="src {{ i.status }}"><span class="dot" aria-hidden="true"></span>
-   <div class="body"><b>{{ i.name }}</b> <span class="pill {{ {'on': 'submitted', 'needs': 'waiting', 'off': 'ignored'}[i.status] }}" style="text-transform:none">{{ {'on': 'on', 'needs': 'needs a step', 'off': 'off'}[i.status] }}</span>
-    <div class="ink2">{{ i.detail }}</div></div>
-   {% if i.action %}<a class="btn sm" href="{{ i.href }}" {% if i.external %}target="_blank" rel="noopener"{% endif %}>{{ i.action }}</a>{% endif %}</li>{% endfor %}</ul></div>{% endfor %}
+  <span class="muted">More sources, more good matches.</span></summary>
+
+ {% set b = src.boards %}
+ <div class="src-sec"><h3>Company job boards</h3>
+  <div class="src-co"><span class="dot {{ b.status }}" aria-hidden="true"></span>
+   <div class="body"><b>{{ b.name }}</b><div class="ink2">Checked first every day, straight from each company's careers page. The weekly run adds good ones it finds.</div></div>
+   <div class="acts">{% if src.companies %}<button type="button" class="btn sm ghost" aria-expanded="false" aria-controls="co-list" id="co-toggle">See list</button>{% endif %}
+    <a class="btn sm" href="{{ b.href }}">Add companies</a></div></div>
+  {% if src.companies %}<div class="co-list" id="co-list" hidden>
+   <input type="search" id="co-filter" placeholder="Filter {{ src.companies|length }} companies" aria-label="Filter companies">
+   <ul class="chips">{% for c in src.companies %}<li data-n="{{ c.name|lower }}" title="{{ c.ats|title }}{% if c.roles %} · {{ c.roles }} role{{ 's' if c.roles != 1 }} in 30 days{% endif %}">{{ c.name }}{% if c.roles %} <small>{{ c.roles }}</small>{% endif %}</li>{% endfor %}</ul>
+   <p class="muted small" id="co-none" hidden>No company matches that.</p></div>{% endif %}
+ </div>
+
+ {% if src.working %}<div class="src-sec"><h3>Finding jobs now</h3>
+  <ul class="src-grid">{% for i in src.working %}<li><span class="dot on" aria-hidden="true"></span><div><b>{{ i.name }}</b><div class="ink2">{{ i.detail }}</div></div></li>{% endfor %}</ul></div>{% endif %}
+
+ {% if src.needs %}<div class="src-sec"><h3>Needs a step</h3>
+  <ul class="src-rows">{% for i in src.needs %}<li><span class="dot needs" aria-hidden="true"></span><div class="body"><b>{{ i.name }}</b><div class="ink2">{{ i.detail }}</div></div>
+   {% if i.action %}<a class="btn sm" href="{{ i.href }}" {% if i.external %}target="_blank" rel="noopener"{% endif %}>{{ 'Fix' if i.action == 'Set up' else i.action }}</a>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+
+ {% if src.off %}<div class="src-off"><span class="muted">Not on yet:</span>
+  <span class="off-names">{% for i in src.off %}{% if i.external %}<a href="{{ i.href }}" target="_blank" rel="noopener">{{ i.name }}</a>{% else %}{{ i.name }}{% endif %}{{ ", " if not loop.last }}{% endfor %}</span>
+  <a class="btn sm" href="/setup#interests">Set up</a></div>{% endif %}
 </details>
 <style>.sources{margin-bottom:16px}.sources>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px}.sources>summary::-webkit-details-marker{display:none}
-.sources>summary h2 span:first-child::after{content:" ▸";color:var(--ink-3)}.sources[open]>summary h2 span:first-child::after{content:" ▾"}
-.src-group{margin-top:16px}.src-group h3{font-size:15px;margin:0}.src-group>p{margin:2px 0 6px;font-size:14px}
-.src-group ul{list-style:none;margin:0;padding:0}.src{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}.src:last-child{border-bottom:0}
-.src .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:none;background:var(--axis)}.src.on .dot{background:var(--good-dot)}.src.needs .dot{background:var(--warn-dot)}
-.src .body{flex:1;min-width:0}.src .ink2{font-size:14px}</style>
+.sources>summary h2 span:first-child::after{content:" \25B8";color:var(--ink-3)}.sources[open]>summary h2 span:first-child::after{content:" \25BE"}
+.src-sec{margin-top:16px}.src-sec h3{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+.sources .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:none;background:var(--axis)}.sources .dot.on{background:var(--good-dot)}.sources .dot.needs{background:var(--warn-dot)}
+.src-co{display:flex;gap:10px;align-items:flex-start}.src-co .body{flex:1;min-width:0}.src-co .acts{display:flex;gap:6px;flex-wrap:wrap}
+.sources .ink2{font-size:14px}.sources ul{list-style:none;margin:0;padding:0}
+.src-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.src-grid li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.src-rows li{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.src-rows li:last-child{border-bottom:0}.src-rows .body{flex:1;min-width:0}
+.src-off{display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
+.src-off .off-names{flex:1;min-width:0;color:var(--ink-2)}
+.co-list{margin:12px 0 0 19px}.co-list input{width:100%;max-width:340px;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips li{font-size:13.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2)}
+.chips li small{color:var(--good);font-weight:700;margin-left:2px}.sources .small{font-size:13.5px}
+@media (max-width:640px){.src-grid{grid-template-columns:1fr}.src-co{flex-wrap:wrap}.src-co .acts{margin-left:19px}}</style>
+<script>(()=>{const t=document.getElementById('co-toggle'),l=document.getElementById('co-list');if(!t||!l)return;
+t.addEventListener('click',()=>{const open=l.hidden;l.hidden=!open;t.setAttribute('aria-expanded',open);t.textContent=open?'Hide list':'See list';if(open)document.getElementById('co-filter').focus()});
+const f=document.getElementById('co-filter'),items=[...l.querySelectorAll('.chips li')],none=document.getElementById('co-none');
+f.addEventListener('input',()=>{const q=f.value.trim().toLowerCase();let n=0;items.forEach(li=>{const hit=!q||li.dataset.n.includes(q);li.hidden=!hit;n+=hit});none.hidden=n>0})})()</script>
