@@ -45,11 +45,26 @@ RESOURCES = [
 ]
 
 # Letters from the agency. Gmail search (read-only) plus a check on each message.
-AGENCY_QUERIES = ['(from:gov OR from:masshire OR from:jobquest) (unemployment OR RESEA OR reemployment OR "work search" '
-                  'OR claimant OR "benefit year" OR correspondence OR determination OR appeal OR hearing) -subject:"Job search brief"']
-AGENCY_SEARCH_WORDS = ["unemployment", "RESEA", "reemployment", "work search", "benefit year"]  # non-Gmail inboxes
+# Career centers often write under their own brand, not a .gov address: MassHire (MA), WorkSource (WA, GA),
+# CareerSource (FL), OhioMeansJobs, American Job Centers... These names count as official senders too.
+CAREER_CENTERS = re.compile(r"masshire|jobquest|worksource|careersource|ohiomeansjobs|american job cent|job ?cent(er|re)"
+                            r"|career ?cent(er|re)|workforce (solutions|development|board)|employment security|labor (and|&) industry"
+                            r"|department of labor|\bdol\b|\bedd\b|\bdes\b|\bdew\b|\bides\b|\btwc\b|\bdua\b", re.I)
+AGENCY_QUERIES = ['(from:gov OR from:state OR from:masshire OR from:jobquest OR from:worksource OR from:careersource '
+                  'OR from:ohiomeansjobs OR from:workforce OR from:"job center" OR from:"career center" OR from:"employment security") '
+                  '(unemployment OR RESEA OR reemployment OR "work search" OR claimant OR "benefit year" OR correspondence '
+                  'OR determination OR appeal OR hearing OR appointment OR orientation OR "career center") -subject:"Job search brief"']
+AGENCY_SEARCH_WORDS = ["unemployment", "RESEA", "reemployment", "work search", "benefit year", "career center"]  # non-Gmail inboxes
 AGENCY_WORDS = re.compile(r"unemployment|\bresea\b|reemployment|work search|claimant|benefit year|correspondence"
-                          r"|determination|appeal|hearing|weekly (benefit )?(claim|certification)|masshire|jobquest|your claim|disqualif|eligibility", re.I)
+                          r"|determination|appeal|hearing|weekly (benefit )?(claim|certification)|masshire|jobquest|your claim"
+                          r"|disqualif|eligibility|career cent(er|re)|orientation|workshop", re.I)
+RESEA = re.compile(r"\bresea\b|reemployment services and eligibility|re-?employment services", re.I)
+_DAY = r"(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?"
+_DATE = r"((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)"
+# "Your RESEA appointment is scheduled for Tuesday, November 18, 2026 at 10:00 AM"
+APPOINTMENT = re.compile(r"(?:appointment|meeting|orientation|session|seminar|workshop|interview)\b[^.\n]{0,80}?"
+                         r"(?:\bon|\bfor|scheduled for|is set for|date:?)\s+" + _DAY + _DATE
+                         + r"(?:[^.\n]{0,20}?\b(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)))?", re.I)
 DENIAL = re.compile(r"\b(denied|disqualif\w*|ineligible|not eligible|overpayment|benefits? (have been |were |are )?(stopped|suspended))\b", re.I)
 DUE = re.compile(r"(?:by|before|no later than|due|deadline[: ]+|on or before)\s+((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:,\s*\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)", re.I)
 
@@ -157,11 +172,78 @@ def add_resea(db, state: str = "") -> int:
     return len(steps)
 
 
-def is_agency(addr: str, subject: str, text: str, state_domain: str = "") -> bool:
-    """A letter or notice from an unemployment agency or its career centers."""
+def is_agency(addr: str, subject: str, text: str, state_domain: str = "", name: str = "") -> bool:
+    """A letter or notice from an unemployment agency or its career centers: an official sender (a .gov or
+    state.xx.us address, your state's agency domain, or a career-center brand in the address or sender name)
+    writing about the claim, RESEA, appointments or work search."""
     a = (addr or "").lower()
-    official = a.endswith(".gov") or ".gov>" in a or "masshire" in a or "jobquest" in a or (state_domain and a.endswith(state_domain))
+    dom = a.rsplit("@", 1)[-1]
+    official = (dom.endswith(".gov") or ".gov>" in a or ".state." in dom
+                or bool(state_domain and dom.endswith(state_domain)) or bool(CAREER_CENTERS.search(f"{name} {dom}")))
     return bool(official and AGENCY_WORDS.search(f"{subject}\n{(text or '')[:3000]}"))
+
+
+def letters(db) -> list[dict]:
+    """Agency emails, newest first, each with resea (bool) and when: an appointment or due date found in it."""
+    out = []
+    for e in db.events():
+        if e["kind"] != "agency":
+            continue
+        body = f"{e['subject'] or ''}\n{e.get('body') or ''}"
+        try:
+            at = datetime.strptime(e["at"][:16], "%Y-%m-%d %H:%M")
+        except (TypeError, ValueError):
+            at = datetime.now()
+        appt = appointment(body, at)
+        due = None if appt else due_date(body, at)
+        when = (f"appointment {appt[0].strftime('%a %b %-d')}" + (f", {appt[1]}" if appt[1] else "")) if appt else (
+            f"due {due.strftime('%a %b %-d')}" if due else "")
+        out.append({**e, "resea": bool(RESEA.search(body)), "denial": bool(DENIAL.search(body)), "when": when,
+                    "from": (e["sender"] or "").split(" <")[0]})
+    return out
+
+
+def tasks_from_letters(db, days: int = 120) -> int:
+    """Every recent agency letter with a RESEA date that has no task yet gets one. Returns how many were added."""
+    n = 0
+    for e in db.events():
+        if e["kind"] != "agency":
+            continue
+        try:
+            at = datetime.strptime(e["at"][:16], "%Y-%m-%d %H:%M")
+        except (TypeError, ValueError):
+            continue
+        if (datetime.now() - at).days > days:
+            continue
+        n += bool(task_from_letter(db, e["id"], e["subject"] or "", e.get("body") or "", at))
+    return n
+
+
+def appointment(text: str, at: datetime) -> tuple[date, str] | None:
+    """The first appointment a letter names ("scheduled for Tuesday, November 18 at 10:00 AM"): (date, "10:00 AM")."""
+    m = APPOINTMENT.search(text or "")
+    if not m:
+        return None
+    d = due_date(f"by {re.sub(r'(st|nd|rd|th)(?=,|\s|$)', '', m.group(1))}", at)
+    return (d, (m.group(2) or "").upper().replace(".", "")) if d else None
+
+
+def task_from_letter(db, event_id: str, subject: str, text: str, at: datetime) -> int | None:
+    """A RESEA letter with a date becomes a RESEA task with that date (once per letter). Returns the task id."""
+    body = f"{subject}\n{text or ''}"
+    if not RESEA.search(body):
+        return None
+    appt = appointment(body, at)
+    due = appt[0] if appt else due_date(body, at)
+    if not due:
+        return None
+    ensure(db)
+    tag = f"[letter {_h(event_id)}]"
+    if db.conn.execute("select 1 from ui_tasks where note like ?", (f"%{tag}%",)).fetchone():
+        return None
+    title = ("RESEA appointment" + (f" at {appt[1]}" if appt and appt[1] else "")) if appt else "RESEA: reply or step due"
+    return add_task(db, title, due.isoformat(), kind="resea",
+                    note=f"From the letter of {at:%b %-d}: {subject[:120]} {tag}")
 
 
 def state_domain(rule: dict | None) -> str:

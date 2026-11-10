@@ -188,7 +188,10 @@ def main(argv=None):
         try:
             if args.rebuild:
                 emailsync.rebuild(db, args.days)
-            counts = emailsync.sync(db, args.days, s.raw.get("recruiter_senders"), s.data_dir / "proof")
+            from . import benefits
+            from .web import my_state  # your state's agency site: its domain counts as an official sender
+            counts = emailsync.sync(db, args.days, s.raw.get("recruiter_senders"), s.data_dir / "proof",
+                                    state_domain=benefits.state_domain(my_state(s)))
         except Exception as e:
             db.log_run("sync-email", False, str(e))
             raise

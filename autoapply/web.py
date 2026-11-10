@@ -1123,7 +1123,7 @@ def make_app(settings, db: DB) -> FastAPI:
                     prefill_company=company[:80], weeks=stats.dua_weeks(db), floor=work_search(settings)[1], rule=rule, nav="work", today=date.today(),
                     claim=benefits.claim(settings), runway=benefits.runway(settings, rule), days=benefits.DAYS,
                     tasks=benefits.tasks(db, include_done=True), resources=benefits.RESOURCES, general=general_notes(),
-                    letters=[e for e in db.events() if e["kind"] == "agency"][:8])
+                    letters=benefits.letters(db)[:20])
 
     @app.post("/dua/claim")
     async def dua_claim(request: Request):

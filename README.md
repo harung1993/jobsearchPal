@@ -315,6 +315,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Run log** (`/runs`, linked from the Running badge and the status strip): what each run did, step by step, read
   from `data/daily/*.md`. **Auto apply** on a lead also leaves its result under that lead (for example "the posting
   says it has been filled"). Confirmations and errors show in the app's own dialog, not browser popups.
+- **Unemployment and RESEA emails** (Work search page): letters from your state's agency or career center (a .gov or
+  state address, your state's agency domain, or names like MassHire, WorkSource, CareerSource, American Job Center),
+  kept as proof, with any appointment or due date found. A RESEA date becomes a RESEA step automatically.
 - **Applied elsewhere** (sidebar on every page, and the Dashboard and Leads headers): a short popup to log an
   application you sent on LinkedIn, a company site or by email. Each lead and each Ready or Shortlist role also has an
   **Applied** button that marks that exact role as applied today.

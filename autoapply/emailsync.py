@@ -126,7 +126,7 @@ def is_own(addr: str) -> bool:
 
 
 def apply_event(db: DB, jobs: list[dict], msg_id: str, name: str, addr: str, subject: str, when, text: str,
-                raw: bytes = b"", proof_root: Path | None = None) -> str | None:
+                raw: bytes = b"", proof_root: Path | None = None, state_domain: str = "") -> str | None:
     """Files a candidate email as unreviewed, with the keyword rules' guess. Nothing counts (stats, outcomes,
     the work-search log) until review_event settles it, either from the model (classify.py) or from you."""
     old = db.get_event(msg_id)
@@ -139,7 +139,7 @@ def apply_event(db: DB, jobs: list[dict], msg_id: str, name: str, addr: str, sub
     if old and old["reviewed"]:
         return None  # settled already; only a --rebuild (or you, on the Emails page) changes it
     from . import benefits
-    if benefits.is_agency(addr, subject, text):
+    if benefits.is_agency(addr, subject, text, state_domain=state_domain, name=name):
         # A letter from the unemployment agency or a career center: a to-do, not a job reply. Filed as settled.
         if not old:
             proof = save_proof(proof_root, when, name or addr, "agency", raw, text,
@@ -251,7 +251,8 @@ def sync_sent(db: DB, days: int = 60) -> int:
     return n
 
 
-def sync(db: DB, days: int = 60, extra_senders: list[str] | None = None, proof_root: Path | None = None) -> dict:
+def sync(db: DB, days: int = 60, extra_senders: list[str] | None = None, proof_root: Path | None = None,
+         state_domain: str = "") -> dict:
     jobs = db.by_status("submitted", "filled")
     counts: dict[str, int] = {}
     try:
@@ -261,7 +262,10 @@ def sync(db: DB, days: int = 60, extra_senders: list[str] | None = None, proof_r
     from .benefits import AGENCY_QUERIES, AGENCY_SEARCH_WORDS
     for msg in alerts.messages(days, ATS_SENDERS + (extra_senders or []), gmail_queries=RECRUITER_QUERIES + AGENCY_QUERIES,
                               words=RECRUITER_WORDS + AGENCY_SEARCH_WORDS):
-        kind = apply_event(db, jobs, *msg, proof_root=proof_root)
+        kind = apply_event(db, jobs, *msg, proof_root=proof_root, state_domain=state_domain)
         if kind:
             counts[kind] = counts.get(kind, 0) + 1
+    from . import benefits
+    if added := benefits.tasks_from_letters(db, max(days, 30)):  # RESEA dates in letters become RESEA tasks
+        counts["resea tasks"] = added
     return counts
