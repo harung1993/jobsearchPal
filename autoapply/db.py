@@ -72,7 +72,9 @@ class DB:
                 self.conn.execute(f"alter table events add column {col} {typ}")
         self.conn.execute("update events set reviewed = 1 where kind = 'applied'")
         ucols = {r[1] for r in self.conn.execute("pragma table_info(usage)")}
-        for col in ("est", "tokens"):  # est: what it would cost at API prices (subscription runs); tokens in + out
+        # est: what it would cost at API prices (subscription runs); tokens in + out.
+        # 11/10: the split (fresh input, cache reads, cache writes, output), turns and run time, to see where tokens go.
+        for col in ("est", "tokens", "t_in", "t_cache_read", "t_cache_write", "t_out", "turns"):
             if col not in ucols:
                 self.conn.execute(f"alter table usage add column {col} {'real' if col == 'est' else 'integer'} default 0")
         self.conn.commit()
@@ -161,10 +163,13 @@ class DB:
         self.conn.commit()
 
     def log_usage(self, source: str, model: str, emails: int, sorted_n: int, cost: float, ms: int, error: str | None,
-                  est: float = 0.0, tokens: int = 0):
+                  est: float = 0.0, tokens: int = 0, split: dict | None = None):
         """cost: money actually billed (OpenRouter); est: API-price equivalent of subscription use."""
-        self.conn.execute("insert into usage (source, model, emails, sorted, cost, ms, error, est, tokens)"
-                          " values (?, ?, ?, ?, ?, ?, ?, ?, ?)", (source, model, emails, sorted_n, cost, ms, error, est, tokens))
+        sp = split or {}
+        self.conn.execute("insert into usage (source, model, emails, sorted, cost, ms, error, est, tokens,"
+                          " t_in, t_cache_read, t_cache_write, t_out, turns) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                          (source, model, emails, sorted_n, cost, ms, error, est, tokens, sp.get("in", 0),
+                           sp.get("cache_read", 0), sp.get("cache_write", 0), sp.get("out", 0), sp.get("turns", 0)))
         self.conn.commit()
 
     def spend_this_month(self) -> float:

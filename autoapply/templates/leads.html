@@ -36,6 +36,11 @@
   if(e.target.closest("#pastejob [data-close]"))d.close()});
  document.querySelectorAll(".applied-open").forEach(b=>b.addEventListener("click",()=>{if(menu)menu.open=false}));
  if(location.hash==="#add")d.showModal()})();</script>
+{% set auto_msg %}This runs the agent now. It finds the role on the company's own site, tailors your resume and cover letter, and fills the form.
+
+It uses credits: roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit.
+
+You can follow it on the Run log page.{% endset %}<template id="confirm-auto">{{ auto_msg }}</template>
 <nav class="tabs" aria-label="Filter">
  {% for key, label, n in tabs %}<a href="/leads?show={{ key }}" {% if key == show %}aria-current="page"{% endif %}>{{ label }} <span class="count">{{ n }}</span></a>{% endfor %}
 </nav>
@@ -61,13 +66,9 @@
   <td class="ink2 hide-sm" style="white-space:nowrap">{{ r.last_seen[5:10]|replace('-', '/') }}</td>
   <td><div class="lead-acts">
    {% if not running and (not r.job_id or r.status in ('tracked', 'starred')) and r.status != 'dismissed' %}<form method="post" action="/leads/apply" style="margin:0" data-confirm-title="Auto apply: {{ r.company }} · {{ r.title }}" data-confirm-ok="Auto apply"
-    data-confirm="This runs the agent now. It finds the role on the company's own site, tailors your resume and cover letter, and fills the form.
+    {% if r.applied %}data-confirm="{{ auto_msg }}
 
-It uses credits: roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit.
-
-You can follow it on the Run log page.{% if r.applied %}
-
-Heads up: {{ r.applied }}.{% endif %}">
+Heads up: {{ r.applied }}."{% else %}data-confirm-ref="confirm-auto"{% endif %}>
     <input type="hidden" name="key" value="{{ r.key }}"><button class="btn sm" title="Find, tailor and fill this one now. Uses credits.">Auto apply</button></form>{% endif %}
    {% if r.status != 'applied' %}{{ applied_btn(r.company, r.title, r.apply_url or r.url, "/leads?show=" ~ show ~ "#leads") }}{% endif %}
    <form method="post" action="/leads" class="lead-acts"><input type="hidden" name="key" value="{{ r.key }}"><input type="hidden" name="show" value="{{ show }}">
@@ -76,6 +77,7 @@ Heads up: {{ r.applied }}.{% endif %}">
    {% if r.status == 'dismissed' %}<button class="btn ghost sm" name="status" value="new">Restore</button>
    {% elif not r.job_id %}<button class="btn ghost sm" name="status" value="dismissed" title="Not interested">Dismiss</button>{% endif %}</form></div></td>
  </tr>{% endfor %}</tbody></table>
+ {% if total > rows|length %}<p class="ink2" style="margin:12px 0 0">Showing the best {{ rows|length }} of {{ total }}. <a href="/leads?show={{ show }}&more=1#leads">Show all {{ total }}</a></p>{% endif %}
  {% else %}<div class="empty-state"><b>No leads here yet.</b><span><button type="button" class="btn sm primary" data-open-paste>Paste a job post</button> They also come in with each email sync, from the job-alert emails in Gmail.
   Set up job alerts on LinkedIn or Indeed, and connect Gmail on Settings &gt; Setup.</span></div>{% endif %}
 </section>

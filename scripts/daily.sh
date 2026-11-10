@@ -69,8 +69,10 @@ run_stage() {
       ${model:+-m "$model"} -o "$last" - || ok=0
     line=$( [ -s "$last" ] && autoapply log-daily codex "$model" "$via" --stage "$stage" < "$last" || echo "")
   else
+    # --strict-mcp-config: no MCP servers. The account's claude.ai connectors (Docs, Sheets, Slack...) otherwise load
+    # into every step and ride along on every turn; the run only needs the built-in tools (11/10).
     line=$(claude -p "$(autoapply daily-prompt "$stage" $job)" ${model:+--model "$model"} \
-      --permission-mode acceptEdits --max-turns "$turns" \
+      --permission-mode acceptEdits --max-turns "$turns" --strict-mcp-config \
       --output-format json < /dev/null | autoapply log-daily claude "$model" "$via" --stage "$stage") || ok=0
   fi
   echo "- $stage${job:+ $job}: $line" >> "$today"

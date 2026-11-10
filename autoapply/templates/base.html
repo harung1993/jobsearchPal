@@ -225,6 +225,9 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
  </nav>
 </div>
 <div id="tip" role="tooltip"></div>
+<template id="confirm-applied">Marks this role as applied today. It counts toward your week, and the daily run won't offer it again.
+
+Applied on a different day? Use Applied elsewhere in the menu to pick the date.</template>
 <dialog id="logapp" class="ask" aria-labelledby="logapp-t">
  <h2 id="logapp-t">I applied somewhere else</h2>
  <div class="ask-b"><p>On LinkedIn, a company site or by email? Add it so it counts toward your week, and the daily run never offers you that role again.</p></div>
@@ -253,6 +256,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
 <script>
 // In-app dialogs, no browser popups. One <dialog> does both jobs:
 //  - confirm: a form with data-confirm (and data-confirm-title, data-confirm-ok) asks before it is sent;
+//    data-confirm-ref="<id>" takes the text from that <template> instead, so a long list carries it once;
 //  - errors: POST forms are sent in the background; if the server says no, the reason shows here and you stay put.
 const ask=(()=>{const d=document.getElementById("ask");if(!d||!d.showModal)return null;
  const $=id=>document.getElementById(id);
@@ -283,7 +287,8 @@ if(ask)document.addEventListener("submit",async e=>{const f=e.target;
  const by0=e.submitter,attr=k=>(by0&&by0.getAttribute("form"+k))||f.getAttribute(k)||"";
  if(e.defaultPrevented||!(f instanceof HTMLFormElement)||attr("method").toLowerCase()!=="post"||attr("target")||"native" in f.dataset)return;
  e.preventDefault();const by=e.submitter;
- if(f.dataset.confirm&&!await ask(f.dataset.confirmTitle||"Are you sure?",f.dataset.confirm,{ok:f.dataset.confirmOk||"OK"}))return;
+ const msg=f.dataset.confirm||(f.dataset.confirmRef&&(document.getElementById(f.dataset.confirmRef)||{}).innerHTML||"").trim();
+ if(msg&&!await ask(f.dataset.confirmTitle||"Are you sure?",new DOMParser().parseFromString(msg,"text/html").documentElement.textContent,{ok:f.dataset.confirmOk||"OK"}))return;
  sendInPage(f,by)});
 // "Applied elsewhere": any .applied-open button opens the popup form (data-company/-title/-url prefill it).
 (()=>{const d=document.getElementById("logapp");if(!d||!d.showModal)return;const f=d.querySelector("form");

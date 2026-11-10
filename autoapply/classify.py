@@ -127,6 +127,9 @@ def _claude_json(stdout: str) -> str:
     except ValueError:
         return stdout
     u = d.get("usage") or {}
+    LAST.update(split={"in": int(u.get("input_tokens") or 0), "cache_read": int(u.get("cache_read_input_tokens") or 0),
+                       "cache_write": int(u.get("cache_creation_input_tokens") or 0), "out": int(u.get("output_tokens") or 0),
+                       "turns": int(d.get("num_turns") or 0)}, ms=int(d.get("duration_ms") or 0))
     LAST.update(est=float(d.get("total_cost_usd") or 0),
                 tokens=int(sum(u.get(k) or 0 for k in ("input_tokens", "output_tokens", "cache_read_input_tokens",
                                                          "cache_creation_input_tokens"))))
