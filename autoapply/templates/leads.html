@@ -12,6 +12,12 @@
 {% with open=src_open %}{% include "_sources.html" %}{% endwith %}
 {% if running %}<p class="notice" role="status" style="margin:0 0 14px"><span class="grow">A run is going{% if running.at %} (since {{ running.at }}){% endif %}{% if running.label %}: {{ running.label }}{% endif %}. Auto apply is available again when it finishes, and what it found shows under the role.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
  <script>setTimeout(()=>location.reload(),20000)</script>{% endif %}
+<details class="card add-job" {% if not rows and show == 'open' %}open{% endif %}><summary><b>Add a job</b> <span class="muted">· paste a post you found anywhere</span></summary>
+ <form method="post" action="/leads/paste" data-native><textarea name="text" rows="6" maxlength="200000" required
+  placeholder="Paste the whole job post (a LinkedIn page, a careers page, an email) or a link"></textarea>
+  <div class="add-row"><span class="muted">You check the details before anything is saved.</span><button class="btn primary">Read it</button></div></form></details>
+<style>.add-job{margin:0 0 14px}.add-job summary{cursor:pointer}.add-job textarea{width:100%;font:inherit;font-size:15px;margin-top:10px}
+.add-job .add-row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:8px}</style>
 <nav class="tabs" aria-label="Filter">
  {% for key, label, n in tabs %}<a href="/leads?show={{ key }}" {% if key == show %}aria-current="page"{% endif %}>{{ label }} <span class="count">{{ n }}</span></a>{% endfor %}
 </nav>
@@ -23,7 +29,8 @@
   <th class="hide-sm"><button type="button" data-k="2">Source</button></th><th class="num"><button type="button" data-k="3" data-num>Score</button></th>
   <th class="hide-sm"><button type="button" data-k="4">Seen</button></th><th></th></tr></thead><tbody>
  {% for r in rows %}<tr data-v='{{ [r.company ~ " " ~ r.title, r.location or "", r.source or "", r.score, r.last_seen]|tojson }}'>
-  <td><b style="font-weight:600">{{ r.company }}</b> · {% if r.apply_url or r.url %}<a href="{{ r.apply_url or r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}
+  <td><b style="font-weight:600">{{ r.company }}</b> · <a href="/lead/{{ r.key|urlencode }}">{{ r.title }}</a>{% if r.apply_url or r.url %} <a class="ext" href="{{ r.apply_url or r.url }}" target="_blank" rel="noopener" title="Open the posting" aria-label="Open the posting">↗</a>{% endif %}
+   {% if r.description and 'pasted' in (r.source or '') %}<span class="pill" style="text-transform:none">pasted</span>{% endif %}
    {% if r.apply_url %}<div class="ink2" style="font-size:14px"><span class="pill submitted" style="text-transform:none">company site</span>{% if r.url %} · <a href="{{ r.url }}" target="_blank" rel="noopener">{{ (r.source or 'alert').split(', ')[0] }} link</a>{% endif %}</div>
    {% elif r.ats_checked and not r.job_id and not r.note %}<div class="ink2" style="font-size:14px">company page not found yet{% if r.status != 'starred' %}: star it to look further{% endif %}</div>{% endif %}
    {% if r.note %}<div class="tried{{ ' found' if r.job_id }}"><b>Auto apply {{ r.tried_at[5:10]|replace('-', '/') }} {{ r.tried_at[11:16] }}:</b> {{ r.note|truncate(260) }} <a href="/runs">Run log</a></div>{% endif %}

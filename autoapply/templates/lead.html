@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'view' %}{{ lead.company }}{% else %}Add a job{% endif %}{% endblock %}
+{% block body %}
+<a class="crumb" href="/leads">← Leads</a>
+{% if mode == 'confirm' %}
+<header class="top"><div><h1>Check the details</h1>
+ <div class="ink2">Read from what you pasted. Fix anything that's wrong, then save. Nothing runs until you press a button on the next page.</div></div></header>
+{% if problem %}<p class="notice" role="alert">{{ problem }}</p>{% endif %}
+<form method="post" action="/leads/add" class="card lead-form">
+ <div class="grid g2">
+  <label class="fld"><span>Company</span><input name="company" value="{{ fields.company or '' }}" required maxlength="120"></label>
+  <label class="fld"><span>Role title</span><input name="title" value="{{ fields.title or '' }}" required maxlength="200"></label>
+  <label class="fld"><span>Location</span><input name="location" value="{{ fields.location or '' }}" maxlength="120"></label>
+  <label class="fld"><span>Work setting</span><select name="work_setting">{% for v, l in [('', 'Not stated'), ('on-site', 'On-site'), ('hybrid', 'Hybrid'), ('remote', 'Remote')] %}
+   <option value="{{ v }}" {% if (fields.work_setting or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label class="fld"><span>Pay range</span><input name="pay" value="{{ fields.pay or '' }}" maxlength="80" placeholder="As posted, e.g. $137K - $257K"></label>
+  <label class="fld"><span>Link to the posting <small class="muted">(optional)</small></span><input name="url" value="{{ fields.url or '' }}" maxlength="1000" inputmode="url"></label>
+ </div>
+ <label class="fld"><span>The job description</span><textarea name="description" rows="14" maxlength="20000">{{ fields.description or '' }}</textarea></label>
+ <div class="row"><a class="btn ghost" href="/leads">Cancel</a><button class="btn primary">Save</button></div>
+</form>
+{% if pasted and not problem %}<details class="mt"><summary class="muted">What you pasted</summary><pre class="pasted">{{ pasted|truncate(6000) }}</pre></details>{% endif %}
+{% else %}
+<header class="top"><div><h1>{{ lead.company }} · {{ lead.title }}</h1>
+ <div class="ink2">{{ lead.location or 'Location not listed' }}{% if lead.work_setting %} · {{ lead.work_setting|capitalize }}{% endif %}{% if lead.salary %} · {{ lead.salary }}{% endif %}
+  · from {{ (lead.source or 'pasted')|replace('pasted', 'your paste') }}{% if lead.apply_url %} · <a href="{{ lead.apply_url }}" target="_blank" rel="noopener">company site</a>{% endif %}{% if lead.url %} · <a href="{{ lead.url }}" target="_blank" rel="noopener">posting</a>{% endif %}</div></div>
+ <span class="pill">{{ lead.status }}</span></header>
+{% if lead.applied %}<p class="notice">Heads up: {{ lead.applied }}.</p>{% endif %}
+{% if lead.note %}<p class="tried"><b>Last run {{ lead.tried_at[5:10]|replace('-', '/') }} {{ lead.tried_at[11:16] }}:</b> {{ lead.note }} <a href="/runs">Run log</a></p>{% endif %}
+{% if running %}<p class="notice" role="status"><span class="grow">A run is going{% if running.label %}: {{ running.label }}{% endif %}. What it makes shows up on this page.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
+ <script>setTimeout(()=>location.reload(),20000)</script>
+{% elif lead.status != 'dismissed' %}<div class="card lead-acts-card">
+ <form method="post" action="/lead/{{ lead.key|urlencode }}/run" data-confirm-title="Prep only: {{ lead.company }}" data-confirm-ok="Prep only"
+  data-confirm="Tailors your resume and cover letter and writes your answers to the usual questions. You apply by hand, wherever you like.
+
+It uses AI credit. Nothing is filled or sent.">
+  <input type="hidden" name="mode" value="prep"><button class="btn primary">Prep only</button>
+  <span class="muted">Resume, cover letter and answers. You apply by hand.</span></form>
+ <form method="post" action="/lead/{{ lead.key|urlencode }}/run" data-confirm-title="Auto apply: {{ lead.company }}" data-confirm-ok="Auto apply"
+  data-confirm="This runs the agent now. It finds the role on the company's own site, tailors your resume and cover letter, and fills the form. If the form needs an account (Workday and the like), it preps only.
+
+It uses credits: roughly 1M tokens of your Claude plan (or OpenRouter credit). Nothing is submitted until you press Submit.">
+  <input type="hidden" name="mode" value="apply"><button class="btn">Auto apply</button>
+  <span class="muted">Also fills the form for you to review and submit.</span></form>
+ <form method="post" action="/leads" class="row-btns"><input type="hidden" name="key" value="{{ lead.key }}"><input type="hidden" name="show" value="open">
+  {% if lead.status == 'starred' %}<button class="btn ghost sm" name="status" value="new">Unstar</button>{% else %}<button class="btn ghost sm" name="status" value="starred">Star</button>{% endif %}
+  <button class="btn ghost sm" name="status" value="dismissed">Dismiss</button></form>
+</div>{% endif %}
+{% if lead.description %}<section class="card mt"><details open><summary><b>The job description</b></summary><div class="jd">{{ lead.description }}</div></details></section>
+{% else %}<section class="card mt"><h2>Paste the post to prep from it</h2>
+ <p class="ink2" style="margin-top:0">This lead came from an alert email, so there's no job description yet. Without it, Prep only can't tailor anything when the company's own page isn't found.</p>
+ <form method="post" action="/lead/{{ lead.key|urlencode }}/description"><textarea name="text" rows="8" maxlength="200000" placeholder="Paste the whole job post here"></textarea>
+  <div class="row"><button class="btn">Save the description</button></div></form></section>{% endif %}
+{% endif %}
+<style>
+.lead-form .fld,.mt .fld{display:grid;gap:4px;margin:0 0 12px}.lead-form .fld span{font-weight:600;font-size:14.5px}
+.lead-form input,.lead-form select,.lead-form textarea,.card textarea{width:100%;font:inherit;font-size:15.5px}
+.row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.lead-acts-card{display:grid;gap:10px}.lead-acts-card form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0}
+.row-btns{display:flex;gap:6px}.jd{white-space:pre-wrap;line-height:1.55;margin-top:10px;overflow-wrap:anywhere}
+.pasted{white-space:pre-wrap;font-size:13px;max-height:320px;overflow:auto;overflow-wrap:anywhere}
+.tried{font-size:14.5px;padding:8px 12px;border-radius:12px;background:var(--surface-2)}
+</style>
+{% endblock %}

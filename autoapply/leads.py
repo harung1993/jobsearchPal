@@ -85,7 +85,8 @@ def ensure(db):
     have = {r[1] for r in db.conn.execute("pragma table_info(leads)")}
     # apply_url, ats_checked (11/4): the company's own posting, found without AI.
     # tried_at, note (11/10): when Auto apply last ran on this lead and what it found, shown on the Leads page.
-    for col in ("apply_url", "ats_checked", "tried_at", "note"):
+    # description, work_setting (11/10): a pasted job post keeps its text, so Prep only can tailor against it.
+    for col in ("apply_url", "ats_checked", "tried_at", "note", "description", "work_setting"):
         if col not in have:
             db.conn.execute(f"alter table leads add column {col} text")
 
@@ -115,7 +116,7 @@ def save(db, found: list[dict], source: str, when: datetime, search: dict, terms
     return new
 
 
-TRACKED = {"submitted": "applied", "filled": "ready", "skipped": "dismissed"}  # job status -> lead status
+TRACKED = {"submitted": "applied", "filled": "ready", "prepped": "prepped", "skipped": "dismissed"}  # job status -> lead status
 
 
 def link_tracked(db):
@@ -169,6 +170,77 @@ def set_note(db, k: str, text: str, when: datetime | None = None):
     when = (when or datetime.now()).strftime("%Y-%m-%d %H:%M")
     db.conn.execute("update leads set tried_at = ?, note = ? where key = ?", (when, (text or "").strip()[:400], k))
     db.conn.commit()
+
+
+def add_pasted(db, settings, fields: dict, now: datetime | None = None) -> dict:
+    """Saves a pasted job post as a lead. Returns {"key", "result", "why"}: result "applied" when this exact role was
+    applied to (or filled) before, and then nothing is written; "updated" when the lead exists (blank fields filled
+    in, "pasted" added to its sources); "added" otherwise."""
+    from .history import _web
+    from .prefs import Prefs
+    from .rank import Applied, profile_terms, score
+    ensure(db)
+    f = {k: (fields.get(k) or "").strip() for k in ("company", "title", "location", "work_setting", "pay", "url", "description")}
+    f["url"] = _web(f["url"])
+    if not f["company"] or not f["title"]:
+        raise ValueError("A company and a role title are needed.")
+    k = key(f["company"], f["title"])
+    at = (now or datetime.now()).strftime("%Y-%m-%d %H:%M")
+    row = get(db, k)
+    if not row:  # a lead you already have opens as it is, even once you prepped or applied to it
+        days = int(Prefs(settings.data_dir, settings.raw).data.get("reapply_after_days", 90) or 0)
+        why = Applied(db, days).same_role(f["company"], f["title"], f["url"])
+        if why:
+            return {"key": k, "result": "applied", "why": why}
+    if row:
+        srcs = sorted(set(filter(None, (row["source"] or "").split(", "))) | {"pasted"})
+        db.conn.execute("update leads set source = ?, last_seen = max(coalesce(last_seen, ''), ?), "
+                        "description = coalesce(nullif(description, ''), ?), work_setting = coalesce(nullif(work_setting, ''), ?), "
+                        "salary = coalesce(nullif(salary, ''), ?), location = coalesce(nullif(location, ''), ?), "
+                        "url = coalesce(nullif(url, ''), ?) where key = ?",
+                        (", ".join(srcs), at, f["description"], f["work_setting"], f["pay"], f["location"], f["url"], k))
+        db.conn.commit()
+        return {"key": k, "result": "updated", "why": ""}
+    s = score({"title": f["title"], "description": f["description"], "found_at": at},
+              settings.raw.get("search") or {}, profile_terms(settings.root), now=now or datetime.now())
+    db.conn.execute("insert into leads (key, title, company, location, salary, url, source, first_seen, last_seen, score, "
+                    "description, work_setting) values (?, ?, ?, ?, ?, ?, 'pasted', ?, ?, ?, ?, ?)",
+                    (k, f["title"], f["company"], f["location"], f["pay"], f["url"], at, at, round(s, 2),
+                     f["description"], f["work_setting"]))
+    db.conn.commit()
+    return {"key": k, "result": "added", "why": ""}
+
+
+def set_description(db, k: str, text: str):
+    """The post's text for a lead that came without one (an alert email), so Prep only can work from it."""
+    ensure(db)
+    db.conn.execute("update leads set description = ? where key = ?", ((text or "").strip()[:20000], k))
+    db.conn.commit()
+
+
+def from_paste(db, k: str) -> str | None:
+    """The job for a lead built from its pasted post, when the company's own page wasn't found. Reuses the lead's job
+    when it has one. None when there's no post text to work from (tailoring blind would mean guessing)."""
+    import hashlib
+    from .history import _web
+    r = get(db, k)
+    if not r:
+        return None
+    if r["job_id"] and db.get(r["job_id"]):
+        return r["job_id"]
+    if not (r.get("description") or "").strip():
+        return None
+    jid = "manual:" + hashlib.sha1(k.encode()).hexdigest()[:10]
+    url = _web(r.get("apply_url") or r.get("url") or "")
+    db.upsert_job({"id": jid, "ats": "manual", "company": r["company"], "title": r["title"], "location": r["location"] or "",
+                   "url": url, "apply_url": url, "description": r["description"]})
+    if r.get("salary") and not (db.get(jid) or {}).get("pay"):
+        db.update(jid, pay=r["salary"])
+    st = TRACKED.get(db.get(jid)["status"], "tracked")
+    db.conn.execute("update leads set job_id = ?, status = case when status = 'starred' and ? = 'tracked' "
+                    "then 'starred' else ? end where key = ?", (jid, st, st, k))
+    db.conn.commit()
+    return jid
 
 
 def get(db, k: str) -> dict | None:

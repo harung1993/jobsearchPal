@@ -367,7 +367,7 @@ def make_app(settings, db: DB) -> FastAPI:
         """Decline from the dashboard: the role leaves Ready for you, and the reason counts in Stats."""
         job, _, _ = load(job_id)
         label = DECLINE_REASONS.get(reason, "other")
-        if job["status"] in ("new", "filled"):
+        if job["status"] in ("new", "filled", "prepped"):
             db.update(job_id, status="skipped", error=f"Declined ({label})")
             from . import coach
             coach.touch(db)
@@ -378,14 +378,18 @@ def make_app(settings, db: DB) -> FastAPI:
         return RedirectResponse("/#ready-h", status_code=303)
 
     @app.post("/prepare/{job_id:path}")
-    def prepare(job_id: str):
-        """Prepare one shortlisted role now: tailor and fill it. Uses credits; never submits."""
+    def prepare(job_id: str, mode: str = Form("apply"), back: str = Form("/")):
+        """Prepare one role now: tailor and fill it, or with mode=prep only tailor and write the answers (the person
+        applies by hand). Uses credits; never submits."""
         job, _, _ = load(job_id)
         from . import coach
         coach.touch(db)
-        if job["status"] == "new" and start_run(AUTOAPPLY_JOB=job_id, AUTOAPPLY_PICKS="1"):
-            db.log_run("run-now", True, f"prepare: {job_id}")
-        return RedirectResponse("/", status_code=303)
+        prep = mode == "prep"
+        extra = {"AUTOAPPLY_PREP_ONLY": "1"} if prep else {}
+        if job["status"] in (("new",) if prep else ("new", "prepped")) and start_run(AUTOAPPLY_JOB=job_id, AUTOAPPLY_PICKS="1", **extra):
+            db.log_run("run-now", True, f"{'prep only' if prep else 'prepare'}: {job_id}")
+        from .auth import safe_next
+        return RedirectResponse(safe_next(back) or "/", status_code=303)
 
     def run_state() -> dict | None:
         """The run going right now, from daily.sh's lock and progress line; None when nothing runs."""
@@ -593,6 +597,81 @@ def make_app(settings, db: DB) -> FastAPI:
             db.log_run("run-now", True, f"auto apply: {key}")
         return RedirectResponse("/leads?show=starred", status_code=303)
 
+    # ---------- Paste a job (11/10): any job post in, one page per job ----------
+
+    NEEDS_TEXT = ("This site needs the post's text: open the job, select the whole page (Cmd+A or Ctrl+A), "
+                  "copy the whole page and paste it here.")
+
+    @app.post("/leads/paste")
+    def lead_paste(text: str = Form("")):
+        """Reads a pasted job post (or a link) and shows the fields to check before anything is saved."""
+        from . import paste
+        text = text[:200000]
+        if paste.is_link(text):
+            fields = paste.from_link(text.strip())
+            if not fields:
+                return page("lead.html", nav="leads", mode="confirm", fields={"url": text.strip()}, problem=NEEDS_TEXT, pasted="")
+        else:
+            fields = paste.read(text)
+        problem = "" if fields.get("title") and fields.get("company") else "Couldn't tell the company or the title: fill them in below."
+        return page("lead.html", nav="leads", mode="confirm", fields=fields, problem=problem, pasted=text)
+
+    @app.post("/leads/add")
+    def lead_add(company: str = Form(""), title: str = Form(""), location: str = Form(""), work_setting: str = Form(""),
+                 pay: str = Form(""), url: str = Form(""), description: str = Form("")):
+        from . import leads
+        fields = {"company": company, "title": title, "location": location, "work_setting": work_setting, "pay": pay,
+                  "url": url, "description": description[:20000]}
+        try:
+            r = leads.add_pasted(db, settings, fields)
+        except ValueError as e:
+            return page("lead.html", nav="leads", mode="confirm", fields=fields, problem=str(e), pasted="")
+        if r["result"] == "applied":
+            msg = f"Nothing added: you {r['why']}."
+            return RedirectResponse(f"/leads?done={quote(msg)}#leads", status_code=303)
+        return RedirectResponse(f"/lead/{quote(r['key'], safe='')}", status_code=303)
+
+    def _lead_or_404(key: str) -> dict:
+        from . import leads
+        r = leads.get(db, key)
+        if not r:
+            raise HTTPException(404)
+        return r
+
+    @app.get("/lead/{key:path}")
+    def lead_page(key: str):
+        """A lead's own page. Once it has a job (a run found or built one), the job's page is the lead's page."""
+        r = _lead_or_404(key)
+        if r["job_id"] and db.get(r["job_id"]):
+            return RedirectResponse(f"/job/{quote(r['job_id'], safe=':')}", status_code=303)
+        from .prefs import Prefs
+        from .rank import Applied
+        applied = Applied(db, int(Prefs(settings.data_dir, settings.raw).data.get("reapply_after_days", 90) or 0))
+        r["applied"] = applied.why(r["company"], r["title"], r["url"])
+        return page("lead.html", nav="leads", mode="view", lead=r, running=run_state())
+
+    @app.post("/lead/{key:path}/run")
+    def lead_run(key: str, mode: str = Form("apply")):
+        """Prep only or Auto apply on one lead. Uses credits; never submits."""
+        from . import leads
+        _lead_or_404(key)
+        if not run_state():
+            leads.set_status(db, key, "starred")
+            extra = {"AUTOAPPLY_PREP_ONLY": "1"} if mode == "prep" else {}
+            if start_run(AUTOAPPLY_LEAD=key, AUTOAPPLY_PICKS="1", **extra):
+                db.log_run("run-now", True, f"{'prep only' if mode == 'prep' else 'auto apply'}: {key}")
+        return RedirectResponse(f"/lead/{quote(key, safe='')}", status_code=303)
+
+    @app.post("/lead/{key:path}/description")
+    def lead_description(key: str, text: str = Form("")):
+        from . import leads, paste
+        _lead_or_404(key)
+        body = text.strip()
+        if body and ("about the job" in body.lower() or body.startswith("Company, ")):
+            body = paste.read(body)["description"] or body  # a whole LinkedIn page: keep only the job's text
+        leads.set_description(db, key, body)
+        return RedirectResponse(f"/lead/{quote(key, safe='')}", status_code=303)
+
     @app.post("/leads")
     def lead_action(key: str = Form(...), status: str = Form(...), show: str = Form("open")):
         from . import leads
@@ -632,9 +711,19 @@ def make_app(settings, db: DB) -> FastAPI:
                   "last": coach.note(db, f"letter-note:{job_id}"),
                   "busy": bool(rs and rs["step"] in (f"letter {job_id}", f"refilling {job_id}")),
                   "voice_set": voice.is_set(db)}
+        from . import leads
+        leads.ensure(db)
+        lead = db.conn.execute("select * from leads where job_id = ?", (job_id,)).fetchone()
+        docx = {slot: Path(p).with_suffix(".docx").name for slot, p in plan.get("files", {}).items()
+                if _servable(str(Path(p).with_suffix(".docx")))}
         return page("job.html", nav="", job=job, report=report, approved=plan.get("approved", {}), files=files, checks=checks,
-                    blocked=preflight.blocking(checks), letter=letter,
+                    blocked=preflight.blocking(checks), letter=letter, lead=dict(lead) if lead else None,
+                    answers=plan.get("answers", {}), docx=docx, running=rs, apply_link=_web_link(job.get("apply_url") or job.get("url") or ""),
                     notes=_notes(plan), plan_text=json.dumps(shown, indent=1), handoff=_handoff(job, report))
+
+    def _web_link(u: str) -> str:
+        from .history import _web
+        return _web(u)
 
     def _handoff(job: dict, report: dict) -> str:
         # The bot never works around captchas: when one blocks Submit, you finish on the site.
@@ -682,9 +771,11 @@ def make_app(settings, db: DB) -> FastAPI:
                 "plan": plan, "files": slots, "profile": settings.profile}
 
     @app.get("/file/{slot}/{job_id:path}")
-    def doc(slot: str, job_id: str):
+    def doc(slot: str, job_id: str, kind: str = ""):
         _, plan, _ = load(job_id)
         p = plan.get("files", {}).get(slot)
+        if p and kind == "docx":
+            p = str(Path(p).with_suffix(".docx"))  # the Word copy build-docs writes next to each PDF
         if not p or not _servable(p):
             raise HTTPException(404)
         return FileResponse(p)
@@ -739,7 +830,7 @@ def make_app(settings, db: DB) -> FastAPI:
         from .prefs import PROVIDERS, Prefs
         chain = Prefs(settings.data_dir, settings.raw).chain()
         name = " then ".join(PROVIDERS[p]["name"] for p in chain[:2]) if chain else "Nobody (no model source is on)"
-        jobs = sorted(db.by_status("submitted", "filled"), key=lambda j: (j["company"] or "").lower())
+        jobs = sorted(db.by_status("submitted", "filled", "prepped"), key=lambda j: (j["company"] or "").lower())
         return page("emails.html", rows=groups[show][:300], tabs=tabs, show=show, kinds=KIND_LABELS, jobs=jobs,
                     classifier=name, nav="emails")
 
@@ -1180,7 +1271,8 @@ def make_app(settings, db: DB) -> FastAPI:
         from . import coach
         coach.touch(db)
         try:
-            new_plan = json.loads(plan)
+            # No answers box on the page (a prepped job's kit): keep the saved plan, or its files and answers are lost.
+            new_plan = json.loads(plan) if "plan" in form and plan.strip() else dict(old_plan)
         except json.JSONDecodeError as e:
             raise HTTPException(400, f"answers JSON is invalid: {e}")
         new_plan.setdefault("answers", {})
@@ -1192,6 +1284,11 @@ def make_app(settings, db: DB) -> FastAPI:
         new_plan["held_reviewed"] = True  # from now on a blank consent stays blank: no standing answer fills it
         new_plan["approved_by_user"] = False
 
+        if action in ("skip", "manual"):  # the lead behind this job follows it
+            from . import leads
+            leads.ensure(db)
+            db.conn.execute("update leads set status = ? where job_id = ?", ("dismissed" if action == "skip" else "applied", job_id))
+            db.conn.commit()
         if action == "skip":
             db.update(job_id, status="skipped", plan_json=new_plan)
         elif action == "manual":

@@ -216,3 +216,103 @@ def test_one_pick_per_company_and_shortlist(tmp_path, capsys):
     ids = [j["id"] for j in rank.shortlist(db, s, 5, skip_companies=["Acme"])]
     assert "gh:a:9" not in ids and "wd:c:3" in ids
     assert rank.shortlist(db, s, 0) == []
+
+
+# ---------- Prep only (11/10): tailor and save answers, fill nothing ----------
+
+def test_prep_only_stores_plan_without_filling(tmp_path, capsys, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    called = []
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: called.append(1))
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"files": {"resume": "r.pdf"}, "answers": {"Why us?": "x"},
+                                "approved_by_user": True, "approved": {"Consent": "yes"}}))
+    cli.main(["--config", str(cfg), "fill", str(plan), "--job", "wd:c:3", "--prep-only"])
+    j = db.get("wd:c:3")
+    saved = json.loads(j["plan_json"])
+    assert not called and j["status"] == "prepped" and saved["answers"] == {"Why us?": "x"} and saved["url"] == "u"
+    assert "approved_by_user" not in saved and "approved" not in saved
+    assert json.loads(capsys.readouterr().out)["prepped"] == "wd:c:3"
+
+
+def test_prep_only_never_downgrades_a_filled_job(tmp_path, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: None)
+    db.update("wd:c:3", status="filled")
+    plan = tmp_path / "plan.json"
+    plan.write_text("{}")
+    import pytest
+    with pytest.raises(SystemExit):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "wd:c:3", "--prep-only"])
+    assert db.get("wd:c:3")["status"] == "filled"
+
+
+def test_prep_only_prompt(tmp_path, capsys, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    monkeypatch.delenv("AUTOAPPLY_PREP_ONLY", raising=False)
+    cli.main(["--config", str(cfg), "daily-prompt", "apply", "gh:a:1"])
+    out = capsys.readouterr().out
+    assert "{{" not in out and "--prep-only" in out and "Prep only." not in out  # Workday uses it in every run
+    monkeypatch.setenv("AUTOAPPLY_PREP_ONLY", "1")
+    cli.main(["--config", str(cfg), "daily-prompt", "apply", "gh:a:1"])
+    out = capsys.readouterr().out
+    assert "Prep only." in out and "{{" not in out
+
+
+def test_leads_job_returns_a_prepped_job(tmp_path, capsys):
+    s, db, cfg = make(tmp_path)
+    from autoapply import leads
+    k = leads.add_pasted(db, s, {"company": "Hooli", "title": "Data Lead", "location": "", "work_setting": "", "pay": "",
+                                 "url": "", "description": "the post"})["key"]
+    cli.main(["--config", str(cfg), "leads", "from-paste", k])
+    jid = capsys.readouterr().out.strip()
+    assert jid.startswith("manual:")
+    db.update(jid, status="prepped")
+    cli.main(["--config", str(cfg), "leads", "job", k])
+    assert capsys.readouterr().out.strip() == jid
+
+
+def test_daily_preps_from_the_paste_when_the_company_page_is_missing():
+    """daily.sh runs with set -u: every read of AUTOAPPLY_PREP_ONLY needs a default, or the whole run dies."""
+    import re
+    from pathlib import Path
+    sh = (Path(__file__).resolve().parent.parent / "scripts" / "daily.sh").read_text()
+    assert 'autoapply leads from-paste "$AUTOAPPLY_LEAD"' in sh and "export AUTOAPPLY_PREP_ONLY=1" in sh
+    assert "Paste the post on this lead's page" in sh
+    reads = re.findall(r"\$\{?AUTOAPPLY_PREP_ONLY[^}]*\}?", sh)
+    assert reads and all(r.startswith("${AUTOAPPLY_PREP_ONLY:") for r in reads), reads
+
+
+def test_no_real_fill_in_a_prep_only_run_or_on_a_pasted_job(tmp_path, monkeypatch):
+    """Review 11/10: only the prompt stood between Prep only and a real browser fill."""
+    import pytest
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: pytest.fail("a form was filled"))
+    plan = tmp_path / "plan.json"
+    plan.write_text("{}")
+    monkeypatch.setenv("AUTOAPPLY_PREP_ONLY", "1")
+    with pytest.raises(SystemExit, match="prep-only"):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "gh:a:1"])
+    monkeypatch.delenv("AUTOAPPLY_PREP_ONLY")
+    db.upsert_job({"id": "manual:p", "ats": "manual", "company": "Hooli", "title": "Data Lead", "location": "",
+                   "url": "", "apply_url": "", "description": "post"})
+    with pytest.raises(SystemExit, match="prep-only"):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "manual:p"])
+    assert db.get("gh:a:1")["status"] == "new" and db.get("manual:p")["status"] == "new"
+
+
+def test_letter_rewrite_on_a_prepped_job_fills_nothing(tmp_path, capsys, monkeypatch):
+    import pytest
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: pytest.fail("a form was filled"))
+    db.update("wd:c:3", status="prepped", plan_json={"url": "https://acme.wd1.myworkdayjobs.com/x", "files": {}})
+    cli.main(["--config", str(cfg), "refill", "wd:c:3"])
+    assert db.get("wd:c:3")["status"] == "prepped" and "nothing filled" in capsys.readouterr().out
+
+
+def test_a_prepped_role_is_not_prepared_again(tmp_path):
+    s, db, _ = make(tmp_path)
+    db.update("gh:a:1", status="prepped")
+    from autoapply import rank
+    why = rank.Applied(db, 90).same_role("ACME", "Senior Analytics Engineer")
+    assert why.startswith("already prepped an application for this role")

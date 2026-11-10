@@ -66,12 +66,12 @@ def compute(db: DB, today: date | None = None, weeks: int = 12, floor: int = 3) 
         ],
         "pipeline_funnel": [
             ("Roles found", len(found)),
-            ("Prepped and filled", sum(1 for j in found if j["status"] in ("filled", "submitted"))),
+            ("Prepped and filled", sum(1 for j in found if j["status"] in ("prepped", "filled", "submitted"))),
             ("Sent", sum(1 for j in found if j["status"] == "submitted")),
         ],
         "top_companies": Counter(j["company"] for j in found if j["status"] != "skipped").most_common(8),
         "applications": sorted(applied, key=lambda j: j["submitted_at"], reverse=True),
-        "ready": db.by_status("filled"),
+        "ready": db.by_status("filled", "prepped"),  # prepped: apply by hand with the kit
         "new_count": sum(1 for j in jobs if j["status"] == "new"),
         "events": [e for e in db.events() if e["kind"] not in ("recruiter", "applied")][:8],
         "pending": db.pending_events(),

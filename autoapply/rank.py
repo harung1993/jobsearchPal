@@ -86,6 +86,9 @@ def score(job: dict, search: dict, terms: set[str], now: datetime | None = None,
     return round(s, 2)
 
 
+DONE = {"submitted": "applied", "filled": "filled a form", "prepped": "prepped an application"}
+
+
 class Applied:
     """Companies you've applied to lately: from the tool's own applications (including ones imported from your
     tracker or marked "applied by hand") and from synced emails like "Thank you for applying to Acme"."""
@@ -98,7 +101,7 @@ class Applied:
         self.jobs = {}   # company key -> an application inside the re-apply window
         self.roles = {}  # (company key, title) -> any application ever: the same role is never applied to twice
         self.urls = {}   # posting link -> the same, for a role whose title changed
-        for j in db.by_status("submitted", "filled"):
+        for j in db.by_status("submitted", "filled", "prepped"):  # prepped: files made for it, applying by hand
             when = str(j.get("submitted_at") or j.get("found_at") or "")[:10]
             hit = (j["status"], when, j["title"])
             ck = company_key(j["company"])
@@ -106,7 +109,7 @@ class Applied:
             for u in (j.get("url"), j.get("apply_url")):
                 if _url(u):
                     self.urls.setdefault(_url(u), hit)
-            if j["status"] == "filled" or not when or when >= cutoff:
+            if j["status"] in ("filled", "prepped") or not when or when >= cutoff:
                 self.jobs.setdefault(ck, hit)
         self.mail = " | ".join(_norm(f"{e['sender']} {e['subject']}") for e in db.events()
                                if e["kind"] in self.EVENT_KINDS and str(e["at"])[:10] >= cutoff)
@@ -118,7 +121,7 @@ class Applied:
         if not role:
             return ""
         st, when, t = role
-        return (f"already {'applied' if st == 'submitted' else 'filled a form'} for this role at {company}"
+        return (f"already {DONE.get(st, 'filled a form')} for this role at {company}"
                 f" ({t}{', ' + when if when else ''})")
 
     def why(self, company: str, title: str = "", url: str = "") -> str:
@@ -132,7 +135,7 @@ class Applied:
         ck = company_key(company)
         if ck in self.jobs:
             st, when, title = self.jobs[ck]
-            return f"already {'applied' if st == 'submitted' else 'filled a form'} at {company} ({title}{', ' + when if when else ''})"
+            return f"already {DONE.get(st, 'filled a form')} at {company} ({title}{', ' + when if when else ''})"
         if len(c) >= 3 and re.search(rf"(^| ){re.escape(c)}( |$)", self.mail):
             return f"already applied at {company} (from your email)"
         return ""

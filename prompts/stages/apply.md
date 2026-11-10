@@ -1,8 +1,11 @@
 Today's job search, one application: {{JOB_ID}}. Follow AGENTS.md (read CLAUDE.local.md and materials/context/*.md
 first). Work only on this role.
+{{PREP_ONLY}}
 
 1. `autoapply show {{JOB_ID}}` for the posting. If its ats is "feed", find the same role on the company's own careers
    page (ATS URL) and work from that; if it's gone there, print "<Company>: posting gone" and stop.
+   If its ats is "manual", the person pasted the post: tailor against its description and finish the way step 3
+   does (plan.json and `fill --prep-only`); there's no form to fill.
    `autoapply resume-outline` prints the base resume (headline, summary, skills, each experience block's bullets).
    Work from that; don't open the .docx or PDFs with python, `pdftotext` or `pdfinfo`.
 2. Tailor the resume and write a cover letter: write data/applications/<company-slug>/docs.json, then run
@@ -19,7 +22,13 @@ first). Work only on this role.
    Write the cover letter the way materials/context/voice.md asks when it's there (tone, length, opening, words to
    avoid, the person's own notes; sample letters set the voice only, never the facts).
    Also write notes.md (fit/gap table, pay ask, form answers, short screen prep). Keep it to what's true in materials/.
-3. If the posting is on Workday or another site that needs an account, stop here: say "apply by hand" in notes.md.
+   If data/applications/<slug>/ already has the PDFs and a plan.json from an earlier prep-only run, reuse them: skip
+   step 2 and go on to step 3.
+3. If the posting is on Workday or another site that needs an account, don't scan it. Write plan.json (the shape in
+   step 5, "url" = the posting) answering the usual questions: why this company, why this role, pay ask (from
+   CLAUDE.local.md), start date, notice period, years with the role's key skill. Run
+   `autoapply fill data/applications/<slug>/plan.json --job {{JOB_ID}} --prep-only`, say "apply by hand" in
+   notes.md, and stop.
 4. `autoapply scan <apply url>` for the form's questions.
 5. Write data/applications/<slug>/plan.json:
    {"url": "<apply url>", "ats": "<greenhouse|lever|ashby|...>",
@@ -34,4 +43,5 @@ first). Work only on this role.
    Consent and self-ID checks are the person's to settle: leave those.
    If fill stops with "Not filled: already applied for this role", the person applied to it already (by hand or
    another way). That is not an error: don't retry or work around it; print "<Company>: already applied, skipped".
-7. Print one line, naming any check still failing: "<Company> (<title>): ready to review" or "<Company>: apply by hand" or what went wrong.
+7. Print one line, naming any check still failing: "<Company> (<title>): ready to review" or "<Company>: apply by hand"
+   or "<Company>: prepped, apply by hand" or what went wrong.

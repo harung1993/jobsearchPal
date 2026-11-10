@@ -75,8 +75,15 @@
   {% if r.state == 'ready' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep pack</a>
   {% elif r.state == 'update' %}<a class="btn sm" href="/prep/{{ r.job.id|urlencode }}">Prep (updating next run)</a>
   {% else %}<span class="pill waiting">prep next run</span>{% endif %}</div>{% endfor %}
- {% if s.ready %}<div class="group-h"><b>Ready to submit</b><span>Filled in and waiting for your review. Nothing is sent until you press Submit.</span></div>
- {% for j in s.ready %}<div class="ready"><div class="avatar" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
+ {% set filled_ready = s.ready|selectattr('status', 'equalto', 'filled')|list %}{% set prepped_ready = s.ready|selectattr('status', 'equalto', 'prepped')|list %}
+ {% if prepped_ready %}<div class="group-h"><b>Prepped: apply by hand</b><span>Resume, cover letter and answers are ready. Apply on the company's site, then press I applied by hand.</span></div>
+ {% for j in prepped_ready %}<div class="ready"><div class="avatar" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
+  <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
+   <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}</div></div>
+  <div class="acts">{{ decline(j) }}<a class="btn primary sm" href="/job/{{ j.id|urlencode }}#kit">Open the kit</a></div></div>
+ {% endfor %}{% endif %}
+ {% if filled_ready %}<div class="group-h"><b>Ready to submit</b><span>Filled in and waiting for your review. Nothing is sent until you press Submit.</span></div>
+ {% for j in filled_ready %}<div class="ready"><div class="avatar" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
    <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.error %} · <span style="color:var(--bad)">{{ j.error|truncate(80) }}</span>{% endif %}</div>
    {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}
@@ -92,7 +99,12 @@
    data-confirm="This runs the agent now: it tailors your resume and cover letter and fills the form.
 
 It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit.">
-   <button class="btn sm" title="Tailor and fill this one now. Uses credits.">Prepare</button></form>{% endif %}</div></div>
+   <button class="btn sm" title="Tailor and fill this one now. Uses credits.">Prepare</button></form>
+   <form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-confirm-title="Prep only: {{ j.company }} · {{ j.title }}" data-confirm-ok="Prep only"
+   data-confirm="Tailors your resume and cover letter and writes your answers to the usual questions. You apply by hand.
+
+It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" value="prep">
+   <button class="btn ghost sm" title="Resume, cover letter and answers only. You apply by hand. Uses credits.">Prep only</button></form>{% endif %}</div></div>
  {% endfor %}{% endif %}
  {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
 </section>

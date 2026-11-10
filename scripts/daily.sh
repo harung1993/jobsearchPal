@@ -83,17 +83,24 @@ one="${AUTOAPPLY_LEAD:-}${AUTOAPPLY_JOB:-}"
 if [ -z "${AUTOAPPLY_JOB:-}" ] && [ "$(autoapply leads lookup 2>/dev/null || echo 0)" -gt 0 ] 2>/dev/null; then
   run_stage alerts || true; echo "- starred leads: $line" >> "$today"; looked="$line"
 fi
+# Prep only (AUTOAPPLY_PREP_ONLY=1, from a lead's or a job's page): tailored files and answers, no form filled.
 if [ -n "${AUTOAPPLY_LEAD:-}" ]; then
   job=$(autoapply leads job "$AUTOAPPLY_LEAD" 2>/dev/null || true)
   if [ -n "$job" ]; then run_stage apply "$job" || true; picked="$line"
-    done_note="Found on the company's site and filled in. ${line}"
+    if [ "${AUTOAPPLY_PREP_ONLY:-}" = 1 ]; then done_note="Prepped: your resume, cover letter and answers are on this page. ${line}"
+    else done_note="Found on the company's site and filled in. ${line}"; fi
     autoapply leads note "$AUTOAPPLY_LEAD" "$done_note" 2>/dev/null || true
+  elif job=$(autoapply leads from-paste "$AUTOAPPLY_LEAD" 2>/dev/null) && [ -n "$job" ]; then
+    # Not on the company's own site, but the person pasted the post: prep from that, and they apply by hand.
+    export AUTOAPPLY_PREP_ONLY=1
+    run_stage apply "$job" || true; picked="$line"
+    autoapply leads note "$AUTOAPPLY_LEAD" "Not on the company's own site, so it was prepped from the post you pasted: apply by hand. ${line}" 2>/dev/null || true
   else picked="Auto apply: couldn't find that role on the company's own site (it may be closed, or only on LinkedIn/Indeed)"; ok=0
     # What the lookup actually saw (filled, page gone, ...), so the Leads page can say why.
-    why="Not found on the company's own site. It may be closed, or only on LinkedIn/Indeed."
+    why="Not found on the company's own site. It may be closed, or only on LinkedIn/Indeed. Paste the post on this lead's page to prep from it."
     autoapply leads note "$AUTOAPPLY_LEAD" "${looked:-${blocked:-$why}}" 2>/dev/null || true
   fi
-  echo "- auto apply: $picked" >> "$today"
+  if [ "${AUTOAPPLY_PREP_ONLY:-}" = 1 ]; then echo "- prep only: $picked" >> "$today"; else echo "- auto apply: $picked" >> "$today"; fi
 fi
 if [ -n "${AUTOAPPLY_JOB:-}" ] && [ -n "${AUTOAPPLY_LETTER:-}" ]; then
   # Rewrite one cover letter with the person's note, then refill the form from the saved plan (no agent).
@@ -103,7 +110,7 @@ if [ -n "${AUTOAPPLY_JOB:-}" ] && [ -n "${AUTOAPPLY_LETTER:-}" ]; then
   echo "- letter: $picked" >> "$today"
 elif [ -n "${AUTOAPPLY_JOB:-}" ]; then
   run_stage apply "$AUTOAPPLY_JOB" || true; picked="$line"
-  echo "- prepare: $picked" >> "$today"
+  if [ "${AUTOAPPLY_PREP_ONLY:-}" = 1 ]; then echo "- prep only: $picked" >> "$today"; else echo "- prepare: $picked" >> "$today"; fi
 fi
 for stage in $( [ -n "$one" ] || autoapply daily-stages 2>/dev/null); do
   if [ "$stage" = rank ]; then
