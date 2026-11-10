@@ -47,27 +47,32 @@
   <div class="actions"><button class="btn sm">Save</button></div></form></section>
 
 <section class="card" id="tasks"><h2><span>Appointments and deadlines</span><span class="count">{{ tasks|rejectattr('done')|list|length }} open</span></h2>
- {% for t in tasks %}<div class="task {{ 'done' if t.done }}">
+ {% macro task_row(t) %}<div class="task {{ 'done' if t.done }}">
   <form method="post" action="/dua/task"><input type="hidden" name="task_id" value="{{ t.id }}">
    <button class="tick" name="action" value="{{ 'undo' if t.done else 'done' }}" aria-label="{{ 'Mark not done' if t.done else 'Mark done' }}">{{ '✓' if t.done else '' }}</button></form>
   <div class="body"><div class="t">{% if t.kind == 'resea' %}<span class="pill rejected" style="text-transform:none">RESEA</span> {% endif %}{{ t.title }}</div>
    <form method="post" action="/dua/task" class="due"><input type="hidden" name="task_id" value="{{ t.id }}"><input type="hidden" name="action" value="due">
     <input type="date" name="due" value="{{ t.due or '' }}" aria-label="Due date" onchange="this.form.submit()">{% if not t.due and not t.done %}<span class="muted">add the date from your letter</span>{% endif %}</form></div>
   <form method="post" action="/dua/task"><input type="hidden" name="task_id" value="{{ t.id }}"><button class="btn ghost sm" name="action" value="delete" aria-label="Remove">✕</button></form>
- </div>{% else %}<p class="muted" style="margin:0 0 10px">Seminars, RESEA meetings, documents to send: anything with a date. They show on the dashboard's To do two weeks ahead.</p>{% endfor %}
+ </div>{% endmacro %}
+ {% set open_list = tasks|rejectattr('done')|list %}{% set done_list = tasks|selectattr('done')|list %}
+ {% for t in open_list %}{{ task_row(t) }}{% else %}<p class="muted" style="margin:0 0 10px">{% if done_list %}Nothing open. {% endif %}Seminars, RESEA meetings, documents to send: anything with a date. They show on the dashboard's To do two weeks ahead.</p>{% endfor %}
+ {% if done_list %}<details class="done-list"><summary class="muted">Done ({{ done_list|length }})</summary>{% for t in done_list %}{{ task_row(t) }}{% endfor %}</details>{% endif %}
  <form method="post" action="/dua/task" class="add-task"><input type="text" name="title" placeholder="e.g. Upload ID to the claim portal" aria-label="New appointment or deadline">
   <input type="date" name="due" aria-label="Due"><button class="btn sm" name="action" value="add">Add</button></form>
  {% if not tasks|selectattr('kind', 'equalto', 'resea')|list %}<form method="post" action="/dua/task" style="margin-top:8px"><button class="btn ghost sm" name="action" value="resea">Asked to do RESEA? Add its steps</button></form>{% endif %}
- <h3 class="mt" style="font-size:15px;margin-bottom:2px">Unemployment and RESEA emails <span class="count">{{ letters|length }}</span></h3>
- <p class="muted" style="margin:0 0 6px;font-size:13.5px">Found in your email (agency, career centers, RESEA), kept as proof. A RESEA date in one
-  becomes a RESEA step above. Missing one? Make sure the address it went to is under Setup, Email.</p>
- {% for e in letters %}<div class="letter"><span class="ink2">{{ e.at[5:10]|replace('-', '/') }}</span>
-  <span><b>{{ e.subject|truncate(80) }}</b>{% if e.resea %} <span class="pill waiting" style="text-transform:none">RESEA</span>{% endif %}{% if e.denial %} <span class="pill rejected" style="text-transform:none">decision</span>{% endif %}
-   <span class="ink2"> · {{ e['from']|truncate(40) }}{% if e.when %} · <b>{{ e.when }}</b>{% endif %}</span>
-   {% if e.proof %} · <a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</span></div>
- {% else %}<p class="muted" style="margin:0;font-size:14px">None yet. Letters from your state's unemployment agency or career center show up here after an email sync.</p>{% endfor %}
- <style>.letter{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:14.5px;padding:4px 0;border-top:1px solid var(--line)}.letter:first-of-type{border-top:0}</style>
 </section></div>
+
+<section class="card letters" id="letters"><h2><span>Unemployment and RESEA emails</span><span class="count">{{ letters|length }}</span></h2>
+ <p class="muted" style="margin:-4px 0 8px;font-size:14px">Found in your email (agency, career centers, RESEA) and kept as proof. A RESEA date in one
+  becomes a step under Appointments and deadlines. Missing one? Make sure the address it went to is under Setup, Email.</p>
+ {% macro letter_row(e) %}<div class="letter"><span class="ink2 when">{{ e.at[5:10]|replace('-', '/') }}</span>
+  <span class="subj"><b>{{ e.subject|truncate(90) }}</b>{% if e.resea %} <span class="pill waiting" style="text-transform:none">RESEA</span>{% endif %}{% if e.denial %} <span class="pill rejected" style="text-transform:none">decision</span>{% endif %}{% if e.when %} <span class="due-on">due {{ e.when }}</span>{% endif %}</span>
+  <span class="ink2 from">{{ e['from']|truncate(44) }}</span>
+  <span class="open">{% if e.proof %}<a href="/proof/{{ e.proof.split('/')[-2] }}/{{ e.proof.split('/')[-1] }}" target="_blank">open</a>{% endif %}</span></div>{% endmacro %}
+ {% for e in letters[:5] %}{{ letter_row(e) }}{% else %}<p class="muted" style="margin:0;font-size:14px">None yet. Letters from your state's unemployment agency or career center show up here after an email sync.</p>{% endfor %}
+ {% if letters|length > 5 %}<details class="more-letters"><summary>Show all {{ letters|length }}</summary>{% for e in letters[5:] %}{{ letter_row(e) }}{% endfor %}</details>{% endif %}
+</section>
 
 <section class="card people" id="people" aria-labelledby="people-h"><h2 id="people-h"><span>People you've been in touch with</span><span class="count">{{ people|length }}</span></h2>
  <p class="ink2 lead">Many jobs come through people you know a little: a former colleague, a friend of a friend, someone from a meetup. A short note to one of them is real search work. Each one is listed in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
@@ -99,13 +104,20 @@
 @media (max-width:700px){.thisweek{flex-direction:column;gap:14px}.thisweek .tw-side{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:12px}}
 .help-box summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px}.help-box summary::-webkit-details-marker{display:none}.help-box summary h2::after{content:" ▸";color:var(--ink-3)}.help-box[open] summary h2::after{content:" ▾"}.help-box[open] summary{margin-bottom:10px}.help-box summary .muted{font-size:14px}
 .section-h{font-size:16px;margin:22px 0 10px}.older>summary{cursor:pointer;margin:16px 0 0;font-weight:600;color:var(--ink-2)}
-.benefits{margin-bottom:16px;align-items:start}.runway .num{font-size:28px;font-weight:700}.runway .num small{font-size:14.5px;font-weight:500;color:var(--ink-2)}
+.benefits{margin-bottom:16px;align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:860px){.benefits{grid-template-columns:1fr}}
+.letters{margin-bottom:16px}.letter{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,220px) 44px;gap:12px;align-items:baseline;font-size:14.5px;padding:8px 0;border-top:1px solid var(--line)}
+.letter .from{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.letter .open{text-align:right}.letter .due-on{font-size:13.5px;font-weight:700;color:var(--warn)}
+.more-letters summary{cursor:pointer;color:var(--accent-ink);font-weight:600;font-size:14.5px;padding:8px 0}
+.done-list summary{cursor:pointer;font-size:14.5px;padding:8px 0}
+@media (max-width:700px){.letter{grid-template-columns:44px minmax(0,1fr)}.letter .from{grid-column:2;white-space:normal}.letter .open{grid-column:2;text-align:left}}.runway .num{font-size:28px;font-weight:700}.runway .num small{font-size:14.5px;font-weight:500;color:var(--ink-2)}
 .runway .sub{font-size:14px;color:var(--ink-3);margin:6px 0 12px}.claim-form .actions{margin-top:8px}
 .task{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}.task form{margin:0}.task .body{flex:1;min-width:0}
 .task .t{font-weight:600;font-size:15.5px}.task.done .t{text-decoration:line-through;color:var(--ink-3)}
 .task .tick{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:14.5px;color:var(--accent);padding:0}
-.task .due{display:flex;gap:8px;align-items:center;margin-top:4px}.task .due input{width:auto;padding:2px 6px;font-size:14px}.task .due span{font-size:13.5px}
-.add-task{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.add-task input[type=text]{flex:1;min-width:160px}.add-task input[type=date]{width:auto}
+.task .body{display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.task .t{flex:1 1 180px;min-width:0}
+.task .due{display:flex;gap:8px;align-items:center}.task .due input{width:auto;padding:2px 6px;font-size:14px}.task .due span{font-size:13.5px}
+.add-task{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.add-task input[type=text]{flex:1 1 220px;min-width:0}.add-task input[type=date]{width:auto}
 .general{margin:0;padding-left:18px;font-size:15px;color:var(--ink-2)}.general li{margin:3px 0}.res{gap:10px}.res-item{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:inherit}
 .res-item:hover{text-decoration:none;background:var(--surface-2)}
 .people{margin-bottom:16px}.people .lead{margin:0 0 10px;max-width:70ch}.add-person{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}
