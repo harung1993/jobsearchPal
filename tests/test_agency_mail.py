@@ -45,3 +45,12 @@ def test_work_search_page_lists_letters(tmp_path):
     emailsync.apply_event(db, [], "<r@x>", "MassHire", "noreply@masshire.org", "RESEA appointment", AT, RESEA_MAIL)
     html = c.get("/dua").text
     assert "Unemployment and RESEA emails" in html and "RESEA appointment" in html and "appointment Wed Nov 18" in html
+
+
+def test_due_task_uses_the_letters_words(tmp_path):
+    db = DB(tmp_path / "t.db")
+    body = ("RESEA is a 3-step process. To complete program requirements: Complete a Career Center Seminar before "
+            "11/20/2026 . You can do this online.")
+    assert benefits.task_from_letter(db, "<w@x>", "Welcome to the MassHire Career Centers!", body, AT)
+    t = benefits.tasks(db)[0]
+    assert t["title"] == "RESEA: Complete a Career Center Seminar" and t["due"] == "2026-11-20"

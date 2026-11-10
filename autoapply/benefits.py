@@ -228,6 +228,16 @@ def appointment(text: str, at: datetime) -> tuple[date, str] | None:
     return (d, (m.group(2) or "").upper().replace(".", "")) if d else None
 
 
+def _due_sentence(text: str) -> str:
+    """The letter's own words for what is due: "Complete a Career Center Seminar" from "...Seminar before 11/20/2026."."""
+    m = DUE.search(text or "")
+    if not m:
+        return ""
+    start = max(text.rfind(".", 0, m.start()), text.rfind("\n", 0, m.start()), text.rfind(":", 0, m.start())) + 1
+    words = re.sub(r"\s+", " ", text[start:m.start()]).strip(" ,;-")
+    return f"RESEA: {words[:70]}" if 3 <= len(words) <= 120 else ""
+
+
 def task_from_letter(db, event_id: str, subject: str, text: str, at: datetime) -> int | None:
     """A RESEA letter with a date becomes a RESEA task with that date (once per letter). Returns the task id."""
     body = f"{subject}\n{text or ''}"
@@ -241,7 +251,7 @@ def task_from_letter(db, event_id: str, subject: str, text: str, at: datetime) -
     tag = f"[letter {_h(event_id)}]"
     if db.conn.execute("select 1 from ui_tasks where note like ?", (f"%{tag}%",)).fetchone():
         return None
-    title = ("RESEA appointment" + (f" at {appt[1]}" if appt and appt[1] else "")) if appt else "RESEA: reply or step due"
+    title = ("RESEA appointment" + (f" at {appt[1]}" if appt and appt[1] else "")) if appt else _due_sentence(body) or "RESEA: reply or step due"
     return add_task(db, title, due.isoformat(), kind="resea",
                     note=f"From the letter of {at:%b %-d}: {subject[:120]} {tag}")
 
