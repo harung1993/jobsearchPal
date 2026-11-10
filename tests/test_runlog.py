@@ -111,3 +111,11 @@ def test_applied_elsewhere_from_any_page_and_one_click_on_a_lead(tmp_path):
     assert r.status_code == 400 and "role title" in r.json()["detail"]
     r = c.post("/applications/log", data={"company": "Y", "title": "Z", "back": "//evil.example"}, follow_redirects=False)
     assert r.headers["location"].startswith("/?msg=")  # only same-site paths are followed
+
+
+def test_in_page_sending_reads_the_form_address_safely(tmp_path):
+    """A <button name="action"> hides form.action in the browser (it posted to /[object HTMLButtonElement])."""
+    s, db, c = make(tmp_path)
+    html = c.get("/dua").text
+    assert 'name="action"' in html  # the Work search page has such forms
+    assert 'getAttribute("action")' in html and "fetch(f.action" not in html and 'getAttribute("formaction")' in html

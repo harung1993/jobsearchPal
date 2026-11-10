@@ -267,7 +267,9 @@ async function sendInPage(f,by){
  btns.forEach(b=>b.disabled=true);if(by&&by.tagName==="BUTTON"&&by.children.length===0)by.textContent="Working…";
  const restore=()=>{btns.forEach(b=>b.disabled=false);if(by&&label!=null&&by.children.length===0)by.textContent=label};
  const fd=new FormData(f);if(by&&by.name)fd.append(by.name,by.value);
- let r;try{r=await fetch(f.action,{method:"POST",body:fd,headers:{"X-In-Page":"1",accept:"text/html"},credentials:"same-origin"})}
+ // Read the address with getAttribute: a field named "action" (many forms have <button name="action">) hides f.action.
+ const to=new URL((by&&by.getAttribute("formaction"))||f.getAttribute("action")||location.href,location.href).href;
+ let r;try{r=await fetch(to,{method:"POST",body:fd,headers:{"X-In-Page":"1",accept:"text/html"},credentials:"same-origin"})}
  catch(e){restore();await ask("Couldn't reach jobsearchPal","The server didn't answer. Check that it's running, then try again.",{cancel:"",error:true});return}
  if(r.ok&&r.redirected){
   // fetch drops the #section from a redirect; put back the one the form's back= asked for
@@ -278,7 +280,8 @@ async function sendInPage(f,by){
  if(r.status===401){await ask("You're signed out","Sign in again, then try that once more.",{cancel:"",ok:"Sign in"});location.assign("/login");return}
  await ask(e.title||"That didn't work",e.detail||"Nothing was changed. Try again, and if it keeps happening, see the Run log.",{cancel:"",error:true,code:"Error "+r.status})}
 if(ask)document.addEventListener("submit",async e=>{const f=e.target;
- if(e.defaultPrevented||!(f instanceof HTMLFormElement)||(f.method||"").toLowerCase()!=="post"||f.target||"native" in f.dataset)return;
+ const by0=e.submitter,attr=k=>(by0&&by0.getAttribute("form"+k))||f.getAttribute(k)||"";
+ if(e.defaultPrevented||!(f instanceof HTMLFormElement)||attr("method").toLowerCase()!=="post"||attr("target")||"native" in f.dataset)return;
  e.preventDefault();const by=e.submitter;
  if(f.dataset.confirm&&!await ask(f.dataset.confirmTitle||"Are you sure?",f.dataset.confirm,{ok:f.dataset.confirmOk||"OK"}))return;
  sendInPage(f,by)});
