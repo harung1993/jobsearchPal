@@ -1,0 +1,13 @@
+Senior Analytics Engineer
+Hooli
+Location: Remote (US)
+Salary: $150,000 - $180,000 a year
+
+About the role
+You will own our dbt models and Snowflake warehouse, and work with product teams on metrics.
+
+What you'll do
+- Build and maintain data models in dbt
+- Partner with analysts on reporting
+
+Apply at https://boards.greenhouse.io/hooli/jobs/4242?gh_src=abc
