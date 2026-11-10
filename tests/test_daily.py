@@ -270,3 +270,14 @@ def test_leads_job_returns_a_prepped_job(tmp_path, capsys):
     db.update(jid, status="prepped")
     cli.main(["--config", str(cfg), "leads", "job", k])
     assert capsys.readouterr().out.strip() == jid
+
+
+def test_daily_preps_from_the_paste_when_the_company_page_is_missing():
+    """daily.sh runs with set -u: every read of AUTOAPPLY_PREP_ONLY needs a default, or the whole run dies."""
+    import re
+    from pathlib import Path
+    sh = (Path(__file__).resolve().parent.parent / "scripts" / "daily.sh").read_text()
+    assert 'autoapply leads from-paste "$AUTOAPPLY_LEAD"' in sh and "export AUTOAPPLY_PREP_ONLY=1" in sh
+    assert "Paste the post on this lead's page" in sh
+    reads = re.findall(r"\$\{?AUTOAPPLY_PREP_ONLY[^}]*\}?", sh)
+    assert reads and all(r.startswith("${AUTOAPPLY_PREP_ONLY:") for r in reads), reads
