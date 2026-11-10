@@ -447,7 +447,7 @@ low-privilege user.
 **The daily agent (Codex).** Runs with `--sandbox workspace-write`, network on and no approval prompts:
 writes are limited to this folder, but there is no command allow list.
 
-**Gmail (app password, optional).** An app password grants full IMAP and SMTP access to the mailbox,
+**Email: Gmail, iCloud or Yahoo (app password, optional).** An app password grants full IMAP and SMTP access to the mailbox,
 the same as your password, minus the 2-step check. jobsearchPal uses it to read job emails in All Mail, Spam and Trash (each opened read-only,
 messages fetched with `BODY.PEEK` so they stay unread) and to send you the morning brief. It never
 sends anything else, never deletes and never marks as read. It is stored in `.env` or `data/secrets.json`
@@ -547,7 +547,10 @@ which walks through everything in a browser:
 4. **About you** (optional, recommended): roles and level, pay ask, where you'll work, work authorization,
    what to emphasize and avoid, saved to `materials/context/setup.md`.
 5. **Agent sign-in**: the command above; the page shows when it worked.
-6. **Gmail** (optional): an app password, tested before it's saved, for job alerts, replies and the brief.
+6. **Email** (optional): Gmail, iCloud or Yahoo with an app password, tested before it's saved, for job alerts, replies
+   and the brief. Best is one address for the whole search. Other addresses you apply from: list them under
+   **Other addresses** and forward them to the main inbox (steps shown per provider), or connect up to three as extra
+   inboxes. Outlook.com and Hotmail can only be forwarded: Microsoft turned off app passwords for them in September 2024.
 
 ![Setup](docs/setup.png)
 
@@ -632,7 +635,8 @@ rough edges. Known limits today:
 
 - **You need a small always-on computer** (a home server, a mini PC, a cheap cloud VM) and are comfortable running a
   few terminal commands once. Day to day, everything happens in the browser.
-- **Email is Gmail only** (an app password, read-only). Other providers are on the list.
+- **Email is Gmail, iCloud or Yahoo** (an app password, read-only). Outlook.com and Hotmail need forwarding. Off Gmail,
+  the recruiter search uses plain keywords, so it is a little broader.
 - **US-focused.** Job filters lean US, and the unemployment rules cover US states and territories.
 - **Some sites need you.** Workday and other account-based sites get materials prepared and are marked "apply by
   hand"; captchas and emailed codes are finished by you (`autoapply-finish` opens the filled form in Chrome).

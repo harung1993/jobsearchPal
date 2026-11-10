@@ -40,6 +40,9 @@ RECRUITER_QUERIES = [
     '(recruiter OR "talent acquisition" OR "right to represent" OR RTR OR "your background" '
     'OR "your profile" OR "your experience" OR "InMail" OR staffing) -subject:"Job search brief"',
 ]
+# The same search for inboxes that aren't Gmail (no Gmail search language there): plain words, matched anywhere.
+# Broader than the Gmail query; is_recruiter() still decides what counts.
+RECRUITER_WORDS = ["recruiter", "talent acquisition", "right to represent", "your background", "your profile", "InMail"]
 RECRUITER = re.compile(
     r"recruit|talent acquisition|staffing|right to represent|\brtr\b|inmail|your (background|profile|experience)"
     r"|(great|exciting|new) (opportunity|role)|reach(ing)? out|open to (new )?(roles|opportunities)", re.I)
@@ -117,10 +120,9 @@ KINDS = ["confirmed", "interview", "rejected", "offer", "recruiter", "agency", "
 
 
 def is_own(addr: str) -> bool:
-    """Mail from your own address (GMAIL_USER, plus any in OWN_ADDRESSES, comma-separated)."""
-    own = {a.strip().lower() for a in [os.environ.get("GMAIL_USER", ""), *os.environ.get("OWN_ADDRESSES", "").split(",")]
-           if a.strip()}
-    return (addr or "").strip().lower() in own
+    """Mail from one of your own addresses: the main inbox, extra inboxes, and OWN_ADDRESSES (comma-separated)."""
+    from . import mailboxes
+    return (addr or "").strip().lower() in mailboxes.own_addresses()
 
 
 def apply_event(db: DB, jobs: list[dict], msg_id: str, name: str, addr: str, subject: str, when, text: str,
@@ -256,8 +258,9 @@ def sync(db: DB, days: int = 60, extra_senders: list[str] | None = None, proof_r
         sync_sent(db, days)
     except Exception:  # reminders just get less precise; the reply sync still runs
         pass
-    from .benefits import AGENCY_QUERIES
-    for msg in alerts.messages(days, ATS_SENDERS + (extra_senders or []), gmail_queries=RECRUITER_QUERIES + AGENCY_QUERIES):
+    from .benefits import AGENCY_QUERIES, AGENCY_SEARCH_WORDS
+    for msg in alerts.messages(days, ATS_SENDERS + (extra_senders or []), gmail_queries=RECRUITER_QUERIES + AGENCY_QUERIES,
+                              words=RECRUITER_WORDS + AGENCY_SEARCH_WORDS):
         kind = apply_event(db, jobs, *msg, proof_root=proof_root)
         if kind:
             counts[kind] = counts.get(kind, 0) + 1

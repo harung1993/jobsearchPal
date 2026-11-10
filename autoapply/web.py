@@ -953,7 +953,7 @@ def make_app(settings, db: DB) -> FastAPI:
                     feeds_on=cfg.get("feeds", list(FEEDS)) if cfg else [*FEEDS, "themuse", "himalayas", "jobicy"], ws=cfg.get("work_search") or {}, states=state_rules(),
                     about=setup.load_about(settings.data_dir), about_fields=setup.ABOUT_FIELDS,
                     resume=setup.base_resume(settings.root), gmail_user=os.environ.get("GMAIL_USER", ""),
-                    gmail_env=pr.from_env("GMAIL_APP_PASSWORD"),
+                    gmail_env=pr.from_env("GMAIL_APP_PASSWORD"), mail=_mail_ctx(),
                     msg=msg, err=err)
 
     @app.post("/setup/profile")
@@ -1018,6 +1018,65 @@ def make_app(settings, db: DB) -> FastAPI:
         setup.save_about(settings.root, settings.data_dir, dict(await request.form()))
         return _back("Saved to materials/context/setup.md. The agent reads it before every application.", "gmail")
 
+    def _mail_ctx() -> dict:
+        """The Email step: providers, the main inbox's provider, forwarded addresses with their steps, extra inboxes."""
+        from . import mailboxes as mb
+        fwd = [{"address": a, "provider": mb.provider_for(a), "steps": mb.FORWARDING[mb.provider_for(a)]} for a in mb.forwarded()]
+        return {"providers": mb.PROVIDERS, "provider": mb.main_provider(), "forwarded": fwd,
+                "extras": [{"provider": x["provider"], "label": mb.PROVIDERS[x["provider"]]["label"], "user": x["user"]} for x in mb.extras()]}
+
+    @app.post("/setup/email/forwarded")
+    async def setup_forwarded(request: Request):
+        """Other addresses of yours that forward into the main inbox (recommended over more logins)."""
+        from .prefs import Prefs
+        f = await request.form()
+        raw = re.split(r"[\s,;]+", str(f.get("addresses") or ""))
+        main = (os.environ.get("GMAIL_USER") or "").lower()
+        found = []
+        for a in raw:
+            a = a.strip().lower()
+            if a and a != main and a not in found:
+                if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", a):
+                    raise HTTPException(400, f"{a} doesn't look like an email address.")
+                found.append(a)
+        Prefs(settings.data_dir, settings.raw).set_key("OWN_ADDRESSES", ",".join(found[:10]))
+        msg = (f"Saved {len(found)} address{'es' if len(found) != 1 else ''}. Turn on forwarding in each one (steps below), "
+               "and their job mail shows up here with the rest.") if found else "No other addresses saved."
+        return _back(msg, "other-emails")
+
+    @app.post("/setup/email/inbox")
+    async def setup_extra_inbox(request: Request):
+        """Connect another inbox (when forwarding isn't possible): tested before it's saved."""
+        from . import mailboxes as mb
+        from . import setup
+        from .prefs import Prefs
+        f = await request.form()
+        pr = Prefs(settings.data_dir, settings.raw)
+        rows = mb.extras()
+        if f.get("action") == "remove":
+            user = str(f.get("user") or "").lower()
+            mb.save_extras(pr, [r for r in rows if r["user"].lower() != user])
+            return _back(f"Stopped reading {user}.", "other-emails")
+        provider = str(f.get("provider") or "")
+        user = str(f.get("user") or "").strip()
+        pw = re.sub(r"\s", "", str(f.get("password") or ""))
+        if mb.provider_for(user) == "outlook":
+            raise HTTPException(400, "Outlook and Hotmail no longer allow app passwords for other apps. Forward that "
+                                     "address to your main inbox instead (steps under Other addresses).")
+        if "@" not in user or not pw:
+            raise HTTPException(400, "Enter the address and an app password.")
+        if user.lower() in mb.own_addresses() - set(mb.forwarded()):
+            raise HTTPException(400, f"{user} is already connected.")
+        if len(rows) >= 3:
+            raise HTTPException(400, "Up to three extra inboxes. Forwarding works for the rest.")
+        problem = await run_in_threadpool(setup.test_gmail, user, pw, provider)
+        if problem:
+            raise HTTPException(400, f"Not saved: {problem}")
+        mb.save_extras(pr, [*rows, {"provider": provider, "user": user, "password": pw}])
+        fwd = [a for a in mb.forwarded() if a != user.lower()]
+        pr.set_key("OWN_ADDRESSES", ",".join(fwd))  # connected now, so no longer a forwarded one
+        return _back(f"Connected {user}. The next email sync reads it too (read-only).", "other-emails")
+
     @app.post("/setup/gmail")
     async def setup_gmail(request: Request):
         from . import setup
@@ -1026,16 +1085,26 @@ def make_app(settings, db: DB) -> FastAPI:
         pr = Prefs(settings.data_dir, settings.raw)
         user = str(f.get("gmail_user") or "").strip()
         pw = re.sub(r"\s", "", str(f.get("gmail_password") or ""))
+        from . import mailboxes as mb
+        provider = str(f.get("provider") or "gmail")
+        provider = provider if provider in mb.PROVIDERS else "gmail"
         if f.get("action") == "forget":
-            for k in ("GMAIL_USER", "GMAIL_APP_PASSWORD", "BRIEF_TO"):
+            for k in ("GMAIL_USER", "GMAIL_APP_PASSWORD", "BRIEF_TO", "EMAIL_PROVIDER"):
                 pr.set_key(k, "")
-            return _back("Removed the saved Gmail login.", "gmail")
-        pw = pw or (os.environ.get("GMAIL_APP_PASSWORD") or "")
+            return _back("Removed the saved email login.", "gmail")
+        same = user.lower() == (os.environ.get("GMAIL_USER") or "").lower() and provider == mb.main_provider()
+        pw = pw or ((os.environ.get("GMAIL_APP_PASSWORD") or "") if same else "")
+        label = mb.PROVIDERS[provider]["label"]
         if "@" not in user or not pw:
-            return _back("Enter your Gmail address and an app password.", "gmail")
-        problem = await run_in_threadpool(setup.test_gmail, user, pw)
+            return _back(f"Enter your {label} address and an app password.", "gmail")
+        if mb.provider_for(user) == "outlook":
+            return _back("Not saved: Outlook and Hotmail no longer allow app passwords for other apps. Use a Gmail, iCloud "
+                         "or Yahoo address as your main inbox, and forward Outlook to it.", "gmail")
+        problem = await run_in_threadpool(setup.test_gmail, user, pw, provider)
         if problem:
             return _back(f"Not saved: {problem}", "gmail")
+        if not pr.from_env("EMAIL_PROVIDER"):
+            pr.set_key("EMAIL_PROVIDER", "" if provider == "gmail" else provider)
         if not pr.from_env("GMAIL_USER"):
             pr.set_key("GMAIL_USER", user)
         if not pr.from_env("GMAIL_APP_PASSWORD"):
@@ -1043,7 +1112,7 @@ def make_app(settings, db: DB) -> FastAPI:
         brief_to = str(f.get("brief_to") or "").strip()
         if "@" in brief_to and not pr.from_env("BRIEF_TO"):
             pr.set_key("BRIEF_TO", brief_to)
-        return _back("Gmail works. Job alerts and replies will be read (read-only), and the brief sent from it.", "agent")
+        return _back(f"{label} works. Job alerts and replies will be read (read-only), and the brief sent from it.", "other-emails")
 
     @app.get("/dua")
     def dua(company: str = ""):

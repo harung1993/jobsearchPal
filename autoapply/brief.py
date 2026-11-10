@@ -161,15 +161,25 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
 
 
 def send(subject: str, text: str, html: str) -> str:
-    user, pw = os.environ.get("GMAIL_USER"), os.environ.get("GMAIL_APP_PASSWORD")
-    if not (user and pw):
-        raise RuntimeError("set GMAIL_USER and GMAIL_APP_PASSWORD in .env")
+    """Sends the brief from the main inbox (Gmail, iCloud or Yahoo) to BRIEF_TO, or to itself."""
+    from . import mailboxes
+    acct = mailboxes.main()
+    if not acct:
+        raise RuntimeError("set GMAIL_USER and GMAIL_APP_PASSWORD in .env, or connect your email on Setup")
+    user, pw = acct["user"], acct["password"]
     to = os.environ.get("BRIEF_TO") or user
     msg = EmailMessage()
     msg["Subject"], msg["From"], msg["To"] = subject, user, to
     msg.set_content(text)
     msg.add_alternative(html, subtype="html")
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
-        smtp.login(user, pw)
-        smtp.send_message(msg)
+    host, port, mode = mailboxes.PROVIDERS[acct["provider"]]["smtp"]
+    if mode == "ssl":
+        with smtplib.SMTP_SSL(host, port, timeout=30) as smtp:
+            smtp.login(user, pw)
+            smtp.send_message(msg)
+    else:
+        with smtplib.SMTP(host, port, timeout=30) as smtp:
+            smtp.starttls()
+            smtp.login(user, pw)
+            smtp.send_message(msg)
     return to

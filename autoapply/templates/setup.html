@@ -7,13 +7,13 @@
 {% set tab_sub = ("Starting a search is a lot. Set this up once, and it works for you every morning. " if not st.ready else "") ~ "Come back and change any of it." %}
 {% include "_tabs.html" %}
 
-{% set step_rows = [('resume','Base resume',1),('profile','Contact details',1),('interests','Job interests',1),('about','About you',0),('agent','AI agent',1),('gmail','Gmail',0)] %}
+{% set step_rows = [('resume','Base resume',1),('profile','Contact details',1),('interests','Job interests',1),('about','About you',0),('agent','AI agent',1),('gmail','Email',0)] %}
 {% set done_rows = [] %}{% for r in step_rows if s[r[0]].done %}{% set _ = done_rows.append(r) %}{% endfor %}
 {% if not st.ready %}<div class="setup-top">
 <div class="prog" aria-label="{{ req_done }} of 4 required steps done"><b>{{ req_done }}</b> of 4 required done
   <div class="meter {{ 'ok' if st.ready }}"><span style="width:{{ (100 * req_done / 4)|round }}%"></span></div></div>
 <nav class="rail" aria-label="Setup steps">
- {% for key, label, req in [('resume','Resume',1),('profile','Contact',1),('interests','Job interests',1),('about','About you',0),('agent','Agent',1),('gmail','Gmail',0)] %}
+ {% for key, label, req in [('resume','Resume',1),('profile','Contact',1),('interests','Job interests',1),('about','About you',0),('agent','Agent',1),('gmail','Email',0)] %}
  <a href="#{{ key }}" class="{{ 'done' if s[key].done }}"><i aria-hidden="true">{{ '✓' if s[key].done else loop.index }}</i>{{ label }}{% if not req %}<small>optional</small>{% endif %}</a>
  {% endfor %}
 </nav>
@@ -209,23 +209,62 @@
 </section>
 
 <section class="card mt step" id="gmail">
- <h2><span><span class="n {{ 'done' if s.gmail.done }}">{{ "✓" if s.gmail.done else "6" }}</span> Gmail</span><span class="count">{{ s.gmail.note }}</span></h2>
+ <h2><span><span class="n {{ 'done' if s.gmail.done }}">{{ "✓" if s.gmail.done else "6" }}</span> Email</span><span class="count">{{ s.gmail.note }}</span></h2>
  <p class="lead">Lets jobsearchPal read job-alert emails (LinkedIn, Indeed and others), sort replies from companies, remind you to
   follow up, and email you a morning brief. It reads only, never marks anything read, and never sends anything except the brief to you.</p>
+ <p class="tip"><b>Best: one email for your whole job search.</b> Apply, sign up for alerts and give recruiters the same address,
+  and everything lands in one place. Use other addresses too? Add them under <a href="#other-emails">Other addresses</a> below.</p>
  <form method="post" action="/setup/gmail">
   <div class="grid g3">
-   <label class="fld"><span>Gmail address</span><input type="text" name="gmail_user" value="{{ gmail_user }}" inputmode="email" autocomplete="username"></label>
+   <label class="fld"><span>Email provider</span><select name="provider" id="mail-prov">
+    {% for k, p in mail.providers.items() %}<option value="{{ k }}" {% if k == mail.provider %}selected{% endif %} data-how="{{ p.how }}" data-link="{{ p.app_password }}">{{ p.label }}</option>{% endfor %}</select></label>
+   <label class="fld"><span>Your address</span><input type="text" name="gmail_user" value="{{ gmail_user }}" inputmode="email" autocomplete="username"></label>
    <label class="fld"><span>App password</span><input type="password" name="gmail_password" autocomplete="new-password"
-     placeholder="{{ 'set in .env' if gmail_env else ('saved; leave blank to keep' if s.gmail.done else '16 letters') }}"></label>
+     placeholder="{{ 'set in .env' if gmail_env else ('saved; leave blank to keep' if s.gmail.done else 'from your provider') }}"></label>
    <label class="fld"><span>Send the brief to (optional)</span><input type="text" name="brief_to" inputmode="email" placeholder="same address"></label>
   </div>
-  <p class="muted" style="font-size:14px">An app password is not your normal password. Turn on 2-step verification, then create one at
-   <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords</a>.
-   It's saved in <code>data/secrets.json</code> on this server, readable only by you, and never shown again.</p>
+  <p class="muted" style="font-size:14px">An app password is not your normal password. <span id="mail-how">{{ mail.providers[mail.provider].how }}</span>
+   <a id="mail-link" href="{{ mail.providers[mail.provider].app_password }}" target="_blank" rel="noopener noreferrer">Open that page</a>.
+   It's saved in <code>data/secrets.json</code> on this server, readable only by you, and never shown again.
+   Outlook or Hotmail? Microsoft no longer allows app passwords there, so use one of these as your main inbox and forward Outlook to it.</p>
   <div class="actions"><button class="btn primary" name="action" value="save">Test and save</button>
    {% if s.gmail.done and not gmail_env %}<button class="btn" name="action" value="forget">Forget it</button>{% endif %}</div>
  </form>
+ <script>(()=>{const sel=document.getElementById("mail-prov");if(!sel)return;sel.onchange=()=>{const o=sel.selectedOptions[0];
+  document.getElementById("mail-how").textContent=o.dataset.how;document.getElementById("mail-link").href=o.dataset.link}})();</script>
+
+ {% if s.gmail.done %}<div class="other-mail" id="other-emails">
+  <h3>Other addresses you apply from</h3>
+  <p class="muted">Applied or signed up for alerts with a different address? <b>Recommended:</b> forward it to {{ gmail_user }}.
+   No extra password, and replies, alerts and confirmations from it show up here like the rest.</p>
+  <form method="post" action="/setup/email/forwarded" class="fwd-form">
+   <label class="fld"><span>Addresses that forward here (comma or one per line)</span>
+    <textarea name="addresses" rows="2" placeholder="e.g. me@outlook.com, old.name@yahoo.com">{{ mail.forwarded|map(attribute='address')|join(', ') }}</textarea></label>
+   <div class="actions"><button class="btn sm primary">Save addresses</button></div>
+  </form>
+  {% if mail.forwarded %}<ul class="fwd-steps">{% for f in mail.forwarded %}<li><b>{{ f.address }}</b><span>{{ f.steps }}</span></li>{% endfor %}</ul>{% endif %}
+
+  <details class="more-inbox" {% if mail.extras %}open{% endif %}><summary>Can't forward? Connect it as another inbox</summary>
+   <p class="muted">Gmail, iCloud and Yahoo work with an app password, like your main inbox. Each one is read the same way, read-only.
+    The brief is still sent from your main inbox.</p>
+   {% if mail.extras %}<ul class="inboxes">{% for x in mail.extras %}<li><span><b>{{ x.user }}</b> · {{ x.label }}</span>
+    <form method="post" action="/setup/email/inbox" style="margin:0" data-confirm-title="Stop reading {{ x.user }}?" data-confirm-ok="Stop reading"
+     data-confirm="Its saved app password is deleted. Mail already synced stays."><input type="hidden" name="user" value="{{ x.user }}">
+     <button class="btn ghost sm" name="action" value="remove">Remove</button></form></li>{% endfor %}</ul>{% endif %}
+   {% if mail.extras|length < 3 %}<form method="post" action="/setup/email/inbox"><div class="grid g3">
+    <label class="fld"><span>Provider</span><select name="provider">{% for k, p in mail.providers.items() %}<option value="{{ k }}">{{ p.label }}</option>{% endfor %}</select></label>
+    <label class="fld"><span>Address</span><input type="text" name="user" required inputmode="email" autocomplete="off"></label>
+    <label class="fld"><span>App password</span><input type="password" name="password" required autocomplete="new-password"></label></div>
+    <div class="actions"><button class="btn sm" name="action" value="add">Test and connect</button></div></form>{% endif %}
+  </details>
+ </div>{% endif %}
 </section>
+<style>.tip{background:var(--accent-soft);border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:15px}
+.other-mail{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.other-mail h3{margin:0 0 6px;font-size:17px}
+.fwd-form textarea{width:100%}.fwd-steps{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:8px}
+.fwd-steps li{display:grid;gap:2px;background:var(--surface-2);border-radius:10px;padding:8px 12px;font-size:14.5px}.fwd-steps span{color:var(--ink-2)}
+.more-inbox{margin-top:16px}.more-inbox summary{cursor:pointer;color:var(--accent-ink);font-weight:600}
+.inboxes{list-style:none;padding:0;margin:10px 0;display:grid;gap:6px}.inboxes li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}</style>
 
 <style>
 .setup-top{display:flex;gap:12px 24px;align-items:center;flex-wrap:wrap;margin-top:14px}
