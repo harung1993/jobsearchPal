@@ -12,10 +12,22 @@
  {% if job.status == 'submitted' %}<span class="pill {{ job.status }}">{{ job.status|label }}</span>{% endif %}</header>
 {% if report.submitted %}<p class="notice" style="background:var(--good-soft)">Sent {{ job.submitted_at }}. That's one more door you knocked on. Confirmation: “{{ report.confirmation }}”</p>{% endif %}
 
+{% set kitmode = job.status in ('new', 'prepped') %}
+{% if lead and lead.note %}<p class="tried-note"><b>Last run {{ lead.tried_at[5:10]|replace('-', '/') }} {{ lead.tried_at[11:16] }}:</b> {{ lead.note }} <a href="/runs">Run log</a></p>{% endif %}
+{% if kitmode and running %}<p class="notice" role="status"><span class="grow">A run is going{% if running.label %}: {{ running.label }}{% endif %}. What it makes shows up on this page.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
+ <script>setTimeout(()=>location.reload(),20000)</script>{% endif %}
 <form method="post" action="/job/{{ job.id|urlencode }}">
 {% set pre_n = report.held|selectattr('prefilled')|list|length %}
 {% set need_n = report.held|rejectattr('value')|list|length %}
 <div class="bar" role="region" aria-label="Review and decide">
+ {% if kitmode %}<div class="chips"><span class="chip {{ 'ok' if job.status == 'prepped' else '' }}">{{ 'Prepped: apply by hand' if job.status == 'prepped' else 'Not prepared yet' }}</span></div>
+ <div class="act">
+  {% if not running %}{% if job.status == 'new' %}<button class="btn" form="prep-form" title="Resume, cover letter and answers. You apply by hand. Uses credits.">Prep only</button>{% endif %}
+  <button class="btn" form="auto-form" title="Tailor and fill the form for you to review. Uses credits.">Auto apply</button>{% endif %}
+  <button class="btn ghost" name="action" value="skip">Not applying</button>
+  <button class="btn {{ 'primary' if job.status == 'prepped' else 'ghost' }}" name="action" value="manual" title="You applied on the company's site: this logs it for your weekly count">I applied by hand</button>
+ </div>
+ {% else %}
  <div class="chips">
   {% if blocked %}<a href="#preflight" class="chip bad">Fix first <b>{{ blocked|length }}</b></a>{% elif checks %}<a href="#preflight" class="chip ok">Checks pass</a>{% endif %}
   {% if report.held %}<a href="#check" class="chip warn">Check these <b>{{ report.held|length }}</b>{% if need_n %} · {{ need_n }} need you{% endif %}</a>{% endif %}
@@ -35,6 +47,7 @@
   <button class="btn primary" name="action" value="manual">I applied by hand</button>
   {% else %}<button class="btn primary" name="action" value="submit" data-needs-approve {% if blocked %}data-blocked title="Fix the checks above first"{% endif %} disabled>Submit</button>{% endif %}
  </div>{% endif %}
+ {% endif %}
 </div>
 {% if job.error %}<p class="notice">{{ job.error }}</p>{% endif %}
 
@@ -55,9 +68,18 @@
 </details>
 </section>{% endif %}
 
+{% if job.description %}<section class="card jd-card"><details {% if not files %}open{% endif %}><summary><b>The job description</b></summary><div class="jd">{{ job.description }}</div></details></section>{% endif %}
 <div class="grid g2 mt">
 <div>
- {% if checks %}{% set bad = checks|rejectattr('ok')|list %}<section class="card pre {{ 'stop' if blocked else ('warn' if bad else 'go') }}" id="preflight">
+ {% if job.status == 'prepped' %}<section class="card kit" id="kit"><h2>Your kit</h2>
+  <p class="ink2" style="margin-top:0">Everything to apply by hand. Download the files, copy each answer into the form, then press <b>I applied by hand</b>.{% if 'apply by hand' in notes|lower %} This site needs an account, so it wasn't filled for you.{% endif %}</p>
+  {% if apply_link %}<p><a class="btn primary" href="{{ apply_link }}" target="_blank" rel="noopener">Apply on the company's site</a></p>{% endif %}
+  {% if files %}<p class="files">{% for slot, name in files %}<a class="btn" href="/file/{{ slot }}/{{ job.id|urlencode }}" download="{{ name }}">{{ name }}</a>{% if docx.get(slot) %} <a class="btn ghost sm" href="/file/{{ slot }}/{{ job.id|urlencode }}?kind=docx" download="{{ docx[slot] }}">Word</a>{% endif %} {% endfor %}</p>{% endif %}
+  {% if answers %}<table class="answers">{% for q, a in answers.items() %}<tr><td class="ink2" style="width:38%">{{ q }}</td><td>{{ a }}</td>
+   <td><button type="button" class="btn sm" onclick="navigator.clipboard.writeText(this.dataset.v);this.textContent='Copied'" data-v="{{ a }}">Copy</button></td></tr>{% endfor %}</table>
+  {% else %}<p class="muted">No answers were written for this one. The notes have the pay ask and screen prep.</p>{% endif %}
+ </section>{% endif %}
+ {% if checks and not kitmode %}{% set bad = checks|rejectattr('ok')|list %}<section class="card pre {{ 'stop' if blocked else ('warn' if bad else 'go') }}" id="preflight">
   <h2>{% if blocked %}Fix before you submit{% elif bad %}Ready to submit, with {{ bad|length }} warning{{ '' if bad|length == 1 else 's' }}{% else %}Everything checks out{% endif %}
    <span class="count">{{ checks|selectattr('ok')|list|length }} of {{ checks|length }} pass</span></h2>
   {% if bad %}<ul class="checks">{% for c in bad %}<li class="{{ 'fail' if c.hard else 'warnc' }}"><b>{{ c.group }}:</b> {{ c.name }}{% if c.detail %} <span class="ink2">· {{ c.detail }}</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
@@ -90,10 +112,10 @@
   {% else %}<input type="text" name="ans::{{ u.label }}">{% endif %}</td></tr>{% endfor %}</table></section>{% endif %}
  {% if report.errors %}<section class="card mt" id="problems"><h2>Problems</h2><ul style="margin:0;padding-left:18px">{% for e in report.errors %}<li>{{ e.label }}: {{ e.error }}</li>{% endfor %}</ul></section>{% endif %}
 
- <section class="card mt" id="answers"><details><summary><b>Filled answers ({{ report.filled|length }})</b> · what the form has now</summary>
+ {% if not kitmode %}<section class="card mt" id="answers"><details><summary><b>Filled answers ({{ report.filled|length }})</b> · what the form has now</summary>
   <table style="margin-top:8px">{% for f in report.filled %}<tr><td class="ink2" style="width:40%">{{ f.label }}</td><td>{{ f.value }}</td><td><span class="pill">{{ f.source }}</span></td></tr>{% endfor %}</table>
   <details style="margin-top:12px"><summary>Edit all answers (JSON)</summary><textarea name="plan" rows="14" style="margin-top:8px">{{ plan_text }}</textarea></details>
- </details></section>
+ </details></section>{% endif %}
 </div>
 <div>
  <section class="card side-tabs">
@@ -123,8 +145,19 @@
 </div>
 </div>
 </form>
+{% if kitmode and not running %}<form id="prep-form" method="post" action="/prepare/{{ job.id|urlencode }}" data-confirm-title="Prep only: {{ job.company }}" data-confirm-ok="Prep only"
+ data-confirm="Tailors your resume and cover letter and writes your answers to the usual questions. You apply by hand, wherever you like.
+
+It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" value="prep"><input type="hidden" name="back" value="/job/{{ job.id|urlencode }}"></form>
+<form id="auto-form" method="post" action="/prepare/{{ job.id|urlencode }}" data-confirm-title="Auto apply: {{ job.company }}" data-confirm-ok="Auto apply"
+ data-confirm="This runs the agent now: it tailors your resume and cover letter{% if job.status == 'prepped' %} (or reuses the ones you have){% endif %} and fills the form. If the form needs an account, it preps only.
+
+It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit). Nothing is submitted until you press Submit."><input type="hidden" name="mode" value="apply"><input type="hidden" name="back" value="/job/{{ job.id|urlencode }}"></form>{% endif %}
 {% if letter.can and not letter.busy %}<form id="letter-form" method="post" action="/letter/{{ job.id|urlencode }}"></form>{% endif %}
 <style>
+.jd-card{margin-top:8px}.jd{white-space:pre-wrap;line-height:1.55;margin-top:10px;overflow-wrap:anywhere;max-height:60vh;overflow:auto}
+.kit h2{font-size:18px}.kit .files{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kit .answers td{vertical-align:top;overflow-wrap:anywhere}
+.tried-note{font-size:14.5px;padding:8px 12px;border-radius:12px;background:var(--surface-2)}
 .rewrite{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 .rewrite summary{cursor:pointer} .rewrite textarea{width:100%;font:inherit;font-size:15.5px;margin-top:8px}
 .rewrite .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px}

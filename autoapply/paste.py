@@ -114,3 +114,31 @@ def read(text: str) -> dict:
     lines = [l.strip() for l in (text or "").replace("\r", "").splitlines()]
     out = _linkedin(lines) or _generic(lines)
     return {k: (out.get(k) or "")[: 20000 if k == "description" else 300] for k in FIELDS}
+
+
+LINK_ATS = {"greenhouse.io": "greenhouse", "lever.co": "lever", "ashbyhq.com": "ashby"}
+
+
+def from_link(url: str, fetchers: dict | None = None) -> dict | None:
+    """A bare link to a public Greenhouse, Lever or Ashby posting, read through the board's own API (no login, no
+    model). None for any other site (LinkedIn and Workday need the page's text pasted) or when it isn't found."""
+    from urllib.parse import urlparse
+    from . import finder
+    u = urlparse((url or "").strip())
+    ats = next((a for host, a in LINK_ATS.items() if u.netloc == host or u.netloc.endswith("." + host)), None)
+    parts = [p for p in u.path.split("/") if p]
+    if not ats or len(parts) < 2:
+        return None
+    slug = parts[0]
+    try:
+        jobs = (fetchers or finder.FETCHERS)[ats](slug)
+    except Exception:  # no such board, or the site is down
+        return None
+    path = "/" + "/".join(parts) + "/"
+    job = next((j for j in jobs if f"/{str(j['id']).rsplit(':', 1)[-1]}/" in path), None)
+    if not job:
+        return None
+    text = re.sub(r"<[^>]+>", "\n", job.get("description") or "")
+    return {"company": slug.replace("-", " ").title(), "title": job.get("title") or "", "location": job.get("location") or "",
+            "work_setting": _setting(job.get("location") or ""), "pay": _pay(text), "url": _web(job.get("url") or url),
+            "description": _tidy([l.strip() for l in text.splitlines()])}

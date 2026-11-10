@@ -27,6 +27,8 @@ agent you are (the file keeps that name for both).
   If something in it is broken, say so in the daily summary.
 - Do not log in to sites, create ATS accounts, solve captchas or read verification codes.
   Workday and other account-based ATSs: prep materials only, and say "apply by hand" in the summary.
+  Prep-only runs end with `autoapply fill <plan.json> --job <id> --prep-only`, which saves the files and answers
+  for the person's kit without opening the form.
 - Answers are short, first person, plain and specific, with real numbers from `materials/`.
   Never invent metrics, titles or dates.
 

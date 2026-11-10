@@ -158,6 +158,10 @@ The dashboard shows at most one of these cards at a time, so the page never pile
   salary when given, source and a rough fit score. After each email sync the top leads are looked up on the
   company's own job board (no AI) and join the roles the daily run can tailor; star others and the next run
   searches the web for them. Parsing is plain Python, from the "View job" blocks these emails use.
+- **Any job you paste.** Found a role somewhere else? Open **Add a job** on the Leads page and paste the whole post
+  (a LinkedIn job page copied with Cmd+A, a careers page, a job email) or a link to a Greenhouse, Lever or Ashby
+  posting. It reads out the company, title, location, work setting and pay range and drops the page clutter; you
+  check the fields, then save. A role you already applied to is caught and nothing is added. Plain Python, no AI.
 
 **See every source in one place.** The Leads page opens with *Where your jobs come from*: the sources finding
 jobs now (with how many roles each brought in), the ones that need a step (a missing key, Gmail not connected),
@@ -326,7 +330,14 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   by email, so it counts toward your week and is never offered again. **Bring in your old tracker** imports a CSV
   (Google Sheets: File, Download, CSV; Excel: Save As CSV), finding columns by name. **Download CSV** gives you the
   whole list back, and it imports cleanly again. The same role is only ever kept once, however it arrives.
-- **Leads:** every role from your job-alert emails, plus *Where your jobs come from* (see above).
+- **Leads:** every role from your job-alert emails and the ones you paste, plus *Where your jobs come from* (see
+  above). Each lead has its own page: the post and pay, then **Prep only** or **Auto apply**. Once a run has made
+  something, the lead's page is the job's page below.
+- **Prep only** (a lead's page, a job's page, or the dashboard shortlist): just the AI help. It tailors the resume and
+  cover letter and writes answers to the form's questions (or the usual ones, for sites that need an account), then
+  stops. The job's page becomes your kit: download the files, copy each answer, open the company's application page,
+  and press **I applied by hand** so it counts toward your week. Workday and other account-based sites always get
+  this. When Auto apply can't find a pasted role on the company's own site, it preps from the post you pasted.
 - **Review page:** the filled answers, your tailored documents and a screenshot of the form. Pre-submit checks
   (documents present and current, required answers filled, consents confirmed) keep Submit locked until they pass.
   **Rewrite this letter** on the Cover letter tab takes a note ("warmer and shorter"), rewrites only that letter
