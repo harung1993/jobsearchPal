@@ -4,6 +4,8 @@ first). Work only on this role.
 
 1. `autoapply show {{JOB_ID}}` for the posting. If its ats is "feed", find the same role on the company's own careers
    page (ATS URL) and work from that; if it's gone there, print "<Company>: posting gone" and stop.
+   If its ats is "manual", the person pasted the post: tailor against its description and finish the way step 3
+   does (plan.json and `fill --prep-only`); there's no form to fill.
    `autoapply resume-outline` prints the base resume (headline, summary, skills, each experience block's bullets).
    Work from that; don't open the .docx or PDFs with python, `pdftotext` or `pdfinfo`.
 2. Tailor the resume and write a cover letter: write data/applications/<company-slug>/docs.json, then run
@@ -21,7 +23,7 @@ first). Work only on this role.
    avoid, the person's own notes; sample letters set the voice only, never the facts).
    Also write notes.md (fit/gap table, pay ask, form answers, short screen prep). Keep it to what's true in materials/.
    If data/applications/<slug>/ already has the PDFs and a plan.json from an earlier prep-only run, reuse them: skip
-   step 2 and go on to step 4.
+   step 2 and go on to step 3.
 3. If the posting is on Workday or another site that needs an account, don't scan it. Write plan.json (the shape in
    step 5, "url" = the posting) answering the usual questions: why this company, why this role, pay ask (from
    CLAUDE.local.md), start date, notice period, years with the role's key skill. Run

@@ -510,7 +510,12 @@ def main(argv=None):
         # Consent answers and the go-ahead only ever come from you on the review page.
         plan.pop("approved_by_user", None)
         plan.pop("approved", None)
-        if args.job and (j := db.get(args.job)) and j["status"] not in ("filled", "submitted"):
+        if args.job and not args.prep_only and (j0 := db.get(args.job)):
+            # Prep only is enforced here, not only in the prompt: a prep-only run, and a job built from a pasted post
+            # (no real form behind it), never open a browser.
+            if os.environ.get("AUTOAPPLY_PREP_ONLY") == "1" or j0["ats"] == "manual":
+                sys.exit("Not filled: this is a prep-only job. Run the same command with --prep-only.")
+        if args.job and (j := db.get(args.job)) and j["status"] not in ("filled", "submitted", "prepped"):
             from .rank import Applied
             dup = Applied(db, 0).same_role(j["company"], j["title"], plan.get("url") or j["apply_url"] or j["url"])
             if dup:  # the same role reached the run another way (a lead, an alert, `add`): never fill it twice
@@ -526,6 +531,10 @@ def main(argv=None):
             if j["status"] in ("filled", "submitted", "skipped"):
                 sys.exit(f"Not saved: {args.job} is already {j['status']}.")
             db.update(args.job, status="prepped", plan_json=plan, error=None)
+            from . import leads
+            leads.ensure(db)
+            db.conn.execute("update leads set status = 'prepped' where job_id = ? and status not in ('applied', 'dismissed')", (args.job,))
+            db.conn.commit()
             _out({"prepped": args.job, "files": sorted(plan.get("files", {})), "answers": len(plan.get("answers", {}))})
             return
         report = fill(plan, s.profile, s.data_dir / "screenshots", headless)
@@ -541,6 +550,9 @@ def main(argv=None):
         # Fills the form again from the saved plan, as "Save and refill" does (after a letter rewrite). Never submits.
         job = db.get(args.job_id) or sys.exit(f"no job {args.job_id}")
         plan = json.loads(job["plan_json"] or "{}")
+        if job["status"] == "prepped":  # a new cover letter for the kit: there's no form to fill again
+            print("prepped: the new letter is in the kit, nothing filled")
+            return
         if not plan.get("url"):
             sys.exit(f"no plan to refill for {args.job_id}")
         plan["approved_by_user"] = False

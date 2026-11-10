@@ -185,12 +185,13 @@ def add_pasted(db, settings, fields: dict, now: datetime | None = None) -> dict:
     if not f["company"] or not f["title"]:
         raise ValueError("A company and a role title are needed.")
     k = key(f["company"], f["title"])
-    days = int(Prefs(settings.data_dir, settings.raw).data.get("reapply_after_days", 90) or 0)
-    why = Applied(db, days).same_role(f["company"], f["title"], f["url"])
-    if why:
-        return {"key": k, "result": "applied", "why": why}
     at = (now or datetime.now()).strftime("%Y-%m-%d %H:%M")
     row = get(db, k)
+    if not row:  # a lead you already have opens as it is, even once you prepped or applied to it
+        days = int(Prefs(settings.data_dir, settings.raw).data.get("reapply_after_days", 90) or 0)
+        why = Applied(db, days).same_role(f["company"], f["title"], f["url"])
+        if why:
+            return {"key": k, "result": "applied", "why": why}
     if row:
         srcs = sorted(set(filter(None, (row["source"] or "").split(", "))) | {"pasted"})
         db.conn.execute("update leads set source = ?, last_seen = max(coalesce(last_seen, ''), ?), "

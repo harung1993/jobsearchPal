@@ -281,3 +281,38 @@ def test_daily_preps_from_the_paste_when_the_company_page_is_missing():
     assert "Paste the post on this lead's page" in sh
     reads = re.findall(r"\$\{?AUTOAPPLY_PREP_ONLY[^}]*\}?", sh)
     assert reads and all(r.startswith("${AUTOAPPLY_PREP_ONLY:") for r in reads), reads
+
+
+def test_no_real_fill_in_a_prep_only_run_or_on_a_pasted_job(tmp_path, monkeypatch):
+    """Review 11/10: only the prompt stood between Prep only and a real browser fill."""
+    import pytest
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: pytest.fail("a form was filled"))
+    plan = tmp_path / "plan.json"
+    plan.write_text("{}")
+    monkeypatch.setenv("AUTOAPPLY_PREP_ONLY", "1")
+    with pytest.raises(SystemExit, match="prep-only"):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "gh:a:1"])
+    monkeypatch.delenv("AUTOAPPLY_PREP_ONLY")
+    db.upsert_job({"id": "manual:p", "ats": "manual", "company": "Hooli", "title": "Data Lead", "location": "",
+                   "url": "", "apply_url": "", "description": "post"})
+    with pytest.raises(SystemExit, match="prep-only"):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "manual:p"])
+    assert db.get("gh:a:1")["status"] == "new" and db.get("manual:p")["status"] == "new"
+
+
+def test_letter_rewrite_on_a_prepped_job_fills_nothing(tmp_path, capsys, monkeypatch):
+    import pytest
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: pytest.fail("a form was filled"))
+    db.update("wd:c:3", status="prepped", plan_json={"url": "https://acme.wd1.myworkdayjobs.com/x", "files": {}})
+    cli.main(["--config", str(cfg), "refill", "wd:c:3"])
+    assert db.get("wd:c:3")["status"] == "prepped" and "nothing filled" in capsys.readouterr().out
+
+
+def test_a_prepped_role_is_not_prepared_again(tmp_path):
+    s, db, _ = make(tmp_path)
+    db.update("gh:a:1", status="prepped")
+    from autoapply import rank
+    why = rank.Applied(db, 90).same_role("ACME", "Senior Analytics Engineer")
+    assert why.startswith("already prepped an application for this role")

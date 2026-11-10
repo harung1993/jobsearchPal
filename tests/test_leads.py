@@ -276,10 +276,10 @@ def test_from_paste_needs_the_post(tmp_path):
     assert leads.from_paste(db, k) is None and leads.from_paste(db, "no|such") is None
 
 
-def test_prepped_is_ready_but_not_applied(tmp_path):
+def test_prepped_is_ready_and_never_repeated(tmp_path):
     s, db, _ = make(tmp_path)
     db.update("gh:a:1", status="prepped")
     from autoapply import rank, stats
-    assert not rank.Applied(db, 90).same_role("Acme", "Senior Analytics Engineer", "u")
+    assert rank.Applied(db, 90).same_role("Acme", "Senior Analytics Engineer", "u")
     assert "gh:a:1" in [j["id"] for j in stats.compute(db)["ready"]]
     assert "gh:a:1" not in [j["id"] for j in rank.shortlist(db, s, 5)]

@@ -136,3 +136,18 @@ def test_leads_page_has_paste_box_and_lead_links(tmp_path):
     leads.add_pasted(db, s, {"company": "Hooli", "title": "Data Lead", "description": "d"})
     t = client(s, db).get("/leads").text
     assert "Add a job" in t and 'href="/lead/hooli%7Cdata%20lead"' in t
+
+
+def test_decline_works_on_a_prepped_row(tmp_path):
+    s, db, _ = make(tmp_path)
+    _prepped(s, db)
+    client(s, db).post("/decline/wd:c:3", data={"reason": "other"})
+    assert db.get("wd:c:3")["status"] == "skipped"
+
+
+def test_prepare_back_stays_on_this_site(tmp_path, monkeypatch):
+    s, db, _ = make(tmp_path)
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **k: None)
+    monkeypatch.setattr("time.sleep", lambda *_: None)
+    r = client(s, db).post("/prepare/gh:a:1", data={"back": "/\\evil.com"}, follow_redirects=False)
+    assert r.headers["location"] == "/"

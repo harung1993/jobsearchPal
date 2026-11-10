@@ -367,7 +367,7 @@ def make_app(settings, db: DB) -> FastAPI:
         """Decline from the dashboard: the role leaves Ready for you, and the reason counts in Stats."""
         job, _, _ = load(job_id)
         label = DECLINE_REASONS.get(reason, "other")
-        if job["status"] in ("new", "filled"):
+        if job["status"] in ("new", "filled", "prepped"):
             db.update(job_id, status="skipped", error=f"Declined ({label})")
             from . import coach
             coach.touch(db)
@@ -388,8 +388,8 @@ def make_app(settings, db: DB) -> FastAPI:
         extra = {"AUTOAPPLY_PREP_ONLY": "1"} if prep else {}
         if job["status"] in (("new",) if prep else ("new", "prepped")) and start_run(AUTOAPPLY_JOB=job_id, AUTOAPPLY_PICKS="1", **extra):
             db.log_run("run-now", True, f"{'prep only' if prep else 'prepare'}: {job_id}")
-        back = back if back.startswith("/") and not back.startswith("//") else "/"
-        return RedirectResponse(back, status_code=303)
+        from .auth import safe_next
+        return RedirectResponse(safe_next(back) or "/", status_code=303)
 
     def run_state() -> dict | None:
         """The run going right now, from daily.sh's lock and progress line; None when nothing runs."""
@@ -627,7 +627,7 @@ def make_app(settings, db: DB) -> FastAPI:
         except ValueError as e:
             return page("lead.html", nav="leads", mode="confirm", fields=fields, problem=str(e), pasted="")
         if r["result"] == "applied":
-            msg = f"Nothing added: you {r['why'].removeprefix('already ').replace('applied for', 'already applied for', 1)}."
+            msg = f"Nothing added: you {r['why']}."
             return RedirectResponse(f"/leads?done={quote(msg)}#leads", status_code=303)
         return RedirectResponse(f"/lead/{quote(r['key'], safe='')}", status_code=303)
 
@@ -830,7 +830,7 @@ def make_app(settings, db: DB) -> FastAPI:
         from .prefs import PROVIDERS, Prefs
         chain = Prefs(settings.data_dir, settings.raw).chain()
         name = " then ".join(PROVIDERS[p]["name"] for p in chain[:2]) if chain else "Nobody (no model source is on)"
-        jobs = sorted(db.by_status("submitted", "filled"), key=lambda j: (j["company"] or "").lower())
+        jobs = sorted(db.by_status("submitted", "filled", "prepped"), key=lambda j: (j["company"] or "").lower())
         return page("emails.html", rows=groups[show][:300], tabs=tabs, show=show, kinds=KIND_LABELS, jobs=jobs,
                     classifier=name, nav="emails")
 
