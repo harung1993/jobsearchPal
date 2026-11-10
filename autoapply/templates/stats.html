@@ -69,7 +69,7 @@
 
 <section class="grid g11 mt">
  <div class="card"><h2>Companies with the most new matches</h2>
-  {% if s.top_companies %}{{ hbars(s.top_companies) }}{% else %}<p class="empty">No matches found yet.</p>{% endif %}
+  {% if s.top_companies %}{{ hbars(s.top_companies) }}{% else %}<p class="empty">No matches yet. The daily run looks every weekday morning.</p>{% endif %}
  </div>
  <div class="card"><h2>Why roles were skipped</h2>
   {% if s.skip_reasons %}{{ hbars(s.skip_reasons) }}{% else %}<p class="empty">Nothing skipped yet.</p>{% endif %}

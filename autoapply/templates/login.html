@@ -5,12 +5,12 @@
 <script>try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 /* Stands alone on purpose: no base.html, so nothing about the person's search shows before sign-in. Same tokens as base.html. */
-:root{color-scheme:light;--bg:#f1f4f2;--surface:#fff;--surface-2:#eef2f0;--line:#dfe5e2;--ink:#14211d;--ink-2:#41504b;--ink-3:#64736e;
+:root{color-scheme:light;--bg:#f6f2ea;--surface:#fffdf9;--surface-2:#f3eee5;--line:#e8e1d4;--ink:#1d2420;--ink-2:#474d46;--ink-3:#686c64;--sun:#e9a420;
  --accent:#0f6e66;--accent-ink:#0b5650;--rail:#12302b;--rail-ink:#d7e6e1;--bad:#b42318;--bad-soft:#fdeceA;--warn-soft:#fdf2d8;--warn-dot:#f0a91b;
  --on-accent:#fff;--focus:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
-@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--sun:#f2b544;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
  --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;--accent:#3fb3a5;--accent-ink:#8fdcd2;--on-accent:#0d1513;--rail:#0a1311;--bad:#f38a80;--bad-soft:#341815;--warn-soft:#2c230e}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
+:root[data-theme="dark"]{color-scheme:dark;--sun:#f2b544;--bg:#0d1513;--surface:#14201d;--surface-2:#1b2925;--line:#24332f;
  --ink:#e9f1ee;--ink-2:#b9c9c3;--ink-3:#8ea29b;--accent:#3fb3a5;--accent-ink:#8fdcd2;--on-accent:#0d1513;--rail:#0a1311;--bad:#f38a80;--bad-soft:#341815;--warn-soft:#2c230e}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink)}
@@ -18,7 +18,10 @@ body{font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetic
  display:grid;place-items:center;min-height:100vh;padding:24px 16px}
 .box{width:100%;max-width:400px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;margin:0 0 20px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card .in{padding:22px 24px 24px}.card .hz{--hz-h:96px}
+.ps{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--ink-3);font-size:14px;margin:18px 0 0}
+.ps a{color:var(--ink-2);font-weight:600;text-decoration:none}.ps a:hover{text-decoration:underline;text-underline-offset:2px}
 h1{font-size:22px;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
 .lead{color:var(--ink-2);margin:0 0 18px;font-size:15.5px}
 form{display:grid;gap:14px}
@@ -33,12 +36,12 @@ button:hover{background:color-mix(in srgb,var(--accent) 85%,var(--ink));border-c
 .notice p{margin:0 0 8px}.notice p:last-child{margin:0}
 code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);padding:1px 6px;border-radius:6px;word-break:break-word}
 .foot{color:var(--ink-3);font-size:14px;margin:14px 2px 0}
-</style></head><body>
+</style>{% from "_horizon.html" import horizon, horizon_css %}{% from "_palstack.html" import palstack_mark %}{{ horizon_css() }}</head><body>
 <main class="box">
  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#22504a"/><path d="M7 18a7 7 0 0 1 14 0Z" fill="#f2b544"/><path d="M5 18h18" stroke="#d7e6e1" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6.5v2.2M8.6 9l1.4 1.5M19.4 9 18 10.5" stroke="#f2b544" stroke-width="1.6" stroke-linecap="round"/></svg><span>unemploymentPal</span></div>
- <div class="card">
+ <div class="card">{{ horizon(13) }}<div class="in">
  {% if mode == 'create' %}
-  <h1>Create your account</h1>
+  <h1>Welcome. Let's set you up.</h1>
   {% if not proof %}
    <div class="notice" role="alert">
     <p>This dashboard already had a password, so only its owner can create the account.</p>
@@ -46,8 +49,8 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
      <code>autoapply reset-password</code> on the server (with Docker: <code>docker compose exec web autoapply reset-password</code>).</p>
    </div>
   {% else %}
-   <p class="lead">First step of setup. Use the email address for your job search and a password only you know.
-    You'll sign in with these on every device.</p>
+   <p class="lead">Starting a search is a lot. We'll take it one morning at a time. First, an account: the email address
+    for your job search and a password only you know. You'll sign in with these on every device.</p>
    {% if err %}<p class="err" role="alert">{{ err }}</p>{% endif %}
    <form method="post" action="/account">
     <input type="hidden" name="t" value="{{ t }}">
@@ -69,7 +72,8 @@ code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surf
    <button>Sign in</button>
   </form>
  {% endif %}
- </div>
+ </div></div>
  {% if mode != 'create' %}<p class="foot">Forgot it? Run <code>autoapply reset-password</code> on the server.</p>{% endif %}
+ <p class="ps">{{ palstack_mark(16) }}<span>Part of <a href="https://palstack.io" target="_blank" rel="noopener">palStack</a></span></p>
 </main>
 </body></html>

@@ -3,12 +3,12 @@
 {% block body %}
 {% from "_horizon.html" import horizon, horizon_css %}{{ horizon_css() }}
 <section class="card welcome" aria-labelledby="hello">
- {{ horizon(s.now_hour, celebrate.kind if celebrate else "") }}
+ {{ horizon(s.now_hour, ('week' if celebrate.kind == 'milestone' else celebrate.kind) if celebrate else "") }}
  <div class="welcome-b">
   <div class="welcome-t">
-   {% if celebrate and celebrate.kind == 'week' %}<div class="cel cel-week" role="status"><b>{{ celebrate.title }}</b><span>{{ celebrate.line }}</span></div>{% endif %}
+   {% if celebrate and celebrate.kind in ('week', 'milestone') %}<div class="cel cel-week" role="status"><b>{{ celebrate.title }}</b><span>{{ celebrate.line }}</span></div>{% endif %}
    <h1 id="hello">{{ greet.title }}</h1>
-   {% if celebrate and celebrate.kind != 'week' %}<p class="hello-line cel-{{ celebrate.kind }}" role="status"><b>{{ celebrate.title }}.</b> {{ celebrate.line }}</p>
+   {% if celebrate and celebrate.kind not in ('week', 'milestone') %}<p class="hello-line cel-{{ celebrate.kind }}" role="status"><b>{{ celebrate.title }}.</b> {{ celebrate.line }}</p>
    {% else %}<p class="hello-line">{{ greet.line }}</p>{% endif %}
    {% if greet.market %}<p class="market">{{ greet.market.text }} <small>{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener">{{ greet.market.source }}</a>{% else %}{{ greet.market.source }}{% endif %}, checked {{ strptime(greet.market.checked).strftime("%b %-d, %Y") }}</small></p>{% endif %}
    <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div>
@@ -61,9 +61,9 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
 {% if src_total and src_on < src_total // 2 %}<div class="notice" style="margin:0 0 16px"><span class="grow">You're using {{ src_on }} of {{ src_total }} job sources. LinkedIn, Indeed and HigherEdJobs alerts, job sites and company boards all add matches.</span><a class="btn sm" href="/leads#sources">See job sources</a></div>{% endif %}
 {% set bad = s.runs|selectattr('state', 'equalto', 'fail')|list %}{% set late = s.runs|selectattr('state', 'equalto', 'stale')|list %}
 <details class="status {{ 'bad' if bad else ('warn' if late else '') }}"><summary><i aria-hidden="true"></i>
- {% if bad %}{{ bad|map(attribute='label')|join(', ') }} failed {{ bad[0].when }}{% elif late %}{{ late|map(attribute='label')|join(', ') }} overdue{% else %}Everything ran on time{% endif %} <u>· details</u></summary>
+ {% if bad %}{{ bad|map(attribute='label')|join(', ') }} didn't finish {{ bad[0].when }}. That's on us, not you{% elif late %}{{ late|map(attribute='label')|join(', ') }} overdue{% else %}Everything ran on time{% endif %} <u>· details</u></summary>
  <section class="runs" aria-label="When things last ran">
- {% for r in s.runs %}<span class="run {{ r.state }}" title="{{ r.summary }}"><i aria-hidden="true"></i><b>{{ r.label }}</b> {{ r.when }}{% if r.state == 'fail' %} · failed{% elif r.state == 'stale' %} · overdue{% endif %}</span>{% endfor %}
+ {% for r in s.runs %}<span class="run {{ r.state }}" title="{{ r.summary }}"><i aria-hidden="true"></i><b>{{ r.label }}</b> {{ r.when }}{% if r.state == 'fail' %} · didn't finish{% elif r.state == 'stale' %} · overdue{% endif %}</span>{% endfor %}
  </section></details>
 
 {% macro decline(j) %}<details class="decline"><summary class="btn ghost sm">Decline</summary>
@@ -160,7 +160,10 @@ document.addEventListener("click",e=>{document.querySelectorAll("details.decline
 
 {% if todo %}<section class="card mt" id="todo"><h2>To do <span class="count">{{ todo|length }}</span></h2>
  {% macro todo_row(n) %}<div class="todo">
-  <span class="pill {{ 'interview' if n.kind == 'interview' else ('recruiter' if n.kind in ('reply', 'chase') else ('rejected' if n.kind in ('appeal', 'resea', 'claim') else 'waiting')) }}">{{ {'interview': 'interview', 'reply': 'reply', 'chase': 'check in', 'application': 'follow up',
+  {# Red only for what is urgent: an appeal, or a benefits step due within two days or overdue. Other dates are sunrise amber,
+     claim day included: it comes every week and is routine, not an alarm. #}
+  {% set urgent = n.kind == 'appeal' or (n.kind in ('resea', 'task') and n.days is number and n.days > -999 and n.days >= -2) %}
+  <span class="pill {{ 'interview' if n.kind == 'interview' else ('recruiter' if n.kind in ('reply', 'chase') else ('rejected' if urgent else ('deadline' if n.kind in ('resea', 'claim', 'task', 'worksearch') else 'waiting'))) }}">{{ {'interview': 'interview', 'reply': 'reply', 'chase': 'check in', 'application': 'follow up',
    'claim': 'claim day', 'worksearch': 'work search', 'resea': 'RESEA', 'task': 'benefits', 'agency': 'agency letter', 'appeal': 'decision'}[n.kind] }}</span>
   <div class="body"><div class="t">{{ n.title }}</div><div class="m">{{ n.about|truncate(70) }} · {{ n.why }}</div>
    {% if n.draft %}<details><summary>Draft reply</summary><pre class="draft">{{ n.draft }}</pre>
@@ -185,7 +188,7 @@ pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--su
  </div>
  <div class="card"><h2>Recruiters <span class="count">{{ s.recruiter_count }}</span></h2>
   <ul class="feed">{% for r in s.recruiters[:6] %}<li><div style="min-width:0"><div class="who">{{ r.sender.split(" <")[0] }}{% if r.count > 1 %} <span class="muted">· {{ r.count }} emails</span>{% endif %}</div><div class="ink2" style="font-size:14px">{{ r.subject|truncate(70) }}</div></div><span class="when">{{ r.last_at[5:10]|replace('-', '/') }}</span></li>
-  {% else %}<li class="empty">No recruiter emails synced yet.</li>{% endfor %}</ul>
+  {% else %}<li class="empty">No recruiters yet. When one gets in touch, they show up here.</li>{% endfor %}</ul>
  </div>
 </section>
 

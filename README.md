@@ -17,6 +17,9 @@ small always-on computer you own and does two jobs:
 It reads your job email (read-only), files every reply, reminds you who to follow up with and drafts the reply,
 and writes an interview prep pack when an interview comes in.
 
+unemploymentPal is part of [palStack](https://palstack.io), a family of privacy-first tools built to make everyday
+life a little easier. Like the other pals, it runs on your own computer: no tracking, no ads, nothing sold.
+
 ![Dashboard](docs/dashboard.png)
 
 <details><summary>Work-search log, job sources, stats, emails, settings and the phone layout</summary>
@@ -97,11 +100,16 @@ draw on research about unemployment and job searching, kept in the palStack rese
   points to what's ready. Lists say "closed", and the count stays exact. A rejection is never sent as a phone
   push; the brief lists them together with "the closed ones need nothing from you".
 - **The weekly minimum.** A quiet tracker that speaks only when you're short: "One more by Saturday covers this week."
+- **The look.** Warm paper colours rather than clinical grey, a little morning light on the sidebar, and red kept for
+  what is urgent: a benefits step due within two days (or overdue), or an appeal. Other dates, claim day included
+  (a routine weekly step), are sunrise amber.
 - **Celebrations.** The logo's sunrise grows into a horizon across the top of the dashboard. Each celebration
   plays once, and with Reduce Motion on you see the finished picture with no movement:
   - covering the week's minimum: light across the water
   - a new interview: the sun lifts with a ring of light
   - an offer: the full sunrise
+  - your first application, then 10, 25, 50 and so on: a small note on what that took. Counted up, never a target
+    or a streak, and only when the one that reached it went out this week.
 - **The market, honestly.** On a quiet stretch, after a rejection, on a long search and once a month in the brief,
   one dated line about the market with its source. There are no figures in the copy. It comes from
   `autoapply/market.yaml`, which maintainers refresh after each monthly jobs report, and it hides itself after
