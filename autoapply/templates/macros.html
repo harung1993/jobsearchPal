@@ -31,3 +31,13 @@
 {% endmacro %}
 
 {% macro co(name) %}{{ name|title if name and name.islower() else name }}{% endmacro %}
+
+{# One click "I applied to this one elsewhere": marks the role applied (counts toward the week, never offered again). #}
+{% macro applied_btn(company, title, url, back) %}<form method="post" action="/applications/log" style="margin:0"
+ data-confirm-title="Applied to {{ company }} · {{ title }}?" data-confirm-ok="Yes, I applied"
+ data-confirm="Marks this role as applied today. It counts toward your week, and the daily run won't offer it again.
+
+Applied on a different day? Use Applied elsewhere in the menu to pick the date.">
+ <input type="hidden" name="company" value="{{ company }}"><input type="hidden" name="title" value="{{ title }}">
+ <input type="hidden" name="url" value="{{ url or '' }}"><input type="hidden" name="back" value="{{ back }}">
+ <button class="btn ghost sm" title="I applied to this one myself">Applied</button></form>{% endmacro %}

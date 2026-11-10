@@ -207,6 +207,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
   <a href="/setup" {% if nav == 'settings' %}aria-current="page"{% endif %}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="lbl">Settings</span>{% if setup_left is defined and setup_left %}<span class="badge" aria-label="Setup: {{ setup_left }} steps left">{{ setup_left }}</span>{% endif %}</a>
  </nav>
  <div class="foot">
+  <button type="button" class="btn sm primary applied-open" style="width:100%;justify-content:center" title="Log an application you sent on LinkedIn, a company site or by email"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span class="sync-lbl">Applied elsewhere</span></button>
   <form method="post" action="/sync" style="margin:0"><button class="btn sm" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg><span class="sync-lbl">Sync email</span></button></form>
   <form method="post" action="/logout" style="margin:0"><button class="btn sm" title="Sign out" aria-label="Sign out" style="width:100%;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="sync-lbl">Sign out</span></button></form>
   <div class="seg" role="group" aria-label="Theme"><button data-t="">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button></div>
@@ -224,6 +225,19 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
  </nav>
 </div>
 <div id="tip" role="tooltip"></div>
+<dialog id="logapp" class="ask" aria-labelledby="logapp-t">
+ <h2 id="logapp-t">I applied somewhere else</h2>
+ <div class="ask-b"><p>On LinkedIn, a company site or by email? Add it so it counts toward your week, and the daily run never offers you that role again.</p></div>
+ <form method="post" action="/applications/log" class="logapp-f">
+  <input type="hidden" name="back" value="">
+  <label class="fld"><span>Company</span><input type="text" name="company" required maxlength="120" autocomplete="off"></label>
+  <label class="fld"><span>Role</span><input type="text" name="title" required maxlength="200" autocomplete="off"></label>
+  <label class="fld"><span>Date applied</span><input type="date" name="applied_on"></label>
+  <label class="fld"><span>Where you applied <i class="muted">(optional)</i></span><input type="text" name="via" maxlength="60" placeholder="e.g. LinkedIn, Workday, email"></label>
+  <label class="fld wide"><span>Link to the posting <i class="muted">(optional)</i></span><input type="url" name="url" maxlength="500" placeholder="https://"></label>
+  <div class="ask-acts wide"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Add to my applications</button></div>
+ </form>
+</dialog>
 <dialog id="ask" class="ask" aria-labelledby="ask-t"><form method="dialog">
  <h2 id="ask-t"></h2><div id="ask-b" class="ask-b"></div>
  <div class="ask-acts"><button class="btn" value="no" id="ask-no">Cancel</button><button class="btn primary" value="yes" id="ask-ok">OK</button></div>
@@ -231,9 +245,11 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
 <style>.ask{border:1px solid var(--line-2);border-radius:var(--radius);background:var(--surface);color:var(--ink);padding:20px 22px;
  width:min(520px,calc(100vw - 32px));box-shadow:var(--shadow-lg,0 12px 32px rgba(0,0,0,.2))}.ask::backdrop{background:rgba(20,16,8,.45)}
 .ask.err h2{color:var(--bad)}.ask .code{color:var(--ink-3);font-size:13px;margin:0}
+.logapp-f{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}.logapp-f .wide{grid-column:1/-1}
+.logapp-f .fld{display:grid;gap:4px;font-size:14px;color:var(--ink-2)}@media (max-width:520px){.logapp-f{grid-template-columns:1fr}}
 .ask h2{margin:0 0 10px;font-size:18px;line-height:1.3}.ask-b p{margin:0 0 10px;color:var(--ink-2);font-size:15.5px}
 .ask-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
-.field-err{display:block;color:var(--bad);font-size:13.5px;margin-top:4px}[aria-invalid=true]{border-color:var(--bad)!important}</style>
+.field-err,.fld .field-err{display:block;color:var(--bad);font-size:13.5px;margin-top:4px}[aria-invalid=true]{border-color:var(--bad)!important}</style>
 <script>
 // In-app dialogs, no browser popups. One <dialog> does both jobs:
 //  - confirm: a form with data-confirm (and data-confirm-title, data-confirm-ok) asks before it is sent;
@@ -253,7 +269,10 @@ async function sendInPage(f,by){
  const fd=new FormData(f);if(by&&by.name)fd.append(by.name,by.value);
  let r;try{r=await fetch(f.action,{method:"POST",body:fd,headers:{"X-In-Page":"1",accept:"text/html"},credentials:"same-origin"})}
  catch(e){restore();await ask("Couldn't reach jobsearchPal","The server didn't answer. Check that it's running, then try again.",{cancel:"",error:true});return}
- if(r.ok&&r.redirected){location.assign(r.url);return}
+ if(r.ok&&r.redirected){
+  // fetch drops the #section from a redirect; put back the one the form's back= asked for
+  const b=f.querySelector("input[name=back]"),h=b&&b.value.includes("#")?"#"+b.value.split("#")[1]:"";
+  location.assign(r.url+(r.url.includes("#")?"":h));return}
  if(r.ok){const html=await r.text();history.replaceState(null,"",r.url);document.open();document.write(html);document.close();return}
  restore();let e={};try{e=await r.json()}catch(_){}
  if(r.status===401){await ask("You're signed out","Sign in again, then try that once more.",{cancel:"",ok:"Sign in"});location.assign("/login");return}
@@ -263,6 +282,18 @@ if(ask)document.addEventListener("submit",async e=>{const f=e.target;
  e.preventDefault();const by=e.submitter;
  if(f.dataset.confirm&&!await ask(f.dataset.confirmTitle||"Are you sure?",f.dataset.confirm,{ok:f.dataset.confirmOk||"OK"}))return;
  sendInPage(f,by)});
+// "Applied elsewhere": any .applied-open button opens the popup form (data-company/-title/-url prefill it).
+(()=>{const d=document.getElementById("logapp");if(!d||!d.showModal)return;const f=d.querySelector("form");
+ d.querySelector("[data-close]").onclick=()=>d.close();
+ document.addEventListener("click",e=>{const b=e.target.closest(".applied-open");if(!b)return;e.preventDefault();
+  f.reset();const t=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  f.applied_on.value=t;f.applied_on.max=t;f.back.value=location.pathname+location.search;
+  for(const k of ["company","title","url"])if(b.dataset[k])f[k].value=b.dataset[k];
+  d.showModal();(f.company.value?f.via:f.company).focus()})})();
+// After an action that reports back (?done=...), say so in the dialog, then tidy the address bar.
+(()=>{const u=new URL(location.href),m=u.searchParams.get("done");if(!m||!ask)return;
+ u.searchParams.delete("done");history.replaceState(null,"",u.pathname+u.search+u.hash);
+ ask("Done",m,{cancel:""})})();
 // Required fields: say what's missing next to the field instead of the browser's own bubble.
 document.addEventListener("invalid",e=>{const el=e.target;e.preventDefault();el.setAttribute("aria-invalid","true");
  let m=el.parentNode.querySelector(":scope > .field-err");if(!m){m=document.createElement("span");m.className="field-err";m.setAttribute("role","alert");el.insertAdjacentElement("afterend",m)}

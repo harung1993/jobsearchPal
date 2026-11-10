@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import week_bars, hbars, co %}
+{% from "macros.html" import week_bars, hbars, co, applied_btn %}
 {% block body %}
 {% from "_horizon.html" import horizon, horizon_css %}{{ horizon_css() }}
 <section class="card welcome" aria-labelledby="hello">
@@ -13,7 +13,7 @@
    {% if greet.market %}<p class="market">{{ greet.market.text }} <small>{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener">{{ greet.market.source }}</a>{% else %}{{ greet.market.source }}{% endif %}, checked {{ strptime(greet.market.checked).strftime("%b %-d, %Y") }}</small></p>{% endif %}
    <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div>
   </div>
- <div class="ph-acts">{% if running %}<a class="running" role="status" href="/runs" title="See what it's doing"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.label %} · {{ running.label }}{% endif %}</a>
+ <div class="ph-acts"><button type="button" class="btn applied-open" title="Log an application you sent on LinkedIn, a company site or by email">Applied elsewhere</button>{% if running %}<a class="running" role="status" href="/runs" title="See what it's doing"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.label %} · {{ running.label }}{% endif %}</a>
   <script>setTimeout(()=>location.reload(),20000)</script>
  {% else %}<form method="post" action="/run" class="runnow" onsubmit="this.querySelector('button').disabled=true">
   <label class="ink2" for="picks">Roles</label><select id="picks" name="picks">{% for n in range(1, 6) %}<option {% if n == picks_default %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
@@ -81,14 +81,14 @@
    <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.error %} · <span style="color:var(--bad)">{{ j.error|truncate(80) }}</span>{% endif %}</div>
    {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}
    <div class="m"><a class="know" href="/dua?company={{ co(j.company)|striptags|trim|urlencode }}#people">Anyone you know there?</a></div></div>
-  <div class="acts">{{ decline(j) }}<a class="btn primary sm" href="/job/{{ j.id|urlencode }}">Review</a></div></div>
+  <div class="acts">{{ decline(j) }}{{ applied_btn(j.company, j.title, j.apply_url or j.url, "/#ready-h") }}<a class="btn primary sm" href="/job/{{ j.id|urlencode }}">Review</a></div></div>
  {% endfor %}{% endif %}
  {% if shortlist %}<div class="group-h"><b>Shortlist</b><span>Good matches from today's search, not tailored yet. Prepare the ones you want, decline the rest.</span></div>
  {% for j in shortlist %}<div class="ready short"><div class="avatar todo-av" style="--h:{{ j.company|hue }}" aria-hidden="true">{{ (j.company or '?')[:1]|upper }}</div>
   <div class="body"><div class="t">{{ co(j.company) }} · {{ j.title }}</div>
    <div class="m">{{ j.location or "Location not listed" }}{% if j.pay %} · {{ j.pay }}{% endif %}{% if j.why %} · {{ j.why|truncate(90) }}{% endif %} · <a href="/job/{{ j.id|urlencode }}">details</a> · <a class="know" href="/dua?company={{ co(j.company)|striptags|trim|urlencode }}#people">anyone you know there?</a></div>
    {% if j.skill_line %}<div class="m skillm">{{ j.skill_line }}</div>{% endif %}</div>
-  <div class="acts">{{ decline(j) }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-confirm-title="Prepare: {{ j.company }} · {{ j.title }}" data-confirm-ok="Prepare"
+  <div class="acts">{{ decline(j) }}{{ applied_btn(j.company, j.title, j.apply_url or j.url, "/#ready-h") }}{% if not running %}<form method="post" action="/prepare/{{ j.id|urlencode }}" class="prepare" data-confirm-title="Prepare: {{ j.company }} · {{ j.title }}" data-confirm-ok="Prepare"
    data-confirm="This runs the agent now: it tailors your resume and cover letter and fills the form.
 
 It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit, if the daily run uses it). Nothing is submitted until you press Submit.">

@@ -283,14 +283,23 @@ def make_app(settings, db: DB) -> FastAPI:
         return f"{'One more' if left == 1 else f'{left} more'} {when} covers this week."
 
     @app.post("/applications/log")
-    def log_application(company: str = Form(""), title: str = Form(""), url: str = Form(""), applied_on: str = Form(""),
-                        via: str = Form(""), pay: str = Form("")):
-        """One application you sent outside the tool. The same role is never added twice."""
+    def log_application(request: Request, company: str = Form(""), title: str = Form(""), url: str = Form(""),
+                        applied_on: str = Form(""), via: str = Form(""), pay: str = Form(""), back: str = Form("")):
+        """One application you sent outside the tool. The same role is never added twice.
+        back: the page it was sent from (the "Applied elsewhere" popup and the Applied buttons); the result
+        shows there in the in-app dialog. Without it, the dashboard's Your applications section as before."""
         from . import history
+        back = back if back.startswith("/") and not back.startswith("//") else ""
         try:
             r = history.log(db, company, title, url=url.strip(), applied_on=applied_on.strip(), via=via, pay=pay.strip())
         except ValueError as e:
+            if back or request.headers.get("x-in-page"):
+                raise HTTPException(400, str(e))
             return RedirectResponse(f"/?log=1&msg={quote(str(e))}#applications", status_code=303)
+        from . import leads
+        leads.link_tracked(db)  # a lead for this role now shows as applied
+        db.conn.execute("update leads set status = 'applied' where job_id = ?", (r["id"],))
+        db.conn.commit()
         j = r["job"]
         if r["status"] == "already":
             when = (j.get("submitted_at") or "")[:10]
@@ -298,6 +307,9 @@ def make_app(settings, db: DB) -> FastAPI:
         else:
             msg = (f"Added {j['title']} at {j['company']}. That's one more door you knocked on. It counts toward your week,"
                    " and the daily run won't offer that role again.")
+        if back:
+            path, _, frag = back.partition("#")
+            return RedirectResponse(f"{path}{'&' if '?' in path else '?'}done={quote(msg)}{'#' + frag if frag else ''}", status_code=303)
         return RedirectResponse(f"/?msg={quote(msg)}#applications", status_code=303)
 
     @app.post("/applications/import")
