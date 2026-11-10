@@ -120,7 +120,7 @@ def main(argv=None):
     a = sub.add_parser("log-run"); a.add_argument("kind"); a.add_argument("result", choices=["ok", "fail"]); a.add_argument("msg", nargs="?", default="")
     a = sub.add_parser("add"); a.add_argument("url"); a.add_argument("--company", default=""); a.add_argument("--title", default="")
     a = sub.add_parser("list"); a.add_argument("--status"); a.add_argument("--prep", action="store_true"); a.add_argument("--nudges", action="store_true"); a.add_argument("--limits", action="store_true")
-    a = sub.add_parser("show"); a.add_argument("job_id")
+    a = sub.add_parser("show"); a.add_argument("job_id"); a.add_argument("--full", action="store_true", help="every field, including the saved plan and fill report")
     a = sub.add_parser("check"); a.add_argument("job_id")
     a = sub.add_parser("leads"); a.add_argument("action", nargs="?", default="list", choices=["list", "sync", "resolve", "lookup", "job", "note", "from-paste"])
     a.add_argument("key", nargs="?", default="")
@@ -390,7 +390,10 @@ def main(argv=None):
         label = f"{args.agent}:{args.model}" if args.model else args.agent
         if args.stage:
             label = f"{args.agent}:{args.model or 'default'}:{args.stage}"
-        db.log_usage("daily", label + (" (openrouter)" if via == "openrouter" else ""), 0, 0, cost, 0, err, est, tokens)
+        from . import classify as _c
+        db.log_usage("daily", label + (" (openrouter)" if via == "openrouter" else ""), 0, 0, cost,
+                     _c.LAST.get("ms", 0) if args.agent == "claude" else 0, err, est, tokens,
+                     _c.LAST.get("split") if args.agent == "claude" else None)
         lines = [l for l in text.strip().splitlines() if l.strip()]
         print(f"Stopped: {err}" if err and err.startswith("needed permission") else (lines[-1] if lines else ""))
         if err:
@@ -438,7 +441,14 @@ def main(argv=None):
         rows = db.by_status(args.status) if args.status else db.all()
         _out([{k: r[k] for k in ("id", "status", "company", "title", "location", "found_at")} for r in rows])
     elif args.cmd == "show":
-        _out(db.get(args.job_id) or sys.exit(f"no job {args.job_id}"))
+        j = db.get(args.job_id) or sys.exit(f"no job {args.job_id}")
+        if not args.full:
+            # What tailoring needs. The saved plan and the last fill report were ~7 KB of the ~26 KB an agent re-read
+            # on every turn of the apply step (11/10); plan.json is in the application folder when it's needed.
+            j = {k: v for k, v in j.items() if k not in ("plan_json", "report_json", "screenshot", "skills_json", "score_reason")
+                 and v not in (None, "")}
+            j["description"] = re.sub(r"\n{3,}", "\n\n", re.sub(r"[ \t]+", " ", j.get("description") or "")).strip()
+        _out(j)
     elif args.cmd == "leads":
         from . import leads
         if args.action == "sync":

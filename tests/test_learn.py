@@ -62,3 +62,19 @@ def test_uses_skill_matching_lists_when_present(tmp_path):
     assert by["Looker / LookML"]["count"] == 2 and by["Looker / LookML"]["required"] == 1  # one model must-have, one keyword
     assert by["Spark"]["required"] == 1 and by["Snowplow"]["area"] == "Other" and by["Snowplow"]["required"] == 0
     assert "Power BI" in {i["name"] for i in g["have"]}  # "PowerBI" from the model, matched to your list
+
+
+def test_skill_scan_is_kept_per_job(tmp_path, monkeypatch):
+    """11/10: the Skills page took 13 s, rescanning ~470 descriptions with 80 patterns on every visit."""
+    from autoapply import learn
+    from autoapply.db import DB
+    db = DB(tmp_path / "t.db")
+    jobs = [{"id": "a", "description": "We use dbt and Snowflake"}, {"id": "b", "description": "Kubernetes and Terraform"}]
+    first = learn.found_in_jobs(db, jobs)
+    calls = []
+    real = learn.found_in
+    monkeypatch.setattr(learn, "found_in", lambda t: calls.append(t) or real(t))
+    assert learn.found_in_jobs(db, jobs) == first and not calls   # second visit: nothing rescanned
+    jobs[1]["description"] = "Now Airflow"
+    again = learn.found_in_jobs(db, jobs)
+    assert calls == ["Now Airflow"] and again["a"] == first["a"] and again["b"] != first["b"]

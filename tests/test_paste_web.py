@@ -152,3 +152,18 @@ def test_prepare_back_stays_on_this_site(tmp_path, monkeypatch):
     monkeypatch.setattr("time.sleep", lambda *_: None)
     r = client(s, db).post("/prepare/gh:a:1", data={"back": "/\\evil.com"}, follow_redirects=False)
     assert r.headers["location"] == "/"
+
+
+def test_leads_page_stays_light(tmp_path):
+    """11/10: 500 rows, each with its own copy of the Auto apply text, made Leads 1.2-1.4 MB."""
+    s, db, _ = make(tmp_path)
+    leads.ensure(db)
+    for i in range(400):
+        db.conn.execute("insert into leads (key, title, company, status, score, last_seen, source) values (?, ?, ?, 'new', ?, '2026-11-10 09:00', 'LinkedIn')",
+                        (f"co{i}|role {i}", f"Role {i}", f"Co{i}", 400 - i))
+    db.conn.commit()
+    c = client(s, db)
+    t = c.get("/leads").text
+    assert t.count('data-confirm-ref="confirm-auto"') == 150 and "Show all 400" in t and t.count("It uses credits") == 1
+    assert len(t) < 400_000, len(t)
+    assert c.get("/leads?more=1").text.count('data-confirm-ref="confirm-auto"') == 400

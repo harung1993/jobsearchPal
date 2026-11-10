@@ -567,7 +567,7 @@ def make_app(settings, db: DB) -> FastAPI:
         return RedirectResponse(_auth.safe_next(back), status_code=303)
 
     @app.get("/leads")
-    def leads_page(show: str = "open"):
+    def leads_page(show: str = "open", more: int = 0):
         from . import leads
         from .prefs import Prefs
         from .rank import Applied
@@ -583,7 +583,8 @@ def make_app(settings, db: DB) -> FastAPI:
         tabs = [("open", "To look at"), ("starred", "Starred"), ("tracked", "Tracked"), ("dismissed", "Dismissed"), ("all", "All")]
         from . import jobsources
         src = jobsources.overview(settings, db)
-        return page("leads.html", rows=groups[show][:500], tabs=[(k, l, len(groups[k])) for k, l in tabs], show=show, nav="leads",
+        cap = 2000 if more else 150  # 500 rows made the page 1.2-1.4 MB (11/10)
+        return page("leads.html", rows=groups[show][:cap], total=len(groups[show]), more=more, tabs=[(k, l, len(groups[k])) for k, l in tabs], show=show, nav="leads",
                     running=run_state(), src=src, src_open=src["on"] < src["total"] // 2 or not every)
 
     @app.post("/leads/apply")

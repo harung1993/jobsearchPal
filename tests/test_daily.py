@@ -316,3 +316,31 @@ def test_a_prepped_role_is_not_prepared_again(tmp_path):
     from autoapply import rank
     why = rank.Applied(db, 90).same_role("ACME", "Senior Analytics Engineer")
     assert why.startswith("already prepped an application for this role")
+
+
+def test_log_daily_keeps_the_token_split(tmp_path, monkeypatch):
+    import io
+    s, db, cfg = make(tmp_path)
+    out = json.dumps({"result": "Acme: ready to review", "total_cost_usd": 0.9, "num_turns": 23, "duration_ms": 140000,
+                      "usage": {"input_tokens": 1200, "cache_read_input_tokens": 900000, "cache_creation_input_tokens": 60000,
+                                "output_tokens": 9000}})
+    monkeypatch.setattr("sys.stdin", io.StringIO(out))
+    cli.main(["--config", str(cfg), "log-daily", "claude", "", "subscription", "--stage", "apply"])
+    r = db.conn.execute("select tokens, t_in, t_cache_read, t_cache_write, t_out, turns, ms from usage").fetchone()
+    assert tuple(r) == (970200, 1200, 900000, 60000, 9000, 23, 140000)
+
+
+def test_show_gives_the_agent_only_what_tailoring_needs(tmp_path, capsys):
+    s, db, cfg = make(tmp_path)
+    db.update("gh:a:1", plan_json={"answers": {"x": "y" * 3000}}, report_json={"filled": ["z" * 3000]}, screenshot="/s.png")
+    cli.main(["--config", str(cfg), "show", "gh:a:1"])
+    short = json.loads(capsys.readouterr().out)
+    assert "plan_json" not in short and "report_json" not in short and short["description"].startswith("dbt Snowflake")
+    cli.main(["--config", str(cfg), "show", "gh:a:1", "--full"])
+    assert "report_json" in json.loads(capsys.readouterr().out)
+
+
+def test_daily_agent_steps_load_no_mcp_servers():
+    from pathlib import Path
+    sh = (Path(__file__).resolve().parent.parent / "scripts" / "daily.sh").read_text()
+    assert "--max-turns \"$turns\" --strict-mcp-config" in sh

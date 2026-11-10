@@ -61,7 +61,7 @@ def test_lead_shows_what_auto_apply_found(tmp_path):
     leads.set_note(db, "national grid|staff data engineer", "The posting says it has been filled.")
     html = c.get("/leads?show=starred").text
     assert "company page not found yet" not in html and "The posting says it has been filled." in html and 'href="/runs"' in html
-    assert "confirm(" not in html and "data-confirm=" in html
+    assert "confirm(" not in html and ("data-confirm=" in html or "data-confirm-ref=" in html)
 
 
 def test_dashboard_has_no_browser_confirm(tmp_path):

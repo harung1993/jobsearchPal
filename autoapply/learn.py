@@ -12,6 +12,7 @@ list run over your base resume, CLAUDE.local.md and materials/context. The tailo
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime, timedelta
@@ -120,6 +121,33 @@ def found_in(text: str) -> set[str]:
     return {n for n, rx, _, _ in _COMPILED if rx.search(t)}
 
 
+# Scanning one description takes ~27 ms (80 patterns), so the Skills page took 13 s for ~470 roles (11/10).
+# A role's text never changes: each one is scanned once and the result kept, keyed by a hash of the patterns and
+# the text, so editing SKILLS or a description rescans just what changed.
+_PATTERNS_KEY = hashlib.sha1("\n".join(p for _, p, _, _ in SKILLS).encode()).hexdigest()[:10]
+HITS_SCHEMA = "create table if not exists skill_hits (job_id text primary key, h text, names text)"
+
+
+def found_in_jobs(db, jobs: list[dict]) -> dict[str, set[str]]:
+    """found_in(description) for each job, from the skill_hits cache where it's current."""
+    db.conn.execute(HITS_SCHEMA)
+    have = {r[0]: (r[1], r[2]) for r in db.conn.execute("select job_id, h, names from skill_hits")}
+    out, fresh = {}, []
+    for j in jobs:
+        text = j.get("description") or ""
+        h = hashlib.sha1((_PATTERNS_KEY + text).encode()).hexdigest()[:16]
+        hit = have.get(j["id"])
+        if hit and hit[0] == h:
+            out[j["id"]] = set(json.loads(hit[1]))
+        else:
+            out[j["id"]] = found_in(text)
+            fresh.append((j["id"], h, json.dumps(sorted(out[j["id"]]))))
+    if fresh:
+        db.conn.executemany("insert or replace into skill_hits (job_id, h, names) values (?, ?, ?)", fresh)
+        db.conn.commit()
+    return out
+
+
 def _marks_path(data_dir: Path) -> Path:
     return Path(data_dir) / "learning.json"
 
@@ -222,6 +250,7 @@ def gaps(db, settings, days: int = 90, now: datetime | None = None) -> dict:
 
     tally: dict[str, dict] = {}
     read = 0
+    scanned = found_in_jobs(db, [j for j in jobs if not j["skills_json"]])
     for j in jobs:
         asked: dict[str, bool | None] = {}
         try:
@@ -235,7 +264,7 @@ def gaps(db, settings, days: int = 90, now: datetime | None = None) -> dict:
             for s in js.get("must") or []:
                 asked[canonical(s)] = True
         else:
-            asked = {n: None for n in found_in(j["description"] or "")}  # None: keywords can't tell must from nice
+            asked = {n: None for n in scanned.get(j["id"]) or found_in(j["description"] or "")}  # None: can't tell must from nice
         for name, must in asked.items():
             if not name:
                 continue
