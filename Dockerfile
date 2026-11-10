@@ -1,4 +1,4 @@
-# unemploymentPal in one image: Python, Playwright's Chromium, LibreOffice (docx -> pdf), and the agent CLIs.
+# jobsearchPal in one image: Python, Playwright's Chromium, LibreOffice (docx -> pdf), and the agent CLIs.
 # Your files (config, profile, materials, data) stay in the repo folder, which compose mounts at /app.
 FROM node:22-bookworm-slim AS node
 

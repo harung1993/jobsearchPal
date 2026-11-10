@@ -1,4 +1,4 @@
-# unemploymentPal with Docker. From the repo folder:
+# jobsearchPal with Docker. From the repo folder:
 #   docker compose up -d --build
 # If your user id isn't 1000 (check with: id -u), add APP_UID and APP_GID to .env first.
 # Sign in to your agent once (either or both):

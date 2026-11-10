@@ -1,4 +1,4 @@
-# unemploymentPal
+# jobsearchPal
 
 Your job search, and the unemployment paperwork that comes with it.
 
@@ -17,7 +17,7 @@ small always-on computer you own and does two jobs:
 It reads your job email (read-only), files every reply, reminds you who to follow up with and drafts the reply,
 and writes an interview prep pack when an interview comes in.
 
-unemploymentPal is part of [palStack](https://palstack.io), a family of privacy-first tools built to make everyday
+jobsearchPal is part of [palStack](https://palstack.io), a family of privacy-first tools built to make everyday
 life a little easier. Like the other pals, it runs on your own computer: no tracking, no ads, nothing sold.
 
 ![Dashboard](docs/dashboard.png)
@@ -89,7 +89,7 @@ you ─► dashboard ─► check answers, decide consents ─► Submit
 
 ### The pal
 
-A job search is hard work, and unemploymentPal talks like a friend who knows it. It is honest about the market
+A job search is hard work, and jobsearchPal talks like a friend who knows it. It is honest about the market
 and on your side, and it never promises an outcome. The rules and the phrase bank are in [VOICE.md](VOICE.md). They
 draw on research about unemployment and job searching, kept in the palStack research library.
 
@@ -152,7 +152,7 @@ The dashboard shows at most one of these cards at a time, so the page never pile
   the Setup page or in `.env`.
 - **Any RSS or Atom job feed** (`rss_feeds` in `config.yaml`, or the Setup page): We Work Remotely, jobs.ac.uk and
   many others have them. Sites that answer automated requests with a bot check (HigherEdJobs does) are
-  left to their job-alert emails; unemploymentPal doesn't try to get around those checks.
+  left to their job-alert emails; jobsearchPal doesn't try to get around those checks.
 - **Job-alert emails** from LinkedIn, Indeed (including its job-match emails), HigherEdJobs (Job Agent emails), Built In,
   Glassdoor, Wellfound, ZipRecruiter and Dice. Every role in them is saved on the **Leads** page with its location,
   salary when given, source and a rough fit score. After each email sync the top leads are looked up on the
@@ -439,7 +439,7 @@ low-privilege user.
 writes are limited to this folder, but there is no command allow list.
 
 **Gmail (app password, optional).** An app password grants full IMAP and SMTP access to the mailbox,
-the same as your password, minus the 2-step check. unemploymentPal uses it to read job emails in All Mail, Spam and Trash (each opened read-only,
+the same as your password, minus the 2-step check. jobsearchPal uses it to read job emails in All Mail, Spam and Trash (each opened read-only,
 messages fetched with `BODY.PEEK` so they stay unread) and to send you the morning brief. It never
 sends anything else, never deletes and never marks as read. It is stored in `.env` or `data/secrets.json`
 (owner-only). It also reads the headers (not bodies) of mail you sent, to tell when you've replied. A separate
@@ -521,7 +521,7 @@ One image has Python, Playwright's Chromium, LibreOffice and both agent CLIs, so
 installed on the host. Your files stay in the repo folder, which is mounted into the containers.
 
 ```
-git clone https://github.com/harung1993/unemploymentPal.git ~/auto-apply && cd ~/auto-apply
+git clone https://github.com/harung1993/jobsearchPal.git ~/auto-apply && cd ~/auto-apply
 docker compose up -d --build                # dashboard + the daily scheduler
 docker compose run --rm web claude          # sign in to Claude Code and trust /app (or: codex login)
 ```
@@ -617,7 +617,7 @@ requests are welcome, especially new ATS fillers and better reply classification
 
 ## Status and limits
 
-unemploymentPal is young: it's used daily by its author and has been tested from a clean Docker install, but expect
+jobsearchPal is young: it's used daily by its author and has been tested from a clean Docker install, but expect
 rough edges. Known limits today:
 
 - **You need a small always-on computer** (a home server, a mini PC, a cheap cloud VM) and are comfortable running a

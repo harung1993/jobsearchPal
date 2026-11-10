@@ -1,4 +1,4 @@
-{# palStack, the family unemploymentPal belongs to. The mark is the four stacked discs of the palStack logo, drawn inline
+{# palStack, the family jobsearchPal belongs to. The mark is the four stacked discs of the palStack logo, drawn inline
    (no image request, nothing to 404). One wording everywhere, as in the other pals: "Part of palStack". #}
 {% macro palstack_mark(size=16) %}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
  <ellipse cx="16" cy="24.5" rx="13" ry="4.5" fill="#f2445e"/><ellipse cx="16" cy="19" rx="13" ry="4.5" fill="#3fae4a"/>
@@ -6,9 +6,9 @@
 
 {% macro about_card() %}<section class="card mt about-ps" aria-labelledby="about-ps-h">
  <h2 id="about-ps-h" style="display:flex;align-items:center;gap:10px">{{ palstack_mark(22) }} Part of palStack</h2>
- <p class="ink2" style="margin:0 0 8px;max-width:70ch">unemploymentPal is part of <a href="https://palstack.io" target="_blank" rel="noopener">palStack</a>,
+ <p class="ink2" style="margin:0 0 8px;max-width:70ch">jobsearchPal is part of <a href="https://palstack.io" target="_blank" rel="noopener">palStack</a>,
   a family of privacy-first tools built to make everyday life a little easier. It runs on your own computer: your search, your
   emails and your applications stay with you. No tracking, no ads, nothing sold.</p>
  <p class="muted" style="margin:0;font-size:14.5px">Made with care for anyone in the middle of a job search. Ideas and fixes are welcome on
-  <a href="https://github.com/harung1993/unemploymentPal" target="_blank" rel="noopener">GitHub</a>.</p>
+  <a href="https://github.com/harung1993/jobsearchPal" target="_blank" rel="noopener">GitHub</a>.</p>
 </section>{% endmacro %}
