@@ -122,7 +122,7 @@ def main(argv=None):
     a = sub.add_parser("list"); a.add_argument("--status"); a.add_argument("--prep", action="store_true"); a.add_argument("--nudges", action="store_true"); a.add_argument("--limits", action="store_true")
     a = sub.add_parser("show"); a.add_argument("job_id")
     a = sub.add_parser("check"); a.add_argument("job_id")
-    a = sub.add_parser("leads"); a.add_argument("action", nargs="?", default="list", choices=["list", "sync", "resolve", "lookup", "job", "note"])
+    a = sub.add_parser("leads"); a.add_argument("action", nargs="?", default="list", choices=["list", "sync", "resolve", "lookup", "job", "note", "from-paste"])
     a.add_argument("key", nargs="?", default="")
     a.add_argument("text", nargs="?", default="")
     a.add_argument("--days", type=int, default=14)
@@ -131,6 +131,7 @@ def main(argv=None):
     sub.add_parser("resume-outline")
     a = sub.add_parser("build-docs"); a.add_argument("spec", help="docs.json, its folder, or an application slug")
     a = sub.add_parser("fill"); a.add_argument("plan"); a.add_argument("--job")
+    a.add_argument("--prep-only", action="store_true", help="save the plan (files and answers) without filling the form")
     a = sub.add_parser("refill"); a.add_argument("job_id")
     a = sub.add_parser("brief"); a.add_argument("--send", action="store_true")
     a = sub.add_parser("skills"); a.add_argument("action", choices=["tag", "build", "show"]); a.add_argument("--limit", type=int)
@@ -296,6 +297,8 @@ def main(argv=None):
                 sys.exit(f"no cover letter to rewrite for {args.job_id or 'this job'}")
             note = (coach.note(db, f"letter-note:{args.job_id}") or {}).get("note") or "(no note: follow voice.md)"
             text = text.replace("{{SLUG}}", slug).replace("{{NOTE}}", note.replace("</note>", ""))
+        prep_only = (root / "preponly.md").read_text() if os.environ.get("AUTOAPPLY_PREP_ONLY") == "1" else ""
+        text = text.replace("{{PREP_ONLY}}", prep_only.strip())
         print(text.replace("{{JOB_ID}}", args.job_id))
     elif args.cmd == "quick-pick":
         # Picks today's roles with one cheap OpenRouter call. Exits 2 when it's off (daily.sh then runs the rank agent).
@@ -454,8 +457,13 @@ def main(argv=None):
             # The tracked job behind a lead, once the alerts step found it on the company's site.
             leads.link_tracked(db)
             r = leads.get(db, args.key)
-            if r and r["job_id"] and (db.get(r["job_id"]) or {}).get("status") == "new":
+            if r and r["job_id"] and (db.get(r["job_id"]) or {}).get("status") in ("new", "prepped"):
                 print(r["job_id"])
+        elif args.action == "from-paste":
+            # Not on the company's own site: the job built from the post the person pasted, for a prep-only run.
+            jid = leads.from_paste(db, args.key)
+            if jid and (db.get(jid) or {}).get("status") in ("new", "prepped"):
+                print(jid)
         elif args.action == "note":
             # What Auto apply found for one lead, shown under it on the Leads page.
             leads.set_note(db, args.key, args.text)
@@ -510,6 +518,16 @@ def main(argv=None):
                 sys.exit(f"Not filled: {dup}.")
         if args.job and not plan.get("url"):
             plan["url"] = db.get(args.job)["apply_url"]
+        if args.prep_only:
+            # Prep only: the person applies by hand. The files and answers go on the job's page; no browser opens.
+            j = db.get(args.job) if args.job else None
+            if not j:
+                sys.exit("--prep-only needs --job <id>")
+            if j["status"] in ("filled", "submitted", "skipped"):
+                sys.exit(f"Not saved: {args.job} is already {j['status']}.")
+            db.update(args.job, status="prepped", plan_json=plan, error=None)
+            _out({"prepped": args.job, "files": sorted(plan.get("files", {})), "answers": len(plan.get("answers", {}))})
+            return
         report = fill(plan, s.profile, s.data_dir / "screenshots", headless)
         db.log_run("fill", not report.errors, f"{plan.get('url', '')[:80]}: {len(report.filled)} filled, {len(report.errors)} errors")
         out = report.as_dict()

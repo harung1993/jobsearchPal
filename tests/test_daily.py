@@ -216,3 +216,57 @@ def test_one_pick_per_company_and_shortlist(tmp_path, capsys):
     ids = [j["id"] for j in rank.shortlist(db, s, 5, skip_companies=["Acme"])]
     assert "gh:a:9" not in ids and "wd:c:3" in ids
     assert rank.shortlist(db, s, 0) == []
+
+
+# ---------- Prep only (11/10): tailor and save answers, fill nothing ----------
+
+def test_prep_only_stores_plan_without_filling(tmp_path, capsys, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    called = []
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: called.append(1))
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"files": {"resume": "r.pdf"}, "answers": {"Why us?": "x"},
+                                "approved_by_user": True, "approved": {"Consent": "yes"}}))
+    cli.main(["--config", str(cfg), "fill", str(plan), "--job", "wd:c:3", "--prep-only"])
+    j = db.get("wd:c:3")
+    saved = json.loads(j["plan_json"])
+    assert not called and j["status"] == "prepped" and saved["answers"] == {"Why us?": "x"} and saved["url"] == "u"
+    assert "approved_by_user" not in saved and "approved" not in saved
+    assert json.loads(capsys.readouterr().out)["prepped"] == "wd:c:3"
+
+
+def test_prep_only_never_downgrades_a_filled_job(tmp_path, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    monkeypatch.setattr(cli, "fill", lambda *a, **k: None)
+    db.update("wd:c:3", status="filled")
+    plan = tmp_path / "plan.json"
+    plan.write_text("{}")
+    import pytest
+    with pytest.raises(SystemExit):
+        cli.main(["--config", str(cfg), "fill", str(plan), "--job", "wd:c:3", "--prep-only"])
+    assert db.get("wd:c:3")["status"] == "filled"
+
+
+def test_prep_only_prompt(tmp_path, capsys, monkeypatch):
+    s, db, cfg = make(tmp_path)
+    monkeypatch.delenv("AUTOAPPLY_PREP_ONLY", raising=False)
+    cli.main(["--config", str(cfg), "daily-prompt", "apply", "gh:a:1"])
+    out = capsys.readouterr().out
+    assert "{{" not in out and "--prep-only" in out and "Prep only." not in out  # Workday uses it in every run
+    monkeypatch.setenv("AUTOAPPLY_PREP_ONLY", "1")
+    cli.main(["--config", str(cfg), "daily-prompt", "apply", "gh:a:1"])
+    out = capsys.readouterr().out
+    assert "Prep only." in out and "{{" not in out
+
+
+def test_leads_job_returns_a_prepped_job(tmp_path, capsys):
+    s, db, cfg = make(tmp_path)
+    from autoapply import leads
+    k = leads.add_pasted(db, s, {"company": "Hooli", "title": "Data Lead", "location": "", "work_setting": "", "pay": "",
+                                 "url": "", "description": "the post"})["key"]
+    cli.main(["--config", str(cfg), "leads", "from-paste", k])
+    jid = capsys.readouterr().out.strip()
+    assert jid.startswith("manual:")
+    db.update(jid, status="prepped")
+    cli.main(["--config", str(cfg), "leads", "job", k])
+    assert capsys.readouterr().out.strip() == jid
