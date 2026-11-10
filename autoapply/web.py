@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from jinja2 import Environment, FileSystemLoader
 from starlette.concurrency import run_in_threadpool
 
@@ -186,6 +186,49 @@ def make_app(settings, db: DB) -> FastAPI:
     ws_label, _ = work_search(settings)
     env.globals["ws_label"] = ws_label
 
+    from fastapi.exceptions import RequestValidationError
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+    ERRORS = {400: "That request didn't make sense to the server.", 404: "That page or role isn't here any more.",
+              405: "That link only works from a button on the page.", 422: "Something the form needs was missing.",
+              500: "Something broke on our side."}
+
+    def _wants_html(request: Request) -> bool:
+        return "text/html" in request.headers.get("accept", "")
+
+    def _error_page(request: Request, code: int, detail: str = ""):
+        """Forms sent from a page (base.html's script sets X-In-Page) get JSON for the in-app dialog;
+        a page opened straight from a link gets the app's error page."""
+        if request.headers.get("x-in-page"):
+            return JSONResponse({"code": code, "title": ERRORS.get(code, "That didn't work."), "detail": detail}, status_code=code)
+        back = request.headers.get("referer") or "/"
+        return HTMLResponse(env.get_template("error.html").render(code=code, title=ERRORS.get(code, "That didn't work."),
+                                                                  detail=detail, back=back), status_code=code)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _http_error(request: Request, exc: StarletteHTTPException):
+        """Browser page loads get an app page with a way back, in-page forms the dialog; fetch and curl keep FastAPI's JSON."""
+        if exc.status_code < 400 or not (_wants_html(request) or request.headers.get("x-in-page")):
+            return await http_exception_handler(request, exc)
+        detail = exc.detail if isinstance(exc.detail, str) and exc.detail not in ("Not Found", "Bad Request", "Method Not Allowed") else ""
+        return _error_page(request, exc.status_code, detail)
+
+    @app.exception_handler(RequestValidationError)
+    async def _form_error(request: Request, exc: RequestValidationError):
+        if not (_wants_html(request) or request.headers.get("x-in-page")):
+            return await request_validation_exception_handler(request, exc)
+        missing = [str(e.get("loc", ["", ""])[-1]) for e in exc.errors()]
+        return _error_page(request, 422, ("Missing: " + ", ".join(missing)) if missing else "")
+
+    @app.exception_handler(Exception)
+    async def _crash(request: Request, exc: Exception):
+        """A bug on our side: the person sees a plain message (dialog or page), the traceback goes to the log."""
+        import logging
+        logging.getLogger("autoapply.web").exception("unhandled error on %s", request.url.path)
+        if not (_wants_html(request) or request.headers.get("x-in-page")):
+            return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+        return _error_page(request, 500, str(exc)[:200])
+
     def page(name: str, **ctx) -> HTMLResponse:  # noqa: F811  every page shows the waiting-email badge
         from . import setup
         return HTMLResponse(env.get_template(name).render(pending_count=len(db.pending_events()),
@@ -350,7 +393,25 @@ def make_app(settings, db: DB) -> FastAPI:
             at = datetime.fromisoformat(started).strftime("%-I:%M %p").lower()
         except (OSError, ValueError):
             started, trigger, step, at = "", "", "", ""
-        return {"at": at, "trigger": trigger, "step": step}
+        return {"at": at, "trigger": trigger, "step": step, "label": step_label(step)}
+
+    def step_label(step: str) -> str:
+        """daily.sh's progress line in plain words: "apply greenhouse:acme:1" -> "tailoring and filling Acme · Data Engineer"."""
+        stage, _, job_id = (step or "").partition(" ")
+        what = ""
+        if job_id:
+            j = db.get(job_id)
+            what = f"{j['company']} · {j['title']}" if j else job_id
+        return {"alerts": "looking the role up on the company's own site", "rank": "ranking today's roles",
+                "apply": f"tailoring and filling {what}".strip(), "prep": f"writing an interview prep pack {what}".strip(),
+                "letter": f"rewriting the cover letter {what}".strip(), "drafts": "drafting replies",
+                "refilling": f"refilling the form {what}".strip()}.get(stage, step)
+
+    @app.get("/runs")
+    def runs_page():
+        """The run log: what every run did, step by step, from data/daily/*.md."""
+        from . import runlog
+        return page("runs.html", days=runlog.recent(settings.data_dir), running=run_state(), nav="dashboard")
 
     @app.post("/run")
     def run_now(picks: int = Form(2)):

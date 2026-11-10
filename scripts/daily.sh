@@ -36,7 +36,7 @@ fi
 today=data/daily/$(date +%F).md
 if [ "$trigger" = manual ]; then echo "
 # Run now $(date '+%F %H:%M')" >> "$today"; else echo "# Daily run $(date '+%F %H:%M')" > "$today"; fi
-ok=1; picked=""; blocked=""
+ok=1; picked=""; blocked=""; looked=""
 
 # run_stage STAGE [JOB_ID]: sets line to the stage's last line of output, and ok=0 on failure.
 # Agent, model and billing come from Settings > Daily run (light model for rank/prep/drafts).
@@ -81,12 +81,18 @@ run_stage() {
 # "Prepare this one" on the dashboard (AUTOAPPLY_JOB): just the apply step for that tracked role.
 one="${AUTOAPPLY_LEAD:-}${AUTOAPPLY_JOB:-}"
 if [ -z "${AUTOAPPLY_JOB:-}" ] && [ "$(autoapply leads lookup 2>/dev/null || echo 0)" -gt 0 ] 2>/dev/null; then
-  run_stage alerts || true; echo "- starred leads: $line" >> "$today"
+  run_stage alerts || true; echo "- starred leads: $line" >> "$today"; looked="$line"
 fi
 if [ -n "${AUTOAPPLY_LEAD:-}" ]; then
   job=$(autoapply leads job "$AUTOAPPLY_LEAD" 2>/dev/null || true)
   if [ -n "$job" ]; then run_stage apply "$job" || true; picked="$line"
-  else picked="Auto apply: couldn't find that role on the company's own site (it may be closed, or only on LinkedIn/Indeed)"; ok=0; fi
+    done_note="Found on the company's site and filled in. ${line}"
+    autoapply leads note "$AUTOAPPLY_LEAD" "$done_note" 2>/dev/null || true
+  else picked="Auto apply: couldn't find that role on the company's own site (it may be closed, or only on LinkedIn/Indeed)"; ok=0
+    # What the lookup actually saw (filled, page gone, ...), so the Leads page can say why.
+    why="Not found on the company's own site. It may be closed, or only on LinkedIn/Indeed."
+    autoapply leads note "$AUTOAPPLY_LEAD" "${looked:-${blocked:-$why}}" 2>/dev/null || true
+  fi
   echo "- auto apply: $picked" >> "$today"
 fi
 if [ -n "${AUTOAPPLY_JOB:-}" ] && [ -n "${AUTOAPPLY_LETTER:-}" ]; then

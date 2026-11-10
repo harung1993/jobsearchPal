@@ -4,6 +4,7 @@
   autoapply board add ATS SLUG        watch another company's job board (checked first)
   autoapply board list                boards being watched
   autoapply leads resolve [N]         find the top N leads on the company's own job board (no AI)
+  autoapply leads note KEY TEXT       record what Auto apply found for a lead (shown on the Leads page)
   autoapply alerts [--days N]         recent job-alert emails as text, to pull roles from
   autoapply sync-email [--days N] [--rebuild] [--no-review]  gather ATS/recruiter emails, then have the
                                       model sort them (--rebuild refiles; your corrections are kept)
@@ -121,8 +122,9 @@ def main(argv=None):
     a = sub.add_parser("list"); a.add_argument("--status"); a.add_argument("--prep", action="store_true"); a.add_argument("--nudges", action="store_true"); a.add_argument("--limits", action="store_true")
     a = sub.add_parser("show"); a.add_argument("job_id")
     a = sub.add_parser("check"); a.add_argument("job_id")
-    a = sub.add_parser("leads"); a.add_argument("action", nargs="?", default="list", choices=["list", "sync", "resolve", "lookup", "job"])
+    a = sub.add_parser("leads"); a.add_argument("action", nargs="?", default="list", choices=["list", "sync", "resolve", "lookup", "job", "note"])
     a.add_argument("key", nargs="?", default="")
+    a.add_argument("text", nargs="?", default="")
     a.add_argument("--days", type=int, default=14)
     a = sub.add_parser("skip"); a.add_argument("job_id", nargs="+"); a.add_argument("--reason", default="")
     a = sub.add_parser("scan"); a.add_argument("url"); a.add_argument("--ats")
@@ -451,6 +453,9 @@ def main(argv=None):
             r = leads.get(db, args.key)
             if r and r["job_id"] and (db.get(r["job_id"]) or {}).get("status") == "new":
                 print(r["job_id"])
+        elif args.action == "note":
+            # What Auto apply found for one lead, shown under it on the Leads page.
+            leads.set_note(db, args.key, args.text)
         else:
             for r in leads.rows(db)[:200]:
                 print(f"{r['score']:5.1f}  {r['status']:9}  {r['company']} | {r['title']} | {r['location']} | {r['source']}")

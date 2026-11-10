@@ -332,7 +332,7 @@ def test_run_now_starts_one_run(tmp_path, base_url, pdfs, monkeypatch):
     with open(d / ".lock", "w") as f:  # a run holds the lock: the page says so and a second click starts nothing
         fcntl.flock(f, fcntl.LOCK_EX)
         html = c.get("/").text
-        assert "Running since 2:10 pm" in html and "apply gh:warp:1" in html
+        assert "Running since 2:10 pm" in html and "tailoring and filling gh:warp:1" in html and "/runs" in html
         c.post("/run", data={"picks": "1"})
     assert len(started) == 1
 

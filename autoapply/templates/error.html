@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+{% block body %}
+<div class="ph"><div><h1>{{ title }}</h1>
+ <div class="sub">{% if detail %}{{ detail }}{% else %}Nothing was changed.{% endif %}</div></div></div>
+<section class="card" style="max-width:640px">
+ <p style="margin:0 0 14px">You can go back and try again. If it keeps happening, that's on us, not you: the
+  <a href="/runs">run log</a> and the server's <code>data/cron.log</code> have the details.</p>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn primary" href="{{ back }}">Go back</a><a class="btn" href="/">Dashboard</a></div>
+ <p class="ink2" style="margin:14px 0 0;font-size:13.5px">Error {{ code }}</p>
+</section>
+{% endblock %}

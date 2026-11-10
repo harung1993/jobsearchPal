@@ -224,7 +224,53 @@ details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:6
  </nav>
 </div>
 <div id="tip" role="tooltip"></div>
+<dialog id="ask" class="ask" aria-labelledby="ask-t"><form method="dialog">
+ <h2 id="ask-t"></h2><div id="ask-b" class="ask-b"></div>
+ <div class="ask-acts"><button class="btn" value="no" id="ask-no">Cancel</button><button class="btn primary" value="yes" id="ask-ok">OK</button></div>
+</form></dialog>
+<style>.ask{border:1px solid var(--line-2);border-radius:var(--radius);background:var(--surface);color:var(--ink);padding:20px 22px;
+ width:min(520px,calc(100vw - 32px));box-shadow:var(--shadow-lg,0 12px 32px rgba(0,0,0,.2))}.ask::backdrop{background:rgba(20,16,8,.45)}
+.ask.err h2{color:var(--bad)}.ask .code{color:var(--ink-3);font-size:13px;margin:0}
+.ask h2{margin:0 0 10px;font-size:18px;line-height:1.3}.ask-b p{margin:0 0 10px;color:var(--ink-2);font-size:15.5px}
+.ask-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.field-err{display:block;color:var(--bad);font-size:13.5px;margin-top:4px}[aria-invalid=true]{border-color:var(--bad)!important}</style>
 <script>
+// In-app dialogs, no browser popups. One <dialog> does both jobs:
+//  - confirm: a form with data-confirm (and data-confirm-title, data-confirm-ok) asks before it is sent;
+//  - errors: POST forms are sent in the background; if the server says no, the reason shows here and you stay put.
+const ask=(()=>{const d=document.getElementById("ask");if(!d||!d.showModal)return null;
+ const $=id=>document.getElementById(id);
+ return (title,body,{ok="OK",cancel="Cancel",error=false,code=""}={})=>new Promise(res=>{
+  $("ask-t").textContent=title;d.classList.toggle("err",error);
+  const ps=String(body||"").split(/\n\s*\n/).filter(t=>t.trim()).map(t=>{const p=document.createElement("p");p.textContent=t.trim();return p});
+  if(code){const c=document.createElement("p");c.className="code";c.textContent=code;ps.push(c)}
+  $("ask-b").replaceChildren(...ps);$("ask-ok").textContent=ok;$("ask-no").style.display=cancel?"":"none";$("ask-no").textContent=cancel||"";
+  d.returnValue="";d.showModal();$("ask-ok").focus();d.addEventListener("close",()=>res(d.returnValue==="yes"),{once:true})})})();
+async function sendInPage(f,by){
+ const btns=[...f.querySelectorAll("button,[type=submit]")],label=by&&by.textContent;
+ btns.forEach(b=>b.disabled=true);if(by&&by.tagName==="BUTTON"&&by.children.length===0)by.textContent="Working…";
+ const restore=()=>{btns.forEach(b=>b.disabled=false);if(by&&label!=null&&by.children.length===0)by.textContent=label};
+ const fd=new FormData(f);if(by&&by.name)fd.append(by.name,by.value);
+ let r;try{r=await fetch(f.action,{method:"POST",body:fd,headers:{"X-In-Page":"1",accept:"text/html"},credentials:"same-origin"})}
+ catch(e){restore();await ask("Couldn't reach jobsearchPal","The server didn't answer. Check that it's running, then try again.",{cancel:"",error:true});return}
+ if(r.ok&&r.redirected){location.assign(r.url);return}
+ if(r.ok){const html=await r.text();history.replaceState(null,"",r.url);document.open();document.write(html);document.close();return}
+ restore();let e={};try{e=await r.json()}catch(_){}
+ if(r.status===401){await ask("You're signed out","Sign in again, then try that once more.",{cancel:"",ok:"Sign in"});location.assign("/login");return}
+ await ask(e.title||"That didn't work",e.detail||"Nothing was changed. Try again, and if it keeps happening, see the Run log.",{cancel:"",error:true,code:"Error "+r.status})}
+if(ask)document.addEventListener("submit",async e=>{const f=e.target;
+ if(e.defaultPrevented||!(f instanceof HTMLFormElement)||(f.method||"").toLowerCase()!=="post"||f.target||"native" in f.dataset)return;
+ e.preventDefault();const by=e.submitter;
+ if(f.dataset.confirm&&!await ask(f.dataset.confirmTitle||"Are you sure?",f.dataset.confirm,{ok:f.dataset.confirmOk||"OK"}))return;
+ sendInPage(f,by)});
+// Required fields: say what's missing next to the field instead of the browser's own bubble.
+document.addEventListener("invalid",e=>{const el=e.target;e.preventDefault();el.setAttribute("aria-invalid","true");
+ let m=el.parentNode.querySelector(":scope > .field-err");if(!m){m=document.createElement("span");m.className="field-err";m.setAttribute("role","alert");el.insertAdjacentElement("afterend",m)}
+ m.textContent=el.validity.valueMissing?"This one is needed.":(el.validationMessage||"Check this one.");
+ const f=el.form;if(f&&f.querySelector("[aria-invalid=true]")===el)el.focus()},true);
+document.addEventListener("input",e=>{const el=e.target;if(el.getAttribute&&el.getAttribute("aria-invalid")==="true"&&el.checkValidity()){
+ el.removeAttribute("aria-invalid");const m=el.parentNode.querySelector(":scope > .field-err");if(m)m.remove()}});
+
 // One tooltip for every chart mark with data-tip.
 const tip=document.getElementById("tip");
 document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");
