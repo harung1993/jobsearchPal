@@ -177,7 +177,7 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
   <div class="body"><div class="t"><span class="pill {{ 'interview' if n.kind == 'interview' else ('recruiter' if n.kind in ('reply', 'chase') else ('rejected' if urgent else ('deadline' if n.kind in ('resea', 'claim', 'task', 'worksearch') else 'waiting'))) }}">{{ {'interview': 'interview', 'reply': 'reply', 'chase': 'check in', 'application': 'follow up',
    'claim': 'claim day', 'worksearch': 'work search', 'resea': 'RESEA', 'task': 'benefits', 'agency': 'agency letter', 'appeal': 'decision'}[n.kind] }}</span><span>{{ n.title }}</span></div><div class="m" title="{{ n.about }} · {{ n.why }}">{{ n.about|truncate(70) }} · {{ n.why }}</div>
    {% if n.draft %}<details><summary>Draft reply</summary><pre class="draft">{{ n.draft }}</pre>
-    <button type="button" class="btn sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent);this.textContent='Copied'">Copy</button></details>{% endif %}</div>
+    <button type="button" class="btn sm" onclick="copyText(this,this.previousElementSibling.textContent)">Copy</button></details>{% endif %}</div>
   <div class="acts">{% if n.compose %}<a class="btn sm" href="{{ n.compose }}" target="_blank" rel="noopener">Reply in Gmail</a>{% endif %}
    <form method="post" action="/nudge/{{ n.key }}"><input type="hidden" name="days" value="3"><button class="btn ghost sm" name="action" value="snooze" title="Hide for 3 days">Snooze</button><button class="btn ghost sm" name="action" value="done">Done</button></form></div>
  </div>{% endmacro %}

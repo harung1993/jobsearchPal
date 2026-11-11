@@ -349,10 +349,15 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   **Rewrite this letter** on the Cover letter tab takes a note ("warmer and shorter"), rewrites only that letter
   in the background, and fills the form again; it uses AI credit and never submits. Tick *Keep this for every letter*
   to add the note to how all your letters sound.
+- **Finish with the command:** when a site shows a captcha, the review page gives you `autoapply-finish <job>` to
+  run on your laptop (**Copy command** works on the plain http address too). Each run is counted. Once it has run
+  for a job, the page offers **I sent it with the command**; **I applied by hand** stays under More.
 - **Stats:** response and interview rates, median time to reply, funnels, results by application
   platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends. *Beyond applications*
   counts the weeks you wrote a plan, the people you got in touch with (and interviews at their companies), and
-  your reflections. *Your planned weeks* shows what you did against each weekly plan you set.
+  your reflections. *Your planned weeks* shows what you did against each weekly plan you set. *How applications
+  went out* splits them into sent by the app, with the command, by hand, and logged from elsewhere, and says how
+  many times `autoapply-finish` ran.
 - **Skills:** what the roles you matched keep asking for that you don't show yet, most asked first, with the
   roles that ask and a link to each skill's own docs or free course. With Skill matching on, it uses the model's
   must-have and nice-to-have list for each role it read (nothing is read twice); otherwise a fixed list of about 80

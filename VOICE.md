@@ -85,6 +85,8 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Rejection, with their plan | "You wrote this for a day like today: ..." |
 | Values reflection | "Fifteen minutes on what matters to you. Some people find it steadying." |
 | Related titles | "Looking a little wider can open more doors." |
+| Sent with autoapply-finish | "I sent it with the command" (button) / "With the command" (Stats) |
+| Copy fell back to selecting | "Press Cmd+C" |
 
 ## Motion
 

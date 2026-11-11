@@ -25,7 +25,8 @@
   {% if not running %}{% if job.status == 'new' %}<button class="btn" form="prep-form" title="Resume, cover letter and answers. You apply by hand. Uses credits.">Prep only</button>{% endif %}
   <button class="btn" form="auto-form" title="Tailor and fill the form for you to review. Uses credits.">Auto apply</button>{% endif %}
   <button class="btn ghost" name="action" value="skip">Not applying</button>
-  <button class="btn {{ 'primary' if job.status == 'prepped' else 'ghost' }}" name="action" value="manual" title="You applied on the company's site: this logs it for your weekly count">I applied by hand</button>
+  {% if command_ran %}<button class="btn primary" name="action" value="command" title="You sent it from the Chrome window autoapply-finish opened: this logs it for your weekly count">I sent it with the command</button>{% endif %}
+  <button class="btn {{ 'primary' if job.status == 'prepped' and not command_ran else 'ghost' }}" name="action" value="manual" title="You applied on the company's site: this logs it for your weekly count">I applied by hand</button>
  </div>
  {% else %}
  <div class="chips">
@@ -38,14 +39,14 @@
  {% if job.status != 'submitted' %}<div class="act">
   <button class="btn" name="action" value="refill" title="Save your edits and fill the form again">Save and refill</button>
   <details class="menu"><summary class="btn ghost" aria-label="More actions">More</summary><div class="menu-list">
-   {% if not handoff %}<button class="btn ghost" name="action" value="manual">I applied by hand</button>{% endif %}
+   {% if not handoff or command_ran %}<button class="btn ghost" name="action" value="manual">I applied by hand</button>{% endif %}
    <button class="btn ghost" name="action" value="skip">Not applying</button></div></details>
   <span class="sep" aria-hidden="true"></span>
   {% if report.submit_clicked and not report.submitted %}<label class="tick warn"><input type="checkbox" name="resubmit" value="yes"> Submit was pressed once with no confirmation: I checked my email, submit again</label>{% endif %}
   <label class="tick"><input type="checkbox" name="approve" value="yes" id="approve"> I reviewed everything, including the consents</label>
   {% if handoff %}<button class="btn" name="action" value="submit" data-needs-approve {% if blocked %}data-blocked{% endif %} disabled>Submit here</button>
-  <button class="btn primary" name="action" value="manual">I applied by hand</button>
-  {% else %}<button class="btn primary" name="action" value="submit" data-needs-approve {% if blocked %}data-blocked title="Fix the checks above first"{% endif %} disabled>Submit</button>{% endif %}
+  {% if command_ran %}<button class="btn primary" name="action" value="command" title="You sent it from the Chrome window autoapply-finish opened: this logs it for your weekly count">I sent it with the command</button>{% else %}<button class="btn primary" name="action" value="manual">I applied by hand</button>{% endif %}
+  {% else %}{% if command_ran %}<button class="btn" name="action" value="command" title="You sent it from the Chrome window autoapply-finish opened: this logs it for your weekly count">I sent it with the command</button>{% endif %}<button class="btn primary" name="action" value="submit" data-needs-approve {% if blocked %}data-blocked title="Fix the checks above first"{% endif %} disabled>Submit</button>{% endif %}
  </div>{% endif %}
  {% endif %}
 </div>
@@ -56,15 +57,15 @@
  <ol class="steps">
   <li>On your Mac, open Terminal and run:
    <div class="cmd"><code>autoapply-finish {{ job.id }}</code>
-    <button type="button" class="btn primary" onclick="navigator.clipboard.writeText(this.dataset.v);this.textContent='Copied'" data-v="autoapply-finish {{ job.id }}">Copy command</button></div>
+    <button type="button" class="btn primary" onclick="copyText(this,this.dataset.v)" data-v="autoapply-finish {{ job.id }}">Copy command</button></div>
    <small>Chrome opens on the form with everything filled in and the files attached. Safari can't be filled this way.</small></li>
   <li>Answer the captcha or code there and press <b>Submit</b>.</li>
-  <li>Come back and press <b>I applied by hand</b> in the bar above.</li>
+  <li>Come back, reload this page and press <b>I sent it with the command</b> in the bar above.</li>
  </ol>
  <details><summary>No Mac handy? Fill it in by hand</summary>
  <p class="ink2">Open the <a href="{{ job.apply_url or job.url }}" target="_blank">application form</a>, attach the files, and copy each answer.</p>
  {% if files %}<p>{% for slot, name in files %}<a class="btn" href="/file/{{ slot }}/{{ job.id|urlencode }}" download="{{ name }}">{{ name }}</a> {% endfor %}</p>{% endif %}
- <table>{% for f in report.filled if f.source != 'file' %}<tr><td class="ink2" style="width:40%">{{ f.label }}</td><td>{{ f.value }}</td><td><button type="button" class="btn" onclick="navigator.clipboard.writeText(this.dataset.v);this.textContent='Copied'" data-v="{{ f.value }}">Copy</button></td></tr>{% endfor %}</table>
+ <table>{% for f in report.filled if f.source != 'file' %}<tr><td class="ink2" style="width:40%">{{ f.label }}</td><td>{{ f.value }}</td><td><button type="button" class="btn" onclick="copyText(this,this.dataset.v)" data-v="{{ f.value }}">Copy</button></td></tr>{% endfor %}</table>
 </details>
 </section>{% endif %}
 
@@ -77,7 +78,7 @@
   {% if apply_link %}<p><a class="btn primary" href="{{ apply_link }}" target="_blank" rel="noopener">Apply on the company's site</a></p>{% endif %}
   {% if files %}<p class="files">{% for slot, name in files %}<a class="btn" href="/file/{{ slot }}/{{ job.id|urlencode }}" download="{{ name }}">{{ name }}</a>{% if docx.get(slot) %} <a class="btn ghost sm" href="/file/{{ slot }}/{{ job.id|urlencode }}?kind=docx" download="{{ docx[slot] }}">Word</a>{% endif %} {% endfor %}</p>{% endif %}
   {% if answers %}<table class="answers">{% for q, a in answers.items() %}<tr><td class="ink2" style="width:38%">{{ q }}</td><td>{{ a }}</td>
-   <td><button type="button" class="btn sm" onclick="navigator.clipboard.writeText(this.dataset.v);this.textContent='Copied'" data-v="{{ a }}">Copy</button></td></tr>{% endfor %}</table>
+   <td><button type="button" class="btn sm" onclick="copyText(this,this.dataset.v)" data-v="{{ a }}">Copy</button></td></tr>{% endfor %}</table>
   {% else %}<p class="muted">No answers were written for this one. The notes have the pay ask and screen prep.</p>{% endif %}
  </section>{% endif %}
  {% if checks and not kitmode %}{% set bad = checks|rejectattr('ok')|list %}<section class="card pre {{ 'stop' if blocked else ('warn' if bad else 'go') }}" id="preflight">

@@ -647,7 +647,7 @@ def finish(job_id: str, server: str):
     left = [u["label"] for u in report.unanswered]
     if left:
         print("Left for you to answer:", "; ".join(left))
-    print(f"Once it's sent, press 'I applied by hand' on {server.rstrip('/')}/job/{job_id} (the confirmation email also marks it).")
+    print(f"Once it's sent, press 'I sent it with the command' on {server.rstrip('/')}/job/{job_id} (the confirmation email also marks it).")
 
 
 if __name__ == "__main__":

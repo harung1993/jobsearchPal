@@ -789,7 +789,7 @@ def make_app(settings, db: DB) -> FastAPI:
                   "last": coach.note(db, f"letter-note:{job_id}"),
                   "busy": bool(rs and rs["step"] in (f"letter {job_id}", f"refilling {job_id}")),
                   "voice_set": voice.is_set(db)}
-        from . import leads
+        from . import finish, leads
         leads.ensure(db)
         lead = db.conn.execute("select * from leads where job_id = ?", (job_id,)).fetchone()
         docx = {slot: Path(p).with_suffix(".docx").name for slot, p in plan.get("files", {}).items()
@@ -797,7 +797,8 @@ def make_app(settings, db: DB) -> FastAPI:
         return page("job.html", nav="", job=job, report=report, approved=plan.get("approved", {}), files=files, checks=checks,
                     blocked=preflight.blocking(checks), letter=letter, lead=dict(lead) if lead else None,
                     answers=plan.get("answers", {}), docx=docx, running=rs, apply_link=_web_link(job.get("apply_url") or job.get("url") or ""),
-                    notes=_notes(plan), plan_text=json.dumps(shown, indent=1), handoff=_handoff(job, report))
+                    notes=_notes(plan), plan_text=json.dumps(shown, indent=1), handoff=_handoff(job, report),
+                    command_ran=finish.ran(db, job_id))
 
     def _web_link(u: str) -> str:
         from .history import _web
@@ -844,6 +845,8 @@ def make_app(settings, db: DB) -> FastAPI:
         """Everything `autoapply finish` needs to fill the form in a visible browser on your laptop."""
         job, plan, _ = load(job_id)
         plan = {**plan, "approved_by_user": False}
+        from . import finish
+        finish.record_run(db, job_id)  # only `autoapply-finish` asks for this: count each run
         slots = {slot: Path(p).name for slot, p in plan.get("files", {}).items() if _servable(p)}
         return {"job": {k: job[k] for k in ("id", "company", "title", "url", "apply_url")},
                 "plan": plan, "files": slots, "profile": settings.profile}
@@ -1362,16 +1365,18 @@ def make_app(settings, db: DB) -> FastAPI:
         new_plan["held_reviewed"] = True  # from now on a blank consent stays blank: no standing answer fills it
         new_plan["approved_by_user"] = False
 
-        if action in ("skip", "manual"):  # the lead behind this job follows it
+        if action in ("skip", "manual", "command"):  # the lead behind this job follows it
             from . import leads
             leads.ensure(db)
             db.conn.execute("update leads set status = ? where job_id = ?", ("dismissed" if action == "skip" else "applied", job_id))
             db.conn.commit()
         if action == "skip":
             db.update(job_id, status="skipped", plan_json=new_plan)
-        elif action == "manual":
+        elif action in ("manual", "command"):  # you sent it yourself: by hand, or with autoapply-finish
+            from . import finish
             db.update(job_id, status="submitted", plan_json=new_plan, error=None,
                       submitted_at=time.strftime("%Y-%m-%d %H:%M"))
+            finish.mark(db, job_id, "command" if action == "command" else "hand")
             _record_applied(job, None)
         elif action == "refill":
             r = await run_in_threadpool(fill, new_plan, settings.profile, shots, headless)  # sync Playwright can't share the event loop
