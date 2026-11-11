@@ -111,7 +111,7 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
  {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
 </section>
 
-<section class="card plan{{ ' g-saved' if planned }}" id="plan" aria-labelledby="plan-h">
+<section class="card plan{{ ' g-saved' if planned }}" id="plan" aria-labelledby="plan-h">{% if planned %}<script>(()=>{const u=new URL(location.href);u.searchParams.delete("planned");history.replaceState(null,"",u.pathname+u.search+u.hash)})()</script>{% endif %}
  {% if lookback %}{{ g.lookback_card(lookback, lookback_summary, plan_days, goal_totals, planned) }}
  {% elif plan %}<div class="plan-row"><div><h2 id="plan-h">Your plan this week</h2>{% if plan_line %}<p class="plan-line">{{ plan_line }}</p>{% endif %}
    {% if plan.goals %}<p class="plan-line ink2">{{ g_summary }}</p>{% endif %}</div>
