@@ -87,6 +87,8 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Related titles | "Looking a little wider can open more doors." |
 | Sent with autoapply-finish | "I sent it with the command" (button) / "With the command" (Stats) |
 | Copy fell back to selecting | "Press Cmd+C" |
+| Filled by autoapply-finish | "Filled with the command" (chip) |
+| Command saw the confirmation | "Sent with the command. It saw the site's confirmation page at {time}. If it didn't go through, undo puts it back as filled." / "Not sent? Undo" |
 | Application notes page | "Application notes" / "Open as a page" / "Print or save as PDF" |
 
 ## Motion
