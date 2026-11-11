@@ -348,7 +348,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   (documents present and current, required answers filled, consents confirmed) keep Submit locked until they pass.
   **Rewrite this letter** on the Cover letter tab takes a note ("warmer and shorter"), rewrites only that letter
   in the background, and fills the form again; it uses AI credit and never submits. Tick *Keep this for every letter*
-  to add the note to how all your letters sound.
+  to add the note to how all your letters sound. The **Notes** tab shows the application's notes (fit/gap table, pay
+  ask, form answers, screen prep) as a formatted document; **Open as a page** gives it a page of its own with
+  **Print or save as PDF**.
 - **Finish with the command:** when a site shows a captcha, the review page gives you `autoapply-finish <job>` to
   run on your laptop (**Copy command** works on the plain http address too). Each run is counted. Once it has run
   for a job, the page offers **I sent it with the command**; **I applied by hand** stays under More.

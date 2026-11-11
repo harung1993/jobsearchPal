@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ job.company }}{% endblock %}
 {% block body %}
+{% import "_doc.html" as d %}{{ d.doc_css() }}
 <style>.finish{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)} .finish h2{font-size:18px;color:var(--accent-ink)}
 .finish .why{margin:-4px 0 10px;font-weight:600} .finish .steps{margin:0 0 12px;padding-left:20px;display:grid;gap:10px}
 .finish .cmd{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px;padding:10px 12px;background:var(--surface);border-radius:12px;border:1px solid var(--line-2)}
@@ -141,7 +142,9 @@
       <a href="/letters">{{ 'How your letters sound' if letter.voice_set else 'Set how all your letters sound' }}</a></p>
     </details>{% endif %}</div>{% endif %}
    {% if name.lower().endswith('.pdf') %}<iframe class="doc" src="/file/{{ slot }}/{{ job.id|urlencode }}" title="{{ name }}" loading="lazy"></iframe>{% endif %}</div>{% endfor %}
-  {% if notes %}<div class="pane" id="notes" {% if files %}hidden{% endif %}><pre style="white-space:pre-wrap;font:14.5px/1.5 ui-monospace,monospace;margin:0">{{ notes }}</pre></div>{% endif %}
+  {% if notes %}<div class="pane" id="notes" {% if files %}hidden{% endif %}>
+   <p class="doc-acts"><a class="btn sm" href="/notes/{{ job.id|urlencode }}" target="_blank" rel="noopener">Open as a page</a></p>
+   <article class="notes-doc">{{ notes_html|safe }}</article></div>{% endif %}
   {% if job.screenshot %}<div class="pane" id="shot" {% if files or notes %}hidden{% endif %}><a href="/shot/{{ job.id|urlencode }}" target="_blank"><img class="shot" src="/shot/{{ job.id|urlencode }}" alt="Screenshot of the filled form"></a></div>{% endif %}
  </section>
 </div>

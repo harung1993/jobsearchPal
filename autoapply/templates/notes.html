@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "macros.html" import co %}
+{% import "_doc.html" as d %}
+{% block title %}Notes · {{ job.company }}{% endblock %}
+{% block body %}
+{{ d.doc_css() }}
+<p class="crumb"><a href="/job/{{ job.id|urlencode }}">← {{ co(job.company) }} · {{ job.title }}</a></p>
+<div class="ph"><div><h1>Application notes</h1>
+ <div class="sub">{{ co(job.company) }} · {{ job.title }}{% if posting_link %}<span class="no-print"> · <a href="{{ posting_link }}" target="_blank" rel="noopener">posting</a></span>{% endif %}</div></div>
+ <button type="button" class="btn" onclick="window.print()">Print or save as PDF</button></div>
+<section class="card mt notes-page"><article class="notes-doc">{{ body|safe }}</article></section>
+<style>
+.notes-page{padding:28px 32px}
+@media (max-width:640px){.notes-page{padding:18px 16px}}
+@media print{.side,.tabbar,.btn,.crumb,.no-print{display:none!important}.app{display:block;background:none!important}
+ :root{color-scheme:light!important;--bg:#fff!important;--surface:#fff!important;--surface-2:#f2f2f2!important;--line:#dcdcdc!important;
+  --line-2:#ccc!important;--ink:#111!important;--ink-2:#333!important;--ink-3:#555!important;--accent:#0f6e66!important;--accent-ink:#0b5650!important}
+ html,body{background:#fff!important;color:#111}.main{padding:0;max-width:none}
+ .card{border:0;box-shadow:none;padding:0}.notes-doc{max-width:none;font-size:11.5pt}.doc-table{overflow:visible}
+ .notes-doc tr,.notes-doc li{break-inside:avoid}a{color:inherit}}
+</style>
+{% endblock %}
