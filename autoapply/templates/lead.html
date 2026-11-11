@@ -22,7 +22,7 @@
 {% if pasted and not problem %}<details class="mt"><summary class="muted">What you pasted</summary><pre class="pasted">{{ pasted|truncate(6000) }}</pre></details>{% endif %}
 {% else %}
 <header class="top"><div><h1>{{ lead.company }} · {{ lead.title }}</h1>
- <div class="ink2">{{ lead.location or 'Location not listed' }}{% if lead.work_setting %} · {{ lead.work_setting|capitalize }}{% endif %}{% if lead.salary %} · {{ lead.salary }}{% endif %}
+ <div class="ink2">{{ lead.location or 'Location not listed' }}{% if lead.work_setting and lead.work_setting|lower not in (lead.location or '')|lower %} · {{ lead.work_setting|capitalize }}{% endif %}{% if lead.salary %} · {{ lead.salary }}{% endif %}
   · from {{ (lead.source or 'pasted')|replace('pasted', 'your paste') }}{% if lead.apply_url %} · <a href="{{ lead.apply_url }}" target="_blank" rel="noopener">company site</a>{% endif %}{% if lead.url %} · <a href="{{ lead.url }}" target="_blank" rel="noopener">posting</a>{% endif %}</div></div>
  <span class="pill">{{ lead.status }}</span></header>
 {% if lead.applied %}<p class="notice">Heads up: {{ lead.applied }}.</p>{% endif %}

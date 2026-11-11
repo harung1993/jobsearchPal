@@ -55,7 +55,7 @@
 <script>document.addEventListener("click",e=>{document.querySelectorAll("details.decline[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});</script>
 
 {% if setup_left %}<div class="notice" style="margin:0 0 20px"><span class="grow">Setup isn't finished: {{ setup_left }} required step{{ '' if setup_left == 1 else 's' }} left. The daily run needs them.</span><a class="btn sm" href="/setup">Finish setup</a></div>{% endif %}
-{% if src_total and src_on < src_total // 2 %}<div class="notice" style="margin:0 0 16px"><span class="grow">You're using {{ src_on }} of {{ src_total }} job sources. LinkedIn, Indeed and HigherEdJobs alerts, job sites and company boards all add matches.</span><a class="btn sm" href="/leads#sources">See job sources</a></div>{% endif %}
+{% if not setup_left and src_total and src_on < src_total // 2 %}<div class="notice info" style="margin:0 0 16px"><span class="grow">You're using {{ src_on }} of {{ src_total }} job sources. More sources, more good matches.</span><a class="btn sm" href="/leads#sources">See job sources</a></div>{% endif %}
 {% set bad = s.runs|selectattr('state', 'equalto', 'fail')|list %}{% set late = s.runs|selectattr('state', 'equalto', 'stale')|list %}
 <details class="status {{ 'bad' if bad else ('warn' if late else '') }}"><summary><i aria-hidden="true"></i>
  {% if bad %}{{ bad|map(attribute='label')|join(', ') }} didn't finish {{ bad[0].when }}. That's on us, not you{% elif late %}{{ late|map(attribute='label')|join(', ') }} overdue{% else %}Everything ran on time{% endif %} <u>· details</u></summary>

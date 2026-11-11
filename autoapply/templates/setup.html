@@ -31,7 +31,7 @@
 </section>
 {% endif %}
 
-<section class="card mt checklist" aria-labelledby="cl-h"><h2 id="cl-h"><span>Your setup</span><span class="count">{{ done_rows|length }} of 6 done</span></h2>
+<section class="card mt checklist" aria-labelledby="cl-h"><h2 id="cl-h"><span>Finished steps</span></h2>
  <ul>{% for key, label, req in done_rows %}<li><span class="ok" aria-hidden="true">✓</span><b>{{ label }}</b>
   <span class="what">{{ s[key].note }}</span><a class="edit-link" href="#{{ key }}" data-open="{{ key }}">Edit<span class="sr"> {{ label }}</span></a></li>{% endfor %}
   <li class="letters-row"><span class="ok pen" aria-hidden="true">✎</span><b>How your letters sound</b><span class="what">tone, how it opens, length</span>
@@ -41,8 +41,7 @@
 
 <section class="card mt step" id="resume">
  <h2><span><span class="n {{ 'done' if s.resume.done }}">{{ "✓" if s.resume.done else "1" }}</span> Base resume</span><span class="count">{{ s.resume.note }}</span></h2>
- <p class="lead">Your full, current resume as a Word file. Every tailored resume is built from it, keeping its layout and styles,
-  so the agent only reorders and rewords what's already true. It never adds jobs, titles or numbers.</p>
+ <p class="lead">Your full, current resume as a Word file. Every tailored resume keeps its layout and only rewords what's already true.</p>
  <form method="post" action="/setup/resume" enctype="multipart/form-data" class="grid g11">
   <label class="fld"><span>Resume (.docx)</span><input type="file" name="docx" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
    <small class="muted">From Google Docs: File &gt; Download &gt; Microsoft Word.</small></label>
@@ -54,7 +53,7 @@
 </section>
 
 <section class="card mt step" id="profile">
- <h2><span><span class="n {{ 'done' if s.profile.done }}">{{ "✓" if s.profile.done else "2" }}</span> Contact details and standard answers</span><span class="count">profile.yaml</span></h2>
+ <h2><span><span class="n {{ 'done' if s.profile.done }}">{{ "✓" if s.profile.done else "2" }}</span> Contact details and standard answers</span><span class="count">required</span></h2>
  <p class="lead">The form filler types these straight into every application.{% if not s.profile.done and resume %} Filled in from your resume where it could; check them.{% endif %}</p>
  <form method="post" action="/setup/profile">
   <div class="grid g3">
@@ -72,10 +71,10 @@
   </div>
 
   <input type="hidden" name="standing_form" value="1">
-  <h3 class="sub3" id="standing">Consents and self-ID: your standing answers</h3>
-  <p class="muted" style="font-size:14px;margin:0 0 10px">The agent never answers these. Whatever you save here is pre-filled on
-   each form and shown in a highlighted <b>Check these</b> box on the review page, so you confirm it every time before Submit.
-   Leave a line blank to answer it yourself on each application.</p>
+  {% set n_stand = stand.values()|select|list|length %}
+  <details class="fold mt" id="standing" {% if n_stand %}open{% endif %}><summary>Consents and self-ID <span class="muted">· {{ n_stand or 'none' }} saved</span></summary>
+  <p class="muted" style="font-size:14px;margin:8px 0 12px">The agent never answers these. What you save is pre-filled and shown in a
+   <b>Check these</b> box on the review page, so you confirm it each time. Blank means you answer it yourself.</p>
   <div class="grid g3">
   {% for k, label, match in standing %}
    {% if k == 'consent' %}<label class="check fld wide"><input type="checkbox" name="stand::consent" value="1" {% if stand.get('consent') %}checked{% endif %}>
@@ -83,17 +82,18 @@
    {% else %}<label class="fld"><span>{{ label }}</span><input type="text" name="stand::{{ k }}" value="{{ stand.get(k, '') }}" list="decline" placeholder="blank = ask me each time"></label>{% endif %}
   {% endfor %}
   </div>
+  </details>
   <datalist id="decline">{% for d in decline %}<option value="{{ d }}">{% endfor %}</datalist>
   <div class="actions"><button class="btn primary">Save</button></div>
  </form>
 </section>
 
 <section class="card mt step" id="interests">
- <h2><span><span class="n {{ 'done' if s.interests.done }}">{{ "✓" if s.interests.done else "3" }}</span> Job interests</span><span class="count">config.yaml</span></h2>
- <p class="lead" style="margin-top:-6px"><a href="/leads#sources">See every job source and what each one needs</a>, including LinkedIn, Indeed and HigherEdJobs alert emails.</p>
- <p class="lead">A role is picked up when its title contains one of your titles and none of the excluded words. The agent then
-  ranks what's left against "About you".</p>
+ <h2><span><span class="n {{ 'done' if s.interests.done }}">{{ "✓" if s.interests.done else "3" }}</span> Job interests</span><span class="count">required</span></h2>
+ <p class="lead">A role is picked up when its title has one of your titles and none of the skipped words, then ranked against "About you".
+  <a href="/leads#sources">All job sources</a>.</p>
  <form method="post" action="/setup/interests">
+  <h3 class="grp first">Which roles</h3>
   <div class="grid g11">
    <label class="fld"><span>Titles to look for *</span>
     <textarea name="titles" rows="3" required placeholder="data engineer, analytics engineer, head of data">{{ titles }}</textarea>
@@ -103,25 +103,25 @@
   </div>
   <label class="check mt"><input type="checkbox" name="us_only" value="1" {% if us_only %}checked{% endif %}> US roles only (and Remote roles that name no other country)</label>
 
-  <fieldset class="fld mt"><legend style="font-size:14px;font-weight:600;color:var(--ink-2);padding:0;margin-bottom:6px">Levels to look at</legend>
+  <fieldset class="fld mt2"><legend style="font-size:14px;font-weight:600;color:var(--ink-2);padding:0;margin-bottom:6px">Levels to look at</legend>
    <div class="checks">{% for k, label in level_opts %}<label class="check"><input type="checkbox" name="level::{{ k }}" value="1" {% if k in levels %}checked{% endif %}> {{ label }}</label>{% endfor %}</div>
-   <small class="muted">Read from the title: "Data Engineer" is mid-level, "Senior Data Engineer" is senior. Picked levels rank a little
-    higher and the rest a little lower; nothing is hidden. None picked: senior titles get a small lift.</small></fieldset>
+   <small class="muted">Read from the title. Picked levels rank a little higher; nothing is hidden.</small></fieldset>
+  <h3 class="grp">Where to look</h3>
 
-  <label class="fld mt"><span>Companies to watch</span>
+  <label class="fld"><span>Companies to watch</span>
    <textarea name="companies" rows="6" placeholder="https://job-boards.greenhouse.io/gitlab&#10;https://jobs.lever.co/netflix&#10;https://jobs.ashbyhq.com/ramp&#10;greenhouse airbnb">{{ boards }}</textarea>
-   <small class="muted">One per line: the company's careers-page URL on Greenhouse, Lever, Ashby, Workable or SmartRecruiters
-    (or <code>ats slug</code>). These are checked first, every day. Companies on Workday or other sites can't be watched here;
-    their roles still come in through job-alert emails.</small></label>
+   <small class="muted">One careers-page URL per line (Greenhouse, Lever, Ashby, Workable or SmartRecruiters). Checked first, every day.
+    Workday companies can't be watched; their roles come in through job-alert emails.</small></label>
 
   {% set ss = src_stats.get('sources', {}) %}
-  <fieldset class="fld mt"><span>Also search these job sites</span>
+  <fieldset class="fld mt2"><span>Also search these job sites</span>
    <div class="checks">{% for k, label in feeds.items() %}{% set x = ss.get(k) %}
     <label class="check"><input type="checkbox" name="feed::{{ k }}" value="1" {% if k in feeds_on %}checked{% endif %}> {{ label }}
      {% if x %}<small class="{{ 'bad' if x.error else 'muted' }}" title="{{ x.error }}">{% if x.error %}failed last run{% else %}{{ x.matched }} matched last run{% endif %}</small>{% endif %}</label>{% endfor %}</div>
-   <small class="muted">LinkedIn, Indeed, HigherEdJobs, ZipRecruiter and others also come in through their job-alert emails once Gmail is connected (step 6).</small></fieldset>
+   <small class="muted">LinkedIn, Indeed and other alerts come in by email once email is connected (step 6).</small></fieldset>
+  <h3 class="grp">More sources</h3>
 
-  <details class="mt" {% if keys.ADZUNA_APP_ID != 'not set' or keys.USAJOBS_API_KEY != 'not set' %}open{% endif %}><summary>Free API keys for Adzuna and USAJOBS</summary>
+  <details class="fold mt" {% if keys.ADZUNA_APP_ID != 'not set' or keys.USAJOBS_API_KEY != 'not set' %}open{% endif %}><summary>Adzuna and USAJOBS keys <span class="muted">· free</span></summary>
    <p class="muted" style="font-size:14px">Adzuna indexes a large share of US postings; get an app id and key at
     <a href="https://developer.adzuna.com/" target="_blank" rel="noopener noreferrer">developer.adzuna.com</a>. USAJOBS covers federal jobs; request a key at
     <a href="https://developer.usajobs.gov/" target="_blank" rel="noopener noreferrer">developer.usajobs.gov</a>. Saved in <code>data/secrets.json</code>.</p>
@@ -132,17 +132,18 @@
     <label class="fld"><span>USAJOBS sign-up email <small class="muted">{{ keys.USAJOBS_EMAIL }}</small></span><input type="text" name="USAJOBS_EMAIL" inputmode="email"></label>
    </div></details>
 
-  <label class="fld mt"><span>RSS job feeds</span>
+  <details class="fold mt" {% if rss %}open{% endif %}><summary>RSS job feeds{% if rss %} <span class="muted">· {{ rss.strip().splitlines()|length }}</span>{% endif %}</summary>
+  <label class="fld mt"><span class="sr">RSS job feeds</span>
    <textarea name="rss" id="rss" rows="4" placeholder="We Work Remotely: Programming | https://weworkremotely.com/categories/remote-programming-jobs.rss">{{ rss }}</textarea>
-   <small class="muted">One per line, as <code>name | URL</code> or just the URL. Many job sites have them (look for an RSS icon). Sites
-    that block automated requests, like HigherEdJobs, won't work here; use their job-alert emails instead. Add a common one:
+   <small class="muted">One per line, as <code>name | URL</code> or just the URL. Sites that block automated requests, like
+    HigherEdJobs, won't work; use their alert emails. Add a common one:
     {% for name, url in rss_presets %}<button type="button" class="btn sm add-rss" data-line="{{ name }} | {{ url }}">+ {{ name }}</button>{% endfor %}</small>
    {% for k, x in ss.items() if k.startswith('rss:') %}<small class="{{ 'bad' if x.error else 'muted' }}">{{ k[4:] }}: {% if x.error %}failed ({{ x.error|truncate(80) }}){% else %}{{ x.fetched }} roles, {{ x.matched }} matched{% endif %}</small>{% endfor %}
-  </label>
+  </label></details>
   <script>document.querySelectorAll(".add-rss").forEach(b=>b.onclick=()=>{const t=document.getElementById("rss");
    if(!t.value.includes(b.dataset.line.split(" | ")[1]))t.value=(t.value.trim()?t.value.trim()+"\n":"")+b.dataset.line;b.disabled=true})</script>
 
-  <details class="mt" {% if ws.get('state') %}open{% endif %}><summary>Collecting unemployment? Your state's work-search rule</summary>
+  <details class="fold mt" {% if ws.get('state') %}open{% endif %}><summary>Unemployment work-search rule{% if ws.get('state') %} <span class="muted">· {{ ws.get('state') }}</span>{% endif %}</summary>
    <label class="fld mt"><span>State</span><select name="ws_state" id="ws_state">
     <option value="">Not collecting, or not in the US</option>
     {% for code, r in states.items()|sort(attribute='1.name') %}<option value="{{ code }}" {% if ws.get('state') == code %}selected{% endif %}
@@ -172,9 +173,8 @@
 </section>
 
 <section class="card mt step" id="about">
- <h2><span><span class="n {{ 'done' if s.about.done }}">{{ "✓" if s.about.done else "4" }}</span> About you</span><span class="count">optional · materials/context/setup.md</span></h2>
- <p class="lead">What the agent needs to rank roles and answer questions the way you would. Plain notes are fine. It uses only what's
-  here and on your resume, and never makes up metrics, titles or dates.</p>
+ <h2><span><span class="n {{ 'done' if s.about.done }}">{{ "✓" if s.about.done else "4" }}</span> About you</span><span class="count">optional</span></h2>
+ <p class="lead">Plain notes the agent uses to rank roles and answer like you would. It never makes up metrics, titles or dates.</p>
  <form method="post" action="/setup/about">
   <div class="grid g11">
   {% for k, label, hint in about_fields %}
@@ -183,8 +183,7 @@
     {% else %}<input type="text" name="{{ k }}" value="{{ about.get(k, '') }}" placeholder="{{ hint }}">{% endif %}</label>
   {% endfor %}
   </div>
-  <p class="muted" style="font-size:14px">For more detail, add your own Markdown notes in <code>materials/context/</code> (projects, past
-   wins, a brag doc) or a <code>CLAUDE.local.md</code> in the folder. The agent reads all of them.</p>
+  <p class="muted" style="font-size:14px;margin:12px 0 0">More detail? Add Markdown notes to <code>materials/context/</code>; the agent reads them all.</p>
   <div class="actions"><button class="btn primary">Save</button></div>
  </form>
 </section>
@@ -193,9 +192,8 @@
 
 <section class="card mt step" id="agent">
  <h2><span><span class="n {{ 'done' if s.agent.done }}">{{ "✓" if s.agent.done else "5" }}</span> Sign in to an AI agent</span><span class="count">{{ s.agent.note }}</span></h2>
- <p class="lead">The daily run uses your own subscription through Claude Code or the Codex CLI. Signing in happens once,
-  in a terminal on the server, because it opens a browser login. No subscription? Pick <b>OpenRouter key</b> on the
-  <a href="/settings?tab=daily">Daily run</a> tab instead and pay per token; then no sign-in is needed.</p>
+ <p class="lead">Sign in once, in a terminal on the server. No subscription? Choose <b>OpenRouter key</b> on the
+  <a href="/settings?tab=daily">Daily run</a> tab and skip this.</p>
  <div class="grid g11">
   <div class="opt"><div><b>Claude subscription</b> (Pro or Max)</div>
    <pre>docker compose run --rm web claude</pre>
@@ -209,11 +207,9 @@
 </section>
 
 <section class="card mt step" id="gmail">
- <h2><span><span class="n {{ 'done' if s.gmail.done }}">{{ "✓" if s.gmail.done else "6" }}</span> Email</span><span class="count">{{ s.gmail.note }}</span></h2>
- <p class="lead">Lets jobsearchPal read job-alert emails (LinkedIn, Indeed and others), sort replies from companies, remind you to
-  follow up, and email you a morning brief. It reads only, never marks anything read, and never sends anything except the brief to you.</p>
- <p class="tip"><b>Best: one email for your whole job search.</b> Apply, sign up for alerts and give recruiters the same address,
-  and everything lands in one place. Use other addresses too? Add them under <a href="#other-emails">Other addresses</a> below.</p>
+ <h2><span><span class="n {{ 'done' if s.gmail.done }}">{{ "✓" if s.gmail.done else "6" }}</span> Email</span><span class="count">{{ 'optional' if s.gmail.note.startswith('optional') else s.gmail.note }}</span></h2>
+ <p class="lead">Reads job alerts and replies, reminds you to follow up, and sends you a morning brief. Read-only: it never marks
+  anything read and only ever sends the brief, to you. Tip: use one address for your whole job search.</p>
  <form method="post" action="/setup/gmail">
   <div class="grid g3">
    <label class="fld"><span>Email provider</span><select name="provider" id="mail-prov">
@@ -223,10 +219,10 @@
      placeholder="{{ 'set in .env' if gmail_env else ('saved; leave blank to keep' if s.gmail.done else 'from your provider') }}"></label>
    <label class="fld"><span>Send the brief to (optional)</span><input type="text" name="brief_to" inputmode="email" placeholder="same address"></label>
   </div>
-  <p class="muted" style="font-size:14px">An app password is not your normal password. <span id="mail-how">{{ mail.providers[mail.provider].how }}</span>
+  <details class="more mt"><summary>What's an app password?</summary><p>An app password is not your normal password. <span id="mail-how">{{ mail.providers[mail.provider].how }}</span>
    <a id="mail-link" href="{{ mail.providers[mail.provider].app_password }}" target="_blank" rel="noopener noreferrer">Open that page</a>.
    It's saved in <code>data/secrets.json</code> on this server, readable only by you, and never shown again.
-   Outlook or Hotmail? Microsoft no longer allows app passwords there, so use one of these as your main inbox and forward Outlook to it.</p>
+   Outlook or Hotmail? Microsoft no longer allows app passwords there, so use one of these as your main inbox and forward Outlook to it.</p></details>
   <div class="actions"><button class="btn primary" name="action" value="save">Test and save</button>
    {% if s.gmail.done and not gmail_env %}<button class="btn" name="action" value="forget">Forget it</button>{% endif %}</div>
  </form>
@@ -290,6 +286,10 @@ input[type=file]{font:inherit;font-size:14.5px;max-width:100%}
 .opt pre{margin:0;font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);padding:8px 10px;border-radius:8px;overflow-x:auto}
 .card.good{border-color:color-mix(in srgb,var(--good-dot) 40%,var(--line-2))} .card.good p{margin:0 0 8px}
 .notice{margin:12px 0 0}
+.grp.first{border-top:0;padding-top:0;margin-top:4px}.mt2{margin-top:20px}
+.grp{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin:26px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+details.fold{border:1px solid var(--line);border-radius:12px;padding:12px 14px}details.fold>summary{font-size:15px;color:var(--ink)}
+details.fold[open]>summary{margin-bottom:4px}
 .step{scroll-margin-top:16px} .sub3{font-size:14.5px;font-weight:650;margin:20px 0 6px} code.sel{user-select:all;word-break:break-all}
 </style>
 
@@ -308,11 +308,13 @@ input[type=file]{font:inherit;font-size:14.5px;max-width:100%}
 .step h2{justify-content:flex-start}.step h2 .count{margin-left:auto}
 </style>
 <script>(()=>{const steps=[...document.querySelectorAll("section.step")],target=location.hash.slice(1);
- const open=id=>{const s=document.getElementById(id);if(s&&s.classList.contains("step")){s.classList.remove("folded");s.scrollIntoView({block:"start"})}};
+ const open=id=>{const el=id&&document.getElementById(id);if(!el)return;const s=el.closest("section.step");if(!s)return;
+  s.classList.remove("folded");for(let d=el.closest("details");d;d=d.parentElement.closest("details"))d.open=true;el.scrollIntoView({block:"start"})};
  steps.forEach(sec=>{if(!sec.querySelector("h2 .n.done"))return;
   const h=sec.querySelector("h2"),b=document.createElement("button");b.type="button";b.className="btn sm ghost done-btn";b.textContent="Done";
   b.addEventListener("click",()=>{sec.classList.add("folded");const r=document.querySelector('[data-open="'+sec.id+'"]');if(r)r.focus()});
-  if(h)h.appendChild(b);if(sec.id!==target)sec.classList.add("folded")});
+  if(h)h.appendChild(b);if(sec.id!==target&&!(target&&sec.querySelector("#"+CSS.escape(target))))sec.classList.add("folded")});
+ if(target)open(target);
  document.querySelectorAll("[data-open]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault();history.replaceState(null,"","#"+a.dataset.open);open(a.dataset.open)}));
  document.querySelectorAll('a[href^="#"]:not([data-open])').forEach(a=>a.addEventListener("click",()=>open(a.getAttribute("href").slice(1))));
  addEventListener("hashchange",()=>open(location.hash.slice(1)));})();</script>

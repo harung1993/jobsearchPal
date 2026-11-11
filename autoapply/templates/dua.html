@@ -30,7 +30,7 @@
  {% if rule.part_time_earnings_allowed %}<p class="ink2" style="margin:0 0 6px"><b>Part-time work:</b> you can earn up to {{ rule.part_time_earnings_allowed }} in a week before your benefit is reduced. Report it for the week you worked.</p>{% endif %}
  <p class="muted" style="margin:0;font-size:14px">Rules change{% if rule.source != 'official' %}, and this one comes from a summary, not the agency's own site{% elif rule.confidence == 'low' %}, and this one couldn't be confirmed on the agency's site{% elif rule.confidence == 'medium' %}, and the agency gives no exact number online{% endif %}. Your agency's letters to you are what counts.
   <a href="{{ rule.url }}" target="_blank" rel="noopener">Check the official rules</a>. This page counts toward {{ floor }} a week; change it on <a href="/setup#interests">Setup</a>.</p></section>
-{% elif floor %}<p class="muted" style="margin:0 0 14px">Collecting unemployment? Pick your state on <a href="/setup#interests">Setup</a> to see its work-search rule.</p>{% endif %}
+{% elif floor %}<p class="muted" style="margin:0 0 14px">Collecting unemployment? Pick your state on <a href="/setup#ws_state">Setup</a> to see its work-search rule.</p>{% endif %}
 <div class="grid g2 benefits">
 <section class="card" id="claim"><h2><span>Your claim</span>{% if runway %}<span class="count">week {{ runway.week_no }}</span>{% endif %}</h2>
  {% if runway %}<div class="runway"><div class="num">{{ runway.left }}<small> of {{ runway.allowed }} weeks left</small></div>
@@ -75,7 +75,7 @@
 </section>
 
 <section class="card people" id="people" aria-labelledby="people-h"><h2 id="people-h"><span>People you've been in touch with</span><span class="count">{{ people|length }}</span></h2>
- <p class="ink2 lead">Many jobs come through people you know a little: a former colleague, a friend of a friend, someone from a meetup. A short note to one of them is real search work. Each one is listed in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
+ <p class="ink2 lead">A short note to a former colleague or a friend of a friend is real search work. Each one goes in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
  <form method="post" action="/contacts" class="add-person"><input type="hidden" name="action" value="add">
   <label class="fld"><span>Who</span><input type="text" name="name" maxlength="80" required placeholder="e.g. Sam Rivera"></label>
   <label class="fld"><span>Where they work</span><input type="text" name="company" maxlength="80" value="{{ prefill_company }}" {% if prefill_company %}autofocus{% endif %}></label>

@@ -225,7 +225,7 @@ def test_cost_limits_budget_and_daily_log(tmp_path, base_url, pdfs, capsys, monk
     db.log_usage("daily", "claude:opus", 0, 0, 0.0, 0, None, 1.25, 21500)  # the dashboard's own db in this test
     assert u["calls"] == 1 and u["tokens"] == 21500 and abs(u["est"] - 1.25) < 1e-9 and (u["cost"] or 0) == 0
     html = c.get("/settings?tab=costs").text
-    assert "Costs and limits" in html and "$1.25" in html and "21,500 tokens" in html
+    assert "<h2>Limits</h2>" in html and "$1.25" in html and "21,500 tokens" in html
     cli.main(["--config", str(cfg), "list", "--limits"])
     assert '"picks_per_day": 1' in capsys.readouterr().out
 

@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Dashboard{% endblock %} · jobsearchPal</title>
-<script>try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>document.documentElement.classList.add("js");try{const t=localStorage.getItem("aa-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 /* Design tokens. Calm, warm and legible for people in a stressful stretch: the system font at a comfortable size, warm paper surfaces (not clinical grey), a deep
    evergreen rail with a little morning light, one teal accent for every action, and sunrise gold for progress and deadlines. Green, amber, red and violet are for
@@ -178,8 +178,40 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;hei
 details summary{cursor:pointer;color:var(--ink-2);font-size:14.5px;font-weight:600}
 .notice{background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn-dot) 30%,transparent);border-radius:var(--radius);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .notice .grow{flex:1;min-width:200px}
+.notice.info{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
 .doc{width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .shot{max-width:100%;border:1px solid var(--line);border-radius:10px}
+
+/* settings rows: label and a one-line hint on the left, the control on the right; longer help behind "More" */
+.set h2{margin-bottom:4px}.set>.lead{color:var(--ink-3);font-size:14.5px;margin:0 0 6px}
+.srow{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:8px 40px;padding:18px 0;border-top:1px solid var(--line);align-items:start}
+.set>.srow:first-of-type,.set>.lead+.srow{border-top:0}
+.srow>.sl>b,.srow>.sl>label>b{display:block;font-weight:650;font-size:15px}
+.srow>.sl>p{margin:3px 0 0;font-size:14px;line-height:1.45;color:var(--ink-3)}
+.srow>.sc{display:grid;gap:8px;max-width:520px;min-width:0}.srow>.sc.wide{max-width:none}
+.srow .inl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.srow .inl input[type=text],.srow .inl input[type=number]{width:110px}
+.srow small{font-size:13.5px;color:var(--ink-3);line-height:1.45}
+@media (max-width:760px){.srow{grid-template-columns:1fr;gap:8px}}
+details.more{font-size:14px;color:var(--ink-3)}details.more>summary{display:inline;font-size:14px;font-weight:600;color:var(--accent-ink);list-style:none}
+details.more>summary::-webkit-details-marker{display:none}details.more[open]>summary{display:block;margin-bottom:4px}details.more p{margin:0 0 6px;line-height:1.5}
+details.adv{border-top:1px solid var(--line);margin-top:4px;padding-top:12px}details.adv>summary{font-size:14.5px;color:var(--ink-2)}
+details.adv>.srow:first-of-type{border-top:0}
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:8px}
+.choice label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line-2);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:14px;color:var(--ink-3);line-height:1.4}
+.choice label b{display:block;color:var(--ink);font-size:15px;font-weight:650;margin-bottom:1px}
+.choice label:has(input:checked){border-color:color-mix(in srgb,var(--accent) 55%,var(--line-2));background:var(--accent-soft)}
+.choice input{margin-top:3px;flex:none}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink-2)}
+.state::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-3)}.state.ok::before{background:var(--good-dot)}.state.no::before{background:var(--warn-dot)}
+.toggle{display:inline-flex;gap:10px;align-items:center;cursor:pointer;font-weight:600}
+.toggle input{appearance:none;-webkit-appearance:none;width:38px!important;height:22px!important;border-radius:999px;background:var(--surface-3);position:relative;cursor:pointer;transition:background .15s;flex:none;margin:0}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.toggle input:checked{background:var(--accent)}.toggle input:checked::after{transform:translateX(16px)}
+[data-when][hidden]{display:none!important}
+.savebar{position:sticky;bottom:16px;z-index:5;display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:16px;padding:10px 12px 10px 18px;
+ background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line-2));border-radius:var(--radius);box-shadow:var(--shadow-lg)}
+.savebar span{margin-right:auto;color:var(--ink-2);font-size:14.5px}.js .savebar:not(.dirty){display:none}
+@media (max-width:900px){.savebar{bottom:84px}}
 
 /* charts */
 .chart{width:100%;height:auto;display:block;overflow:visible} .chart text{fill:var(--ink-3);font-size:12.5px;font-family:inherit}
@@ -310,6 +342,18 @@ document.addEventListener("invalid",e=>{const el=e.target;e.preventDefault();el.
 document.addEventListener("input",e=>{const el=e.target;if(el.getAttribute&&el.getAttribute("aria-invalid")==="true"&&el.checkValidity()){
  el.removeAttribute("aria-invalid");const m=el.parentNode.querySelector(":scope > .field-err");if(m)m.remove()}});
 
+// Settings forms (data-dirty): one Save bar that shows once something changed; [data-when="field=value"] shows a
+// block only while that field has that value ("!=" for the opposite), so options that don't apply stay out of the way.
+document.querySelectorAll("form[data-dirty]").forEach(f=>{
+ const bar=f.querySelector(".savebar"),val=n=>{const els=[...f.elements].filter(e=>e.name===n);if(!els.length)return"";
+  const e=els.find(x=>x.type==="radio"?x.checked:true);if(!e)return"";return e.type==="checkbox"?(e.checked?e.value:""):e.value};
+ const sync=()=>f.querySelectorAll("[data-when]").forEach(el=>{const m=el.dataset.when.match(/^([\w:]+)(!?=)(.*)$/);if(!m)return;
+  const hit=m[3].split("|").includes(val(m[1]));el.hidden=m[2]==="="?!hit:hit});
+ sync();const dirty=e=>{if(e.target.closest("[data-nodirty]"))return;sync();if(bar)bar.classList.add("dirty")};
+ f.addEventListener("input",dirty);f.addEventListener("change",dirty);
+ const undo=f.querySelector("[data-undo]");if(undo)undo.onclick=()=>{f.reset();sync();bar.classList.remove("dirty")};
+ addEventListener("beforeunload",e=>{if(bar&&bar.classList.contains("dirty")&&!f.dataset.sending){e.preventDefault()}});
+ f.addEventListener("submit",()=>{f.dataset.sending="1"})});
 // One tooltip for every chart mark with data-tip.
 const tip=document.getElementById("tip");
 document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");
