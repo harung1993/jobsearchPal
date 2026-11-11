@@ -15,6 +15,7 @@ dependencies = [
   "python-docx>=1.1",
   "pypdf>=4",
   "python-multipart>=0.0.9",
+  "markdown-it-py>=3.0",
 ]
 
 [project.optional-dependencies]

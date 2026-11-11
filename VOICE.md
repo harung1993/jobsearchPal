@@ -87,6 +87,7 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Related titles | "Looking a little wider can open more doors." |
 | Sent with autoapply-finish | "I sent it with the command" (button) / "With the command" (Stats) |
 | Copy fell back to selecting | "Press Cmd+C" |
+| Application notes page | "Application notes" / "Open as a page" / "Print or save as PDF" |
 
 ## Motion
 

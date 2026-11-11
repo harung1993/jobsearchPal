@@ -789,7 +789,7 @@ def make_app(settings, db: DB) -> FastAPI:
                   "last": coach.note(db, f"letter-note:{job_id}"),
                   "busy": bool(rs and rs["step"] in (f"letter {job_id}", f"refilling {job_id}")),
                   "voice_set": voice.is_set(db)}
-        from . import finish, leads
+        from . import finish, leads, notesdoc
         leads.ensure(db)
         lead = db.conn.execute("select * from leads where job_id = ?", (job_id,)).fetchone()
         docx = {slot: Path(p).with_suffix(".docx").name for slot, p in plan.get("files", {}).items()
@@ -797,8 +797,8 @@ def make_app(settings, db: DB) -> FastAPI:
         return page("job.html", nav="", job=job, report=report, approved=plan.get("approved", {}), files=files, checks=checks,
                     blocked=preflight.blocking(checks), letter=letter, lead=dict(lead) if lead else None,
                     answers=plan.get("answers", {}), docx=docx, running=rs, apply_link=_web_link(job.get("apply_url") or job.get("url") or ""),
-                    notes=_notes(plan), plan_text=json.dumps(shown, indent=1), handoff=_handoff(job, report),
-                    command_ran=finish.ran(db, job_id))
+                    notes=(n := _notes(plan)), notes_html=notesdoc.render(n), plan_text=json.dumps(shown, indent=1),
+                    handoff=_handoff(job, report), command_ran=finish.ran(db, job_id))
 
     def _web_link(u: str) -> str:
         from .history import _web
@@ -839,6 +839,16 @@ def make_app(settings, db: DB) -> FastAPI:
             if _servable(str(n)):
                 return n.read_text()[:20000]
         return ""
+
+    @app.get("/notes/{job_id:path}")
+    def notes_page(job_id: str):
+        """The application's notes as a page of their own, to read through or print."""
+        from . import notesdoc
+        job, plan, _ = load(job_id)
+        body = notesdoc.render(_notes(plan))
+        if not body:
+            raise HTTPException(404)
+        return page("notes.html", job=job, body=body, nav="")
 
     @app.get("/bundle/{job_id:path}")
     def bundle(job_id: str):

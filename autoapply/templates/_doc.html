@@ -1,0 +1,20 @@
+{# The application notes as a document: shared by the job page's Notes tab and the /notes page. #}
+{% macro doc_css() %}<style>
+.notes-doc{font-size:15.5px;line-height:1.62;color:var(--ink);max-width:72ch}
+.notes-doc h1{font-size:22px;line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.notes-doc h2{font-size:17.5px;margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.notes-doc h3{font-size:15.5px;margin:18px 0 6px}
+.notes-doc p{margin:8px 0}.notes-doc ul,.notes-doc ol{padding-left:22px;margin:8px 0}.notes-doc li{margin:5px 0}.notes-doc li::marker{color:var(--ink-3)}
+.notes-doc strong{font-weight:650}.notes-doc a{overflow-wrap:anywhere}
+.notes-doc code{background:var(--surface-2);padding:1px 5px;border-radius:5px;font-size:.92em}
+.notes-doc pre{background:var(--surface-2);padding:10px 12px;border-radius:8px;overflow-x:auto}
+.notes-doc blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--surface-2);border-radius:0 8px 8px 0}
+.doc-table{overflow-x:auto;margin:10px 0 14px;border:1px solid var(--line);border-radius:10px}
+.notes-doc table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+.notes-doc th{text-align:left;font-weight:650;background:var(--surface-2);color:var(--ink-2)}
+.notes-doc th,.notes-doc td{padding:8px 12px;vertical-align:top;border-bottom:1px solid var(--line)}
+.notes-doc th:first-child,.notes-doc td:first-child{width:42%}
+.notes-doc tbody tr:last-child td{border-bottom:0}
+.doc-acts{margin:0 0 12px}
+@media (max-width:640px){.notes-doc table{min-width:520px}}
+</style>{% endmacro %}
