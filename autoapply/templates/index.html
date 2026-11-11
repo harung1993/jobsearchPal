@@ -176,9 +176,8 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
   {# Red only for what is urgent: an appeal, or a benefits step due within two days or overdue. Other dates are sunrise amber,
      claim day included: it comes every week and is routine, not an alarm. #}
   {% set urgent = n.kind == 'appeal' or (n.kind in ('resea', 'task') and n.days is number and n.days > -999 and n.days >= -2) %}
-  <span class="pill {{ 'interview' if n.kind == 'interview' else ('recruiter' if n.kind in ('reply', 'chase') else ('rejected' if urgent else ('deadline' if n.kind in ('resea', 'claim', 'task', 'worksearch') else 'waiting'))) }}">{{ {'interview': 'interview', 'reply': 'reply', 'chase': 'check in', 'application': 'follow up',
-   'claim': 'claim day', 'worksearch': 'work search', 'resea': 'RESEA', 'task': 'benefits', 'agency': 'agency letter', 'appeal': 'decision'}[n.kind] }}</span>
-  <div class="body"><div class="t">{{ n.title }}</div><div class="m">{{ n.about|truncate(70) }} · {{ n.why }}</div>
+  <div class="body"><div class="t"><span class="pill {{ 'interview' if n.kind == 'interview' else ('recruiter' if n.kind in ('reply', 'chase') else ('rejected' if urgent else ('deadline' if n.kind in ('resea', 'claim', 'task', 'worksearch') else 'waiting'))) }}">{{ {'interview': 'interview', 'reply': 'reply', 'chase': 'check in', 'application': 'follow up',
+   'claim': 'claim day', 'worksearch': 'work search', 'resea': 'RESEA', 'task': 'benefits', 'agency': 'agency letter', 'appeal': 'decision'}[n.kind] }}</span><span>{{ n.title }}</span></div><div class="m" title="{{ n.about }} · {{ n.why }}">{{ n.about|truncate(70) }} · {{ n.why }}</div>
    {% if n.draft %}<details><summary>Draft reply</summary><pre class="draft">{{ n.draft }}</pre>
     <button type="button" class="btn sm" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent);this.textContent='Copied'">Copy</button></details>{% endif %}</div>
   <div class="acts">{% if n.compose %}<a class="btn sm" href="{{ n.compose }}" target="_blank" rel="noopener">Reply in Gmail</a>{% endif %}
@@ -188,11 +187,12 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
  {% for n in todo[:top] %}{{ todo_row(n) }}{% endfor %}
  {% if todo|length > top %}<details class="more"><summary>{% if back %}{{ todo|length - top }} more, when you're ready{% else %}Show {{ todo|length - top }} more{% endif %}</summary>{% for n in todo[top:] %}{{ todo_row(n) }}{% endfor %}</details>{% endif %}
 </section>
-<style>.todo{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.todo:last-child,.todo:last-of-type{border-bottom:0}
-.todo .pill{justify-self:start}.todo .t{font-weight:600}.todo .m{font-size:14px;color:var(--ink-3)}.todo .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.todo form{display:flex;gap:2px;margin:0}
+<style>.todo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.todo:last-child,.todo:last-of-type{border-bottom:0}
+.todo .t{font-weight:600;display:flex;align-items:center;gap:10px;min-width:0}.todo .t .pill{flex:none;font-size:12.5px;padding:1px 8px 1px 7px}
+.todo .m{font-size:14px;color:var(--ink-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.todo .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.todo form{display:flex;gap:2px;margin:0}
 details.more{border-top:1px solid var(--line);padding-top:10px}details.more[open] summary{margin-bottom:4px}
 pre.draft{white-space:pre-wrap;font:inherit;font-size:14.5px;background:var(--surface-2);border-radius:var(--r-ctl);padding:10px 12px;margin:6px 0}
-@media (max-width:640px){.todo{grid-template-columns:minmax(0,1fr)}.todo .acts{justify-content:flex-start}}</style>{% endif %}
+@media (max-width:640px){.todo{grid-template-columns:minmax(0,1fr)}.todo .m{white-space:normal}.todo .t{flex-wrap:wrap}.todo .acts{justify-content:flex-start}}</style>{% endif %}
 
 <section class="grid g2 mt">
  <div class="card"><h2>Latest replies <a href="/emails?show={{ 'waiting' if s.pending else 'all' }}">{% if s.pending %}{{ s.pending|length }} not sorted{% else %}All emails{% endif %}</a></h2>
