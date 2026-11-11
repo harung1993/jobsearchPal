@@ -123,6 +123,12 @@ of what you did.
 
 - **Your plan for the week.** A short card on the dashboard: which kinds of roles, which days, and one person to
   get in touch with. You write it; the dashboard and the morning brief show it back. "Not this week" is a fine answer.
+- **Weekly goals.** On Sunday, set a few totals for the week (applications, and hours for reaching out, interview
+  prep and learning) and pick your days; they're spread across those days, and you can change any day. Each day a
+  *Today* card shows your share: applications and people you got in touch with count themselves, and the rest get a
+  Done button. A short day is credit, never a red mark; what's left can move to your next day or simply go. Next
+  Sunday a look-back shows what you did next to what you planned, with an optional note, and flows into planning the
+  new week. No streaks and no reminders; the plan never changes the daily run or your work-search count.
 - **People you know.** Every ready role has an *Anyone you know there?* link. People you get in touch with go on
   the Work search page and are listed in your log as networking contacts. They count toward your weekly number
   only if you turn that on, because not every state accepts networking.
@@ -346,7 +352,7 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Stats:** response and interview rates, median time to reply, funnels, results by application
   platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends. *Beyond applications*
   counts the weeks you wrote a plan, the people you got in touch with (and interviews at their companies), and
-  your reflections.
+  your reflections. *Your planned weeks* shows what you did against each weekly plan you set.
 - **Skills:** what the roles you matched keep asking for that you don't show yet, most asked first, with the
   roles that ask and a link to each skill's own docs or free course. With Skill matching on, it uses the model's
   must-have and nice-to-have list for each role it read (nothing is read twice); otherwise a fixed list of about 80
@@ -621,6 +627,7 @@ autoapply/nudges.py      follow-up reminders from sorted emails and your Sent ma
 autoapply/stats.py       dashboard and stats numbers
 autoapply/pal.py         the pal's voice: greeting, celebrations, rejection note, market line
 autoapply/coach.py       what helps a search: weekly plan, contacts, related titles, setback card, reflection, return
+autoapply/goals.py       weekly goals: totals spread over your days, the Today card, the Sunday look-back
 autoapply/voice.py       how your cover letters sound: the Letters page choices, samples, voice.md, recent letters
 autoapply/web.py         dashboard, review page, work-search log
 autoapply/templates/     HTML (no build step, no JavaScript framework)

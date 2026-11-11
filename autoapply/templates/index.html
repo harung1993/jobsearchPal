@@ -2,6 +2,7 @@
 {% from "macros.html" import week_bars, hbars, co, applied_btn %}
 {% block body %}
 {% from "_horizon.html" import horizon, horizon_css %}{{ horizon_css() }}
+{% import "_goals.html" as g %}{{ g.goals_css() }}
 <section class="card welcome" aria-labelledby="hello">
  {{ horizon(s.now_hour, ('week' if celebrate.kind == 'milestone' else celebrate.kind) if celebrate else "") }}
  <div class="welcome-b">
@@ -28,6 +29,7 @@
    <button class="btn sm" name="back" value="/">Put it away</button></form>
  </div>{% endif %}
 </section>
+{% if today_goals %}{{ g.today_card(today_goals, just_met, so_far) }}{% endif %}
 
 <style>.welcome{overflow:hidden;margin-bottom:22px;padding:0}.welcome .hz{border-radius:var(--radius) var(--radius) 0 0}
 .welcome-b{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding:18px 22px 20px}
@@ -109,19 +111,15 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
  {% if not s.ready and not shortlist %}<div class="empty-state"><b>You're all caught up.</b><span>The next daily run looks for more. Resting counts too.</span></div>{% endif %}
 </section>
 
-{% macro plan_form() %}<form method="post" action="/plan" class="plan-form">
- <label class="fld"><span>What kinds of roles?</span><input type="text" name="roles" maxlength="200" value="{{ plan.roles if plan else '' }}" placeholder="e.g. analytics engineer, two at companies I like"></label>
- <fieldset class="fld days"><legend>Which days will you search?</legend>{% for d in plan_days %}<label class="day"><input type="checkbox" name="days" value="{{ d }}" {% if plan and d in plan.days %}checked{% endif %}><span>{{ d }}</span></label>{% endfor %}</fieldset>
- <label class="fld"><span>One person to get in touch with</span><input type="text" name="contact" maxlength="120" value="{{ plan.contact if plan else '' }}" placeholder="e.g. Sam from my old team"></label>
- <div class="acts"><button class="btn sm primary">Save my plan</button>{% if not plan %}<button class="btn sm ghost" name="action" value="skip">Not this week</button>{% endif %}</div>
-</form>{% endmacro %}
-<section class="card plan" id="plan" aria-labelledby="plan-h">
- {% if plan %}<div class="plan-row"><div><h2 id="plan-h">Your plan this week</h2><p class="plan-line">{{ plan_line }}</p></div>
-  <details class="plan-edit"><summary class="btn ghost sm">Edit</summary>{{ plan_form() }}</details></div>
+<section class="card plan{{ ' g-saved' if planned }}" id="plan" aria-labelledby="plan-h">
+ {% if lookback %}{{ g.lookback_card(lookback, lookback_summary, plan_days, goal_totals, planned) }}
+ {% elif plan %}<div class="plan-row"><div><h2 id="plan-h">Your plan this week</h2>{% if plan_line %}<p class="plan-line">{{ plan_line }}</p>{% endif %}
+   {% if plan.goals %}<p class="plan-line ink2">{{ g_summary }}</p>{% endif %}</div>
+  <details class="plan-edit"><summary class="btn ghost sm">Edit</summary>{{ g.goals_form(plan, goal_totals, plan_days) }}{{ g.adjust_days(plan, week_iso, plan_days) }}</details></div>
  {% elif plan_open and not back %}<h2 id="plan-h">Your week, in your words</h2>
-  <p class="ink2 plan-why">A short plan you write yourself: which roles, which days, and one person to get in touch with. It's yours; nothing reminds you of it.</p>
-  {{ plan_form() }}
- {% else %}<div class="plan-row"><h2 id="plan-h" class="plan-quiet">No plan this week. That's fine.</h2><details class="plan-edit"><summary class="btn ghost sm">Write one</summary>{{ plan_form() }}</details></div>{% endif %}
+  <p class="ink2 plan-why">Set a few totals and pick your days; we'll spread them out. Change any day. It's yours; nothing reminds you of it.</p>
+  {{ g.goals_form(None, goal_totals, plan_days) }}
+ {% else %}<div class="plan-row"><h2 id="plan-h" class="plan-quiet">No plan this week. That's fine.</h2><details class="plan-edit"><summary class="btn ghost sm">Write one</summary>{{ g.goals_form(None, goal_totals, plan_days, skip=False) }}</details></div>{% endif %}
 </section>
 
 

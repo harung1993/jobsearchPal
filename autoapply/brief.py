@@ -82,7 +82,13 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
         t += [f"{market['text']} ({market['source']}, checked {market['checked']})", ""]
     from . import coach
     my_plan = coach.plan_line(coach.plan(db, s["this_week_start"]))  # the person's own words; no nagging when there's none
-    t += [f"{label}: {dua}"] + ([f"Your plan this week: {my_plan}"] if my_plan else []) + [""]
+    from . import goals  # weekly goals: today's share, and on Sunday a look-back (no nagging when there's none)
+    day = now.date()
+    lb = goals.lookback(db, day)
+    lb_line = f"Last week: {goals.summary(lb['did'])}. Plan this week: {base}/#plan" if lb and goals.summary(lb["did"]) else ""
+    today_line = "" if lb else goals.today_line(goals.today_view(db, day))
+    t += [f"{label}: {dua}"] + ([f"Your plan this week: {my_plan}"] if my_plan else [])
+    t += ([lb_line] if lb_line else []) + ([f"Today's plan: {today_line}"] if today_line else []) + [""]
     if todo:
         t.append(f"TO DO ({len(todo)})")
         t += [f"- {n['title']} · {n['about']} · {n['why']}" for n in todo[:8]]
@@ -126,6 +132,11 @@ def compose(db: DB, review_url: str = "", today: date | None = None, label: str 
                  f"<span style='color:#666'>{escape(market['source'])}, checked {escape(market['checked'])}</span></p>")
     if my_plan:
         h.append(f"<p style='font-size:15px;margin:0 0 6px'><b>Your plan this week:</b> {escape(my_plan)}</p>")
+    if lb_line:
+        h.append(f"<p style='font-size:15px;margin:0 0 6px'><b>Last week:</b> {escape(goals.summary(lb['did']))}. "
+                 f"<a href='{escape(base)}/#plan'>Plan this week</a></p>")
+    if today_line:
+        h.append(f"<p style='font-size:15px;margin:0 0 6px'><b>Today's plan:</b> {escape(today_line)}</p>")
     h += [f"<p style='font-size:15px'><b>{escape(label)}:</b> {escape(dua)}</p>",
          f"<h3>Ready for you ({len(ready)})</h3><ul>"]
     h.append(li([f"<b>{escape(_co(j['company']))}</b> · {escape(j['title'])}{' · ' + escape(j['pay']) if j['pay'] else ''}<br>"
