@@ -308,6 +308,11 @@ Applied on a different day? Use Applied elsewhere in the menu to pick the date.<
 // Copy buttons. The clipboard API only exists on https or localhost, and this app is usually opened at a plain http
 // address, so fall back to the older copy command. "Copied" only shows when one of them worked; otherwise the text is
 // left selected so you can press Cmd+C.
+// After a button sent you back to this same page: return to where you were.
+(()=>{let v=null;try{v=JSON.parse(sessionStorage.getItem("jsp-scroll")||"null");sessionStorage.removeItem("jsp-scroll")}catch(_){}
+ if(!v||v.p!==location.pathname)return;if("scrollRestoration" in history)history.scrollRestoration="manual";
+ const go=()=>scrollTo(0,Math.min(v.y,document.documentElement.scrollHeight-innerHeight));go();
+ requestAnimationFrame(go);addEventListener("load",go,{once:true})})();
 // Numbers count up once on load ([data-count]); the dashboard's only on the first view of a visit, like its scene.
 (()=>{const h=document.documentElement;if(matchMedia("(prefers-reduced-motion: reduce)").matches||!h.classList.contains("motion-in"))return;
  document.querySelectorAll("[data-count]").forEach(el=>{const end=parseInt(el.dataset.count,10),t=el.firstChild;
@@ -347,7 +352,11 @@ async function sendInPage(f,by){
  let r;try{r=await fetch(to,{method:"POST",body:fd,headers:{"X-In-Page":"1",accept:"text/html"},credentials:"same-origin"})}
  catch(e){restore();await ask("Couldn't reach jobsearchPal","The server didn't answer. Check that it's running, then try again.",{cancel:"",error:true});return}
  if(r.ok&&r.redirected){
-  // fetch drops the #section from a redirect; put back the one the form's back= asked for
+  const dest=new URL(r.url);
+  // Back to the page you were on: come back to the same spot, not the top (restored by the script at the end of this page).
+  if(dest.pathname===location.pathname){try{sessionStorage.setItem("jsp-scroll",JSON.stringify({p:dest.pathname,y:scrollY}))}catch(_){}
+   location.assign(dest.pathname+dest.search);return}
+  // Another page: fetch drops the #section from a redirect; put back the one the form's back= asked for
   const b=f.querySelector("input[name=back]"),h=b&&b.value.includes("#")?"#"+b.value.split("#")[1]:"";
   location.assign(r.url+(r.url.includes("#")?"":h));return}
  if(r.ok){const html=await r.text();history.replaceState(null,"",r.url);document.open();document.write(html);document.close();return}
