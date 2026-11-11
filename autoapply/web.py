@@ -848,7 +848,7 @@ def make_app(settings, db: DB) -> FastAPI:
         body = notesdoc.render(_notes(plan))
         if not body:
             raise HTTPException(404)
-        return page("notes.html", job=job, body=body, nav="")
+        return page("notes.html", job=job, body=body, nav="", posting_link=_web_link(job.get("url") or ""))
 
     @app.get("/bundle/{job_id:path}")
     def bundle(job_id: str):

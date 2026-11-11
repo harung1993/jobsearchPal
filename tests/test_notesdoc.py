@@ -59,3 +59,13 @@ def test_job_page_and_notes_page(tmp_path):
     assert page.status_code == 200
     assert "Print or save as PDF" in page.text and "<h2>Fit / gap</h2>" in page.text
     assert c.get("/notes/greenhouse:nope:2").status_code == 404
+
+
+def test_notes_page_posting_link_must_be_web(tmp_path):
+    c = _setup(tmp_path)
+    assert 'href="https://acme.example/job"' in c.get("/notes/greenhouse:acme:1").text
+    from autoapply.db import DB
+    db = DB(tmp_path / "data" / "t.db")
+    db.update("greenhouse:acme:1", url="javascript:alert(1)")
+    html = c.get("/notes/greenhouse:acme:1").text
+    assert 'href="javascript' not in html and ">posting<" not in html

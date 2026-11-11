@@ -6,7 +6,7 @@
 {{ d.doc_css() }}
 <p class="crumb"><a href="/job/{{ job.id|urlencode }}">← {{ co(job.company) }} · {{ job.title }}</a></p>
 <div class="ph"><div><h1>Application notes</h1>
- <div class="sub">{{ co(job.company) }} · {{ job.title }}{% if job.url %}<span class="no-print"> · <a href="{{ job.url }}" target="_blank" rel="noopener">posting</a></span>{% endif %}</div></div>
+ <div class="sub">{{ co(job.company) }} · {{ job.title }}{% if posting_link %}<span class="no-print"> · <a href="{{ posting_link }}" target="_blank" rel="noopener">posting</a></span>{% endif %}</div></div>
  <button type="button" class="btn" onclick="window.print()">Print or save as PDF</button></div>
 <section class="card mt notes-page"><article class="notes-doc">{{ body|safe }}</article></section>
 <style>
