@@ -138,11 +138,11 @@ def test_dashboard_celebrates_once_and_puts_rejection_away(tmp_path, db):
     _ev(db, "r1", "rejected", today.strftime("%Y-%m-%d %H:%M"), job=None, sender="Globex <no@globex.example>")
     c = _app(tmp_path, db)
     html = c.get("/").text
-    assert "cel-interview\" role=\"status\"" in html and "Acme wants to talk" in html and "class=\"hz play-interview\"" in html and "Alex." in html
+    assert "cel-interview\" role=\"status\"" in html and "Acme wants to talk" in html and "class=\"hz scene play-interview\"" in html and "Alex." in html
     assert "Globex said no this time" in html and "one stone in a very big ocean" in html
     assert "closed" in html and "rejected ·" not in html
     again = c.get("/").text
-    assert "cel-interview\" role=\"status\"" not in again and "class=\"hz play-interview\"" not in again  # played once
+    assert "cel-interview\" role=\"status\"" not in again and "class=\"hz scene play-interview\"" not in again  # played once
     r = c.post("/pal/seen", data={"key": "pal:rejection:r1", "back": "//evil.example"}, follow_redirects=False)
     assert r.headers["location"] == "/"
     assert "Globex said no this time" not in c.get("/").text

@@ -6,19 +6,19 @@
  <div class="sub">Everything you've done since your first tracked application. Every one of these took effort · weeks run Sunday to Saturday · <a href="/skills">Skills to learn</a></div></div></div>
 
 <section class="grid g6" aria-label="Key numbers">
- <div class="card tile"><div class="lbl">Applied</div><div class="num">{{ s.applied }}</div><div class="sub">{{ s.found_total }} roles found</div></div>
- <div class="card tile"><div class="lbl">Replies</div><div class="num">{{ s.responded }}</div><div class="sub">from {{ s.applied }} sent · {{ s.response_rate }}%</div></div>
- <div class="card tile"><div class="lbl">Interviews</div><div class="num">{{ s.interviews }}</div><div class="sub">from {{ s.applied }} sent · {{ s.interview_rate }}%</div></div>
+ <div class="card tile"><div class="lbl">Applied</div><div class="num" data-count="{{ s.applied }}">{{ s.applied }}</div><div class="sub">{{ s.found_total }} roles found</div></div>
+ <div class="card tile"><div class="lbl">Replies</div><div class="num" data-count="{{ s.responded }}">{{ s.responded }}</div><div class="sub">from {{ s.applied }} sent · {{ s.response_rate }}%</div></div>
+ <div class="card tile"><div class="lbl">Interviews</div><div class="num" data-count="{{ s.interviews }}">{{ s.interviews }}</div><div class="sub">from {{ s.applied }} sent · {{ s.interview_rate }}%</div></div>
  <div class="card tile"><div class="lbl">Median reply</div><div class="num">{% if s.median_wait is not none %}{{ s.median_wait }}<small> days</small>{% else %}–{% endif %}</div><div class="sub">submit to first answer</div></div>
- <div class="card tile"><div class="lbl">Weeks covered</div><div class="num">{{ s.weeks_met }}</div><div class="sub">weeks at your {{ ws_label }} minimum, last 12 active</div></div>
- <div class="card tile"><div class="lbl">Recruiters</div><div class="num">{{ s.recruiter_count }}</div><div class="sub">people who reached out</div></div>
+ <div class="card tile"><div class="lbl">Weeks covered</div><div class="num" data-count="{{ s.weeks_met }}">{{ s.weeks_met }}</div><div class="sub">weeks at your {{ ws_label }} minimum, last 12 active</div></div>
+ <div class="card tile"><div class="lbl">Recruiters</div><div class="num" data-count="{{ s.recruiter_count }}">{{ s.recruiter_count }}</div><div class="sub">people who reached out</div></div>
 </section>
 
 <section class="card mt beyond" aria-labelledby="beyond-h"><h2 id="beyond-h">Beyond applications</h2>
  <div class="grid g3">
-  <div><div class="num">{{ s.planned_weeks }}</div><div class="sub">week{{ '' if s.planned_weeks == 1 else 's' }} with a plan you wrote · <a href="/#plan">this week's</a></div></div>
-  <div><div class="num">{{ s.contacts_total }}</div><div class="sub">{{ 'person' if s.contacts_total == 1 else 'people' }} you got in touch with{% if s.contact_interviews %} · {{ s.contact_interviews }} interview{{ '' if s.contact_interviews == 1 else 's' }} at their companies{% endif %} · <a href="/dua#people">add</a></div></div>
-  <div><div class="num">{{ s.reflections }}</div><div class="sub">reflection{{ '' if s.reflections == 1 else 's' }} on what matters to you · <a href="/reflect">write one</a></div></div>
+  <div><div class="num" data-count="{{ s.planned_weeks }}">{{ s.planned_weeks }}</div><div class="sub">week{{ '' if s.planned_weeks == 1 else 's' }} with a plan you wrote · <a href="/#plan">this week's</a></div></div>
+  <div><div class="num" data-count="{{ s.contacts_total }}">{{ s.contacts_total }}</div><div class="sub">{{ 'person' if s.contacts_total == 1 else 'people' }} you got in touch with{% if s.contact_interviews %} · {{ s.contact_interviews }} interview{{ '' if s.contact_interviews == 1 else 's' }} at their companies{% endif %} · <a href="/dua#people">add</a></div></div>
+  <div><div class="num" data-count="{{ s.reflections }}">{{ s.reflections }}</div><div class="sub">reflection{{ '' if s.reflections == 1 else 's' }} on what matters to you · <a href="/reflect">write one</a></div></div>
  </div>
 </section>
 {% if s.goal_weeks %}{% import "_goals.html" as g %}{{ g.goals_css() }}

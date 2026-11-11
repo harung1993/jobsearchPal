@@ -85,6 +85,7 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Rejection, with their plan | "You wrote this for a day like today: ..." |
 | Values reflection | "Fifteen minutes on what matters to you. Some people find it steadying." |
 | Related titles | "Looking a little wider can open more doors." |
+| Sign-in page headline | "Your search, one morning at a time." / "Roles found and prepared while you sleep, your applications in one place, and a week you plan yourself." |
 | Sent with autoapply-finish | "I sent it with the command" (button) / "With the command" (Stats) |
 | Copy fell back to selecting | "Press Cmd+C" |
 | Filled by autoapply-finish | "Filled with the command" (chip) |
@@ -99,6 +100,9 @@ The logo's sunrise grown into a horizon (`templates/_horizon.html`):
   - **Week covered:** light spreads across the water.
   - **Interview:** the sun lifts with a ring of light.
   - **Offer:** the full sunrise.
+- **The dashboard scene** (`scene()`): the same sunrise, taller, with hills and sky, above the week's headline numbers. Its quiet
+  entrance (hills settle, the sun rises, the numbers count up) plays on the first dashboard view of a visit only, because the
+  dashboard reloads after every action and replaying it each time would nag. Charts rise and bars grow once when another page loads.
 - With Reduce Motion, the finished picture shows with no movement. No loop runs longer than 5 seconds, and every animation is finite.
 
 ## What helps a search (`autoapply/coach.py`)
