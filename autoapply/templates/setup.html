@@ -308,11 +308,13 @@ details.fold[open]>summary{margin-bottom:4px}
 .step h2{justify-content:flex-start}.step h2 .count{margin-left:auto}
 </style>
 <script>(()=>{const steps=[...document.querySelectorAll("section.step")],target=location.hash.slice(1);
- const open=id=>{const s=document.getElementById(id);if(s&&s.classList.contains("step")){s.classList.remove("folded");s.scrollIntoView({block:"start"})}};
+ const open=id=>{const el=id&&document.getElementById(id);if(!el)return;const s=el.closest("section.step");if(!s)return;
+  s.classList.remove("folded");for(let d=el.closest("details");d;d=d.parentElement.closest("details"))d.open=true;el.scrollIntoView({block:"start"})};
  steps.forEach(sec=>{if(!sec.querySelector("h2 .n.done"))return;
   const h=sec.querySelector("h2"),b=document.createElement("button");b.type="button";b.className="btn sm ghost done-btn";b.textContent="Done";
   b.addEventListener("click",()=>{sec.classList.add("folded");const r=document.querySelector('[data-open="'+sec.id+'"]');if(r)r.focus()});
-  if(h)h.appendChild(b);if(sec.id!==target)sec.classList.add("folded")});
+  if(h)h.appendChild(b);if(sec.id!==target&&!(target&&sec.querySelector("#"+CSS.escape(target))))sec.classList.add("folded")});
+ if(target)open(target);
  document.querySelectorAll("[data-open]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault();history.replaceState(null,"","#"+a.dataset.open);open(a.dataset.open)}));
  document.querySelectorAll('a[href^="#"]:not([data-open])').forEach(a=>a.addEventListener("click",()=>open(a.getAttribute("href").slice(1))));
  addEventListener("hashchange",()=>open(location.hash.slice(1)));})();</script>

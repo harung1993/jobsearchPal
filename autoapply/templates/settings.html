@@ -5,8 +5,6 @@
                   'daily': 'The morning pass finds roles, tailors your materials and fills forms. It never submits.',
                   'costs': 'What the daily pass may do each day, and what it costs.'}[tab] %}
 {% include "_tabs.html" %}
-{% macro choice(name, value, current, title, text, auto=false) %}<label><input type="radio" name="{{ name }}" value="{{ value }}" {% if current %}checked{% endif %}>
- <span><b>{{ title }}</b>{{ caller() if caller else text }}</span></label>{% endmacro %}
 
 <form method="post" action="/settings" data-dirty>
 <input type="hidden" name="tab" value="{{ tab }}">
@@ -97,15 +95,15 @@
  <div class="srow"><div class="sl"><b>Agent</b><p>Which command-line agent does the work.</p></div>
   <div class="sc wide"><div class="choice">
   {% for key, label in daily_agents.items() %}{% set st = status[key] %}
-   <label><input type="radio" name="daily_agent" value="{{ key }}" {% if p.daily_agent == key %}checked{% endif %}>
+   <label><input type="radio" onchange="this.form.requestSubmit()" name="daily_agent" value="{{ key }}" {% if p.daily_agent == key %}checked{% endif %}>
     <span><b>{{ label }}</b><span class="state {{ 'ok' if st.ready else 'no' }}">{{ st.note }}</span></span></label>
   {% endfor %}</div></div></div>
 
  <div class="srow"><div class="sl"><b>Pay for the model with</b><p>Your plan, or an OpenRouter key billed per token.</p></div>
   <div class="sc wide"><div class="choice">
-   <label><input type="radio" name="daily_via" value="subscription" {% if p.daily_via != 'openrouter' %}checked{% endif %}>
+   <label><input type="radio" onchange="this.form.requestSubmit()" name="daily_via" value="subscription" {% if p.daily_via != 'openrouter' %}checked{% endif %}>
     <span><b>Your subscription</b>No per-run cost. Counts toward your plan's limits.</span></label>
-   <label><input type="radio" name="daily_via" value="openrouter" {% if p.daily_via == 'openrouter' %}checked{% endif %}>
+   <label><input type="radio" onchange="this.form.requestSubmit()" name="daily_via" value="openrouter" {% if p.daily_via == 'openrouter' %}checked{% endif %}>
     <span><b>OpenRouter key</b>Any model, billed to your key. Stops at your <a href="/settings?tab=costs">monthly budget</a>.
      <span class="state {{ 'ok' if key_hint != 'not set' else 'no' }}">Key {{ key_hint }}{% if key_hint == 'not set' %}: <a href="/settings?tab=sorting">add it</a>{% endif %}</span></span></label>
   </div>
