@@ -66,6 +66,19 @@ suggests", never "science proves", and copy never quotes a research figure.
 | Sign in | "Welcome back. Your search is right where you left it." |
 | Back after a week away | "Welcome back. No catch-up list today: just what's ready, and one place to start." |
 | Weekly plan | "Your week, in your words." / "No plan this week. That's fine." |
+| Weekly goals, setting | "Your week, in your words. Set a few totals and pick your days; we'll spread them out. Change any day." |
+| Today card | "Today" / "This week so far: {summary}." |
+| Today card, a short day | "{n} {thing} today, and that counts." |
+| Today card, rest day | "A rest day in your plan. Rest counts too." |
+| Block met | "Done for today." |
+| Day met | "That's today's plan done. The rest of the day is yours." |
+| Week plan met | "Your plan for the week, done." / "You set it and you followed through." |
+| Look-back, with a plan | "You had a plan and you worked to it: {summary}. Planning your week is one of the things that helps a search stay on track. Next week builds on this one." |
+| Look-back, no plan | "Last week: {summary}. That all counts. A short plan for this week can help keep the days steady." |
+| Look-back, nothing done | "A quiet week. That happens, and this one is a fresh start." |
+| Look-back note | "What helped, or what got in the way?" (optional, just for you) |
+| Morning email, Sunday | "Last week: {summary}. Plan this week: {url}/#plan" |
+| Morning email, a planned day | "Today's plan: {today_line}" |
 | People you know | "Anyone you know there?" / "One message this week is a good start." |
 | Setback card, early | "Searches are long right now, and much of the time is quiet. That's the usual shape of a search, not a sign you're doing it wrong." |
 | Setback card, week 8 | "Around now, a lot of searches start to feel long. That's common, and it isn't a verdict on you." |
@@ -87,6 +100,10 @@ The logo's sunrise grown into a horizon (`templates/_horizon.html`):
 
 The evidence on what moves outcomes, turned into optional features. None sends a reminder; each can be put away.
 - **A plan the person writes** (Abel et al., B): roles, days, one contact. Reminders added nothing in the trial, so there are none.
+- **Weekly goals** (Abel et al.; van Hooft et al. 2005; Jahoda, B/C): totals the person sets on Sunday (applications, and hours
+  for reaching out, interview prep and learning), spread across the days they pick, counted up each day, and a Sunday look-back that
+  flows into the next week. The week is the goal, so a short day is credit; mood and progress swing day to day (Wanberg, Zhu and
+  van Hooft 2010). No streaks, no reminders, no red; the plan never changes the daily run or the work-search count (`autoapply/goals.py`).
 - **People you know** (Granovetter; referral studies, B): contacts are logged and can count as work search.
 - **Fit before volume** (van Hooft et al. 2021, A): the ranking prompts say fit decides, never the weekly number.
 - **Related titles** for a narrow, long search (Belot, Kircher and Muller, B).
@@ -116,6 +133,9 @@ The evidence on what moves outcomes, turned into optional features. None sends a
 - Wright and Patrick (2019), on how benefit conditions are experienced.
 - Granovetter (1973), American Journal of Sociology.
 - Abel, Burger, Carranza and Piraino, on written job-search plans (working paper).
+- van Hooft, Born, Taris, van der Flier and Blonk (2005), on implementation intentions in job search, Journal of Vocational Behavior.
+- Wanberg, Zhu and van Hooft (2010), on day-to-day job search, Academy of Management Journal.
+- Feather and Bond (1983), on time structure and purposeful activity out of work.
 - Belot, Kircher and Muller, on suggesting related occupations, Review of Economic Studies.
 - Pfrombeck et al. (2023), on self-affirmation and reemployment, PNAS.
 - Market data: U.S. Bureau of Labor Statistics (Current Population Survey; Job Openings and Labor Turnover Survey).

@@ -21,6 +21,11 @@
   <div><div class="num">{{ s.reflections }}</div><div class="sub">reflection{{ '' if s.reflections == 1 else 's' }} on what matters to you · <a href="/reflect">write one</a></div></div>
  </div>
 </section>
+{% if s.goal_weeks %}{% import "_goals.html" as g %}{{ g.goals_css() }}
+<section class="card mt" aria-labelledby="gw-h"><h2 id="gw-h">Your planned weeks</h2>
+ <p class="muted" style="font-size:13.5px;margin:0 0 8px">What you did against the plan you set, for the weeks you planned.</p>
+ {{ g.weeks_list(s.goal_weeks) }}
+</section>{% endif %}
 <style>.beyond .num{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}.beyond .sub{font-size:14px;color:var(--ink-2)}</style>
 
 <section class="card mt"><h2>Applications per week <span class="count">last {{ s.weeks }} weeks</span></h2>

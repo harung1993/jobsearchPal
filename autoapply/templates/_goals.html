@@ -1,0 +1,143 @@
+{# Weekly goals (autoapply/goals.py): the Sunday card, the Today card, the look-back, and the week strip.
+   Copy comes from VOICE.md's phrase bank. Counts go up; a short day is never red; every animation runs once and
+   Reduce Motion shows the finished picture. The week strip echoes the horizon: each day's water rises with what
+   was done, and a small sun sits over a day whose plan was met. #}
+
+{% macro goals_css() %}<style>
+:root{--g-water:color-mix(in srgb,var(--accent) 30%,var(--surface));--g-pool:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.g-ring{display:block;flex:0 0 auto}.g-ring .tr{fill:none;stroke:var(--line-2);stroke-width:5}
+.g-ring .fl{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;animation:g-ring .7s cubic-bezier(.2,.8,.2,1) 1 backwards}
+.g-ring.met .fl{stroke:var(--sun)}.g-ring .ck{fill:none;stroke:var(--sun);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+@keyframes g-ring{from{stroke-dasharray:0 200}}
+.g-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;max-width:420px;margin:14px 0 0;padding:0;list-style:none}
+.g-day{display:grid;justify-items:center;gap:5px;font-size:12.5px;color:var(--ink-3)}
+.g-day .sun{width:9px;height:9px;border-radius:50%;background:var(--sun);visibility:hidden}.g-day.met .sun{visibility:visible}
+.g-col{position:relative;width:100%;max-width:38px;height:58px;border-radius:11px;background:var(--g-pool);border:1px solid var(--line-2);overflow:hidden}
+.g-col .w{position:absolute;left:0;right:0;bottom:0;height:var(--f);background:var(--g-water);border-top:2px solid var(--accent);animation:g-rise .8s cubic-bezier(.2,.8,.2,1) 1 backwards;animation-delay:calc(var(--i) * 70ms)}
+.g-col .w[style*="--f:0%"]{border-top:0}
+.g-day.rest .g-col{background:transparent;border-color:transparent}
+.g-day.rest .g-col svg{position:absolute;left:0;right:0;bottom:6px;width:100%;height:10px}
+.g-day.rest .g-col path{fill:none;stroke:var(--accent-soft);stroke-width:2.2;stroke-linecap:round}
+.g-day .dot{position:absolute;left:50%;bottom:8px;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:var(--accent)}
+.g-day.today .g-col{border:2px solid var(--accent)}.g-day.today b{color:var(--accent-ink)}.g-day b{font-weight:600}
+@keyframes g-rise{from{height:0}}
+.g-today{margin:22px 0 0}.g-today h2{margin:0}.g-today .sub{font-size:14px;color:var(--ink-2);margin:2px 0 12px}
+.g-rows{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.g-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+.g-row .what b{display:block;font-size:15.5px}.g-row .what span{font-size:14px;color:var(--ink-2)}
+.g-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.g-acts form{margin:0;display:flex;gap:6px;align-items:center}
+.g-acts input[type=number]{width:70px;height:32px}.g-adj summary{list-style:none;cursor:pointer}.g-adj summary::-webkit-details-marker{display:none}
+.g-adj[open]{flex-basis:100%}.g-adj form{margin-top:6px;justify-content:flex-end}
+.g-line{margin:12px 0 0;max-width:62ch}.g-so-far{margin:12px 0 0;font-size:14.5px;color:var(--ink-2)}
+.g-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:640px}
+.g-totals .fld input{width:100%}
+.g-adjust table{border-collapse:collapse;font-size:14px;margin-top:8px}.g-adjust td,.g-adjust th{padding:4px 6px;text-align:left}
+.g-adjust input{width:64px;height:30px}.g-adjust summary{cursor:pointer;color:var(--accent-ink);font-weight:600;font-size:14.5px}
+.g-back{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:640px;margin:10px 0 0}
+.g-back>div{display:grid;justify-items:start;gap:6px}.g-back .n{font-size:15px}.g-back .n b{font-size:20px;font-variant-numeric:tabular-nums}
+.g-back .n span{color:var(--ink-3);font-size:13.5px;display:block}
+.g-note{display:flex;gap:8px;flex-wrap:wrap;align-items:end;max-width:640px;margin:12px 0 0}.g-note .fld{flex:1 1 280px}
+.g-sep{border:0;border-top:1px solid var(--line);margin:18px 0}
+.just-met .g-ring{animation:g-glow .9s ease-out 1}.g-today.just-met-day{animation:g-card .9s ease-out 1}
+@keyframes g-glow{0%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}45%{transform:scale(1.14);filter:drop-shadow(0 0 7px var(--sun))}100%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}}
+@keyframes g-card{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 55%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.g-saved{animation:offer-up .5s ease-out 1}
+.g-weeks{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:12px}
+.g-weeks li{display:grid;grid-template-columns:70px repeat(4,minmax(0,1fr));gap:10px;align-items:center}
+.g-weeks .cell{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--ink-2)}.g-weeks .cell b{color:var(--ink);font-size:14.5px}
+@media (max-width:620px){.g-totals,.g-back{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .g-row{grid-template-columns:44px minmax(0,1fr);row-gap:6px}.g-acts{grid-column:2/-1;justify-content:flex-start}
+ .g-weeks li{grid-template-columns:repeat(2,minmax(0,1fr))}.g-weeks li>b{grid-column:1/-1}}
+@media (prefers-reduced-motion:reduce){.g-ring .fl,.g-col .w,.just-met .g-ring,.g-today.just-met-day,.g-saved{animation:none!important}}
+</style>{% endmacro %}
+
+{% macro ring(frac, met=False, size=44) %}{% set c = 113.1 %}
+<svg class="g-ring{{ ' met' if met }}" width="{{ size }}" height="{{ size }}" viewBox="0 0 44 44" aria-hidden="true">
+ <circle class="tr" cx="22" cy="22" r="18"/>{% if frac > 0 %}<circle class="fl" cx="22" cy="22" r="18" stroke-dasharray="{{ '%.1f'|format(frac * c) }} {{ c }}"/>{% endif %}
+ {% if met %}<path class="ck" d="M15.5 22.5l4.5 4.5 8.5-9"/>{% endif %}</svg>{% endmacro %}
+
+{% macro strip(days) %}<ol class="g-strip" aria-label="Your week, day by day">
+ {% for d in days %}{% set met = d.planned and d.frac >= 1 %}
+ <li class="g-day{{ ' rest' if d.rest }}{{ ' today' if d.today }}{{ ' met' if met }}" aria-label="{{ d.day }}: {{ 'rest day' if d.rest else ('plan done' if met else (d.frac * 100)|round|int ~ '% of the plan') }}">
+  <i class="sun" aria-hidden="true"></i>
+  <span class="g-col" aria-hidden="true">{% if d.rest %}<svg viewBox="0 0 38 10" preserveAspectRatio="none"><path d="M2 6c5-4 9-4 14 0s9 4 14 0 6-3 6-3"/></svg>{% if d.active %}<i class="dot"></i>{% endif %}
+   {% else %}<i class="w" style="--f:{{ (d.frac * 100)|round|int }}%;--i:{{ loop.index0 }}"></i>{% endif %}</span>
+  <b>{{ d.day }}</b></li>{% endfor %}
+</ol>{% endmacro %}
+
+{% macro hrs(m) %}{{ '%g'|format(m / 60) }}{% endmacro %}
+
+{% macro goals_form(plan, totals, days, saved=False, skip=True) %}
+<form method="post" action="/plan" class="plan-form"><input type="hidden" name="back" value="/#plan">
+ <div class="g-totals">
+  <label class="fld"><span>Applications</span><input type="number" name="apps" min="0" max="200" step="1" inputmode="numeric" value="{{ totals.apps if totals and totals.apps else '' }}" placeholder="e.g. 15"></label>
+  <label class="fld"><span>Reaching out, hours</span><input type="number" name="reach_h" min="0" max="40" step="0.5" inputmode="decimal" value="{{ hrs(totals.reach) if totals and totals.reach else '' }}" placeholder="e.g. 3"></label>
+  <label class="fld"><span>Interview prep, hours</span><input type="number" name="prep_h" min="0" max="40" step="0.5" inputmode="decimal" value="{{ hrs(totals.prep) if totals and totals.prep else '' }}" placeholder="e.g. 2"></label>
+  <label class="fld"><span>Learning, hours</span><input type="number" name="learn_h" min="0" max="40" step="0.5" inputmode="decimal" value="{{ hrs(totals.learn) if totals and totals.learn else '' }}" placeholder="e.g. 3"></label>
+ </div>
+ <fieldset class="fld days"><legend>Which days will you search?</legend>{% for d in days %}<label class="day"><input type="checkbox" name="days" value="{{ d }}" {% if (plan and d in plan.days) or (not plan and d in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri')) %}checked{% endif %}><span>{{ d }}</span></label>{% endfor %}</fieldset>
+ <label class="fld"><span>What kinds of roles?</span><input type="text" name="roles" maxlength="200" value="{{ plan.roles if plan else '' }}" placeholder="e.g. analytics engineer, two at companies I like"></label>
+ <label class="fld"><span>One person to get in touch with</span><input type="text" name="contact" maxlength="120" value="{{ plan.contact if plan else '' }}" placeholder="e.g. Sam from my old team"></label>
+ <div class="acts"><button class="btn sm primary">Save my week</button>{% if skip and not plan %}<button class="btn sm ghost" name="action" value="skip">Not this week</button>{% endif %}</div>
+</form>{% endmacro %}
+
+{% macro adjust_days(plan, week, days) %}{% if plan and plan.per_day %}
+<details class="g-adjust"><summary>Adjust a day</summary>
+ {% for d in days %}<form method="post" action="/plan/day" id="adj-{{ d }}" hidden><input type="hidden" name="back" value="/#plan"><input type="hidden" name="action" value="set"><input type="hidden" name="week" value="{{ week }}"><input type="hidden" name="day" value="{{ d }}"></form>{% endfor %}
+ <table><thead><tr><th>Day</th><th>Apps</th><th>Reach out, h</th><th>Prep, h</th><th>Learn, h</th><th></th></tr></thead><tbody>
+ {% for d in days %}{% set p = plan.per_day.get(d) or {} %}<tr>
+  <td>{{ d }}</td>
+  <td><input form="adj-{{ d }}" type="number" name="v_apps" min="0" max="200" value="{{ p.apps or 0 }}" aria-label="{{ d }} applications"></td>
+  <td><input form="adj-{{ d }}" type="number" name="v_reach" min="0" max="16" step="0.5" value="{{ hrs(p.reach or 0) }}" aria-label="{{ d }} reaching out, hours"></td>
+  <td><input form="adj-{{ d }}" type="number" name="v_prep" min="0" max="16" step="0.5" value="{{ hrs(p.prep or 0) }}" aria-label="{{ d }} interview prep, hours"></td>
+  <td><input form="adj-{{ d }}" type="number" name="v_learn" min="0" max="16" step="0.5" value="{{ hrs(p.learn or 0) }}" aria-label="{{ d }} learning, hours"></td>
+  <td><button form="adj-{{ d }}" class="btn sm ghost">Save</button></td></tr>{% endfor %}
+ </tbody></table></details>{% endif %}{% endmacro %}
+
+{% macro amount(goal, n) %}{% if goal == 'apps' %}{{ n }}{% elif n < 60 %}{{ n }} m{% else %}{{ '%g'|format(n / 60) }} h{% endif %}{% endmacro %}
+
+{% macro today_card(v, just_met, summary) %}{% set iso = v.date.isoformat() %}{% set dk = 'goals:met:' ~ iso %}
+<section class="card g-today{{ ' just-met-day' if dk in just_met }}" id="today" aria-labelledby="today-h"{% if dk in just_met %} data-met="{{ dk }}"{% endif %}>
+ <h2 id="today-h">Today</h2><div class="sub">{{ v.date.strftime("%A, %B %-d") }}</div>
+ {% if v.rest %}<p class="g-line">A rest day in your plan. Rest counts too.</p>
+ {% else %}<ul class="g-rows">
+ {% for b in v.blocks %}{% set k = 'goals:met:' ~ iso ~ ':' ~ b.goal %}
+  <li class="g-row{{ ' just-met' if k in just_met }}"{% if k in just_met %} data-met="{{ k }}"{% endif %}>
+   {{ ring(b.frac, b.met) }}
+   <div class="what"><b>{{ b.label }}</b>
+    <span>{% if b.met %}Done for today. {% endif %}{{ amount(b.goal, b.done) }} of {{ amount(b.goal, b.planned) }}{% if b.goal == 'apps' %} · counted from what you sent{% elif b.goal == 'reach' and b.people %} · {{ b.people }} {{ 'person' if b.people == 1 else 'people' }}{% endif %}</span></div>
+   <div class="g-acts">
+    {% if b.goal != 'apps' and not b.met %}<form method="post" action="/plan/day"><input type="hidden" name="back" value="/#today"><input type="hidden" name="action" value="done"><input type="hidden" name="goal" value="{{ b.goal }}"><input type="hidden" name="day" value="{{ iso }}"><button class="btn sm primary">Done</button></form>{% endif %}
+    {% if b.goal != 'apps' %}<details class="g-adj"><summary class="btn sm ghost">{{ 'Change' if b.done else 'Some of it' }}</summary>
+     <form method="post" action="/plan/day"><input type="hidden" name="back" value="/#today"><input type="hidden" name="action" value="adjust"><input type="hidden" name="goal" value="{{ b.goal }}"><input type="hidden" name="day" value="{{ iso }}">
+      <label class="ink2" for="adj-{{ b.goal }}">Hours</label><input id="adj-{{ b.goal }}" type="number" name="hours" min="0" max="16" step="0.5" value="{{ '%g'|format(b.done / 60) }}"><button class="btn sm">Save</button></form></details>{% endif %}
+    {% if b.can_move %}<form method="post" action="/plan/day"><input type="hidden" name="back" value="/#today"><input type="hidden" name="action" value="move"><input type="hidden" name="goal" value="{{ b.goal }}"><input type="hidden" name="day" value="{{ iso }}"><button class="btn sm ghost" title="Put what's left on {{ v.next_day }}">Move to {{ v.next_day }}</button></form>{% endif %}
+   </div></li>
+ {% endfor %}</ul>
+ {% set apps = v.blocks|selectattr('goal', 'equalto', 'apps')|first %}
+ {% if v.met %}<p class="g-line">That's today's plan done. The rest of the day is yours.</p>
+ {% elif apps and apps.done and not apps.met %}<p class="g-line">{{ apps.done }} application{{ '' if apps.done == 1 else 's' }} today, and that counts.</p>{% endif %}
+ {% endif %}
+ {% if summary %}<p class="g-so-far">This week so far: {{ summary }}.</p>{% endif %}
+ {{ strip(v.strip) }}
+</section>{% endmacro %}
+
+{% macro lookback_card(lb, summary, plan_days, totals, saved) %}
+ <h2 id="plan-h">Your week, looking back</h2>
+ <div class="sub ink2">{{ lb.week.strftime("%b %-d") }} to {{ (lb.strip[-1].date).strftime("%b %-d") }}</div>
+ <div class="g-back">{% for r in lb.rows %}{% if r.did or r.planned %}<div>{{ ring(r.frac if lb.planned else (1 if r.did else 0), lb.planned and r.planned and r.did >= r.planned) }}
+  <p class="n" style="margin:0"><b>{{ amount(r.goal, r.did) }}</b> {{ r.label|lower }}{% if lb.planned %}<span>did · planned {{ amount(r.goal, r.planned) }}</span>{% else %}<span>did</span>{% endif %}</p></div>{% endif %}{% endfor %}</div>
+ {% if not summary %}<p class="g-line">A quiet week. That happens, and this one is a fresh start.</p>
+ {% elif lb.planned %}<p class="g-line">You had a plan and you worked to it: {{ summary }}. Planning your week is one of the things that helps a search stay on track. Next week builds on this one.</p>
+ {% else %}<p class="g-line">Last week: {{ summary }}. That all counts. A short plan for this week can help keep the days steady.</p>{% endif %}
+ <form method="post" action="/plan/note" class="g-note"><input type="hidden" name="back" value="/#plan"><input type="hidden" name="week" value="{{ lb.week.isoformat() }}">
+  <label class="fld"><span>What helped, or what got in the way?</span><small>Optional, just for you.</small><input type="text" name="text" maxlength="300" value="{{ lb.note }}" placeholder="e.g. mornings worked better than afternoons"></label>
+  <button class="btn sm">Save note</button></form>
+ <hr class="g-sep">
+ <h2>Plan this week</h2>
+ <p class="ink2 plan-why">{% if totals %}Started from your last plan's numbers. Change anything.{% else %}Set a few totals and pick your days; we'll spread them out. Change any day.{% endif %}</p>
+ {{ goals_form(None, totals, plan_days, saved) }}
+{% endmacro %}
+
+{% macro weeks_list(weeks) %}<ul class="g-weeks">{% for w in weeks %}<li><b>{{ w.week.strftime("%b %-d") }}</b>
+ {% for r in w.rows %}<div class="cell">{{ ring(r.frac, r.planned and r.did >= r.planned, 30) }}<span><b>{{ amount(r.goal, r.did) }}</b> of {{ amount(r.goal, r.planned) }}<br>{{ r.label|lower }}</span></div>{% endfor %}</li>{% endfor %}</ul>{% endmacro %}

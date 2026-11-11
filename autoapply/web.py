@@ -235,7 +235,7 @@ def make_app(settings, db: DB) -> FastAPI:
                                                           setup_left=len(setup.status(settings, os.environ)["left"]), **ctx))
 
     @app.get("/")
-    def index(msg: str = "", log: str = ""):
+    def index(request: Request, msg: str = "", log: str = "", planned: str = ""):
         if settings.raw.get("_from_example"):
             return RedirectResponse("/setup", status_code=303)  # fresh install
         from . import prep
@@ -263,15 +263,34 @@ def make_app(settings, db: DB) -> FastAPI:
         greet = pal.greeting(db, s, now, first_name)
         wk_plan = coach.plan(db, s["this_week_start"])
         back = greet["state"] == "back"
+        from . import goals
+        today_goals = goals.today_view(db, now.date())
+        lookback = None if back else goals.lookback(db, now.date())
+        met = goals.new_met(db, now.date())
+        week_met = next((m for m in met if m["scope"] == "week"), None)
+        if week_met and not cel:  # the whole weekly plan met: the horizon's light spreads, once
+            cel = {"key": week_met["key"], "kind": "week", "title": "Your plan for the week, done",
+                   "line": "You set it and you followed through."}
         resp = page("index.html", s=s, shortlist=more, decline_reasons=DECLINE_REASONS, src_on=src["on"], src_total=src["total"], first_name=first_name,
                     interviews=ivs[:6], greet=greet, plan=wk_plan, plan_line=coach.plan_line(wk_plan), plan_days=coach.DAYS,
                     plan_open=not wk_plan and f"pal:plan-skip:{s['this_week_start'].isoformat()}" not in db.nudge_states(),
                     offer=None if back else coach.offer(db, settings, s, now.date(), bool(ivs)), back=back, if_then=coach.if_then(db),
                     celebrate=cel, rejection=pal.rejection_note(db, now.date()), week_left=_week_left(s, now.date()),
                     todo=todo, nav="dashboard", running=run_state(), picks_default=Prefs(settings.data_dir, settings.raw).limits()["picks_per_day"],
-                    msg=msg[:300], open_log=log == "1", today=now.date().isoformat())
+                    msg=msg[:300], open_log=log == "1", today=now.date().isoformat(),
+                    today_goals=today_goals, lookback=lookback, just_met={m["key"] for m in met}, planned=planned == "1",
+                    goal_totals=goals.week_goals(wk_plan) or goals.prefill(db, s["this_week_start"]),
+                    week_iso=s["this_week_start"].isoformat(),
+                    g_summary=("Goals: " + goals.summary(goals.week_goals(wk_plan))) if goals.week_goals(wk_plan) else "",
+                    so_far=goals.summary(today_goals["week_so_far"]) if today_goals else "",
+                    lookback_summary=goals.summary(lookback["did"]) if lookback else "")
+        if request.headers.get("x-in-page"):
+            return resp  # an in-page form post following its redirect: the page the person sees comes next, so keep these
         if cel:
             db.set_nudge(cel["key"], "done")  # each celebration plays once
+        for m in met:  # each met moment animates once; a week moment waits while a bigger celebration plays
+            if m["scope"] != "week" or (cel and cel["key"] == m["key"]):
+                db.set_nudge(m["key"], "done")
         return resp
 
     def _week_left(s: dict, today: date) -> str:
@@ -465,8 +484,66 @@ def make_app(settings, db: DB) -> FastAPI:
         week = stats.week_start(date.today())
         if f.get("action") == "skip":
             db.set_nudge(f"pal:plan-skip:{week.isoformat()}", "done")
+            return RedirectResponse("/#plan", status_code=303)
+        from . import goals
+        totals = goals.parse_totals(f)
+        roles, days, contact = str(f.get("roles") or ""), [str(d) for d in f.getlist("days")], str(f.get("contact") or "")
+        if any(totals.values()):  # weekly goals: spread over the chosen days (goals.py)
+            goals.save_week(db, week, totals, days, roles, contact, date.today())
         else:
-            coach.save_plan(db, week, str(f.get("roles") or ""), [str(d) for d in f.getlist("days")], str(f.get("contact") or ""))
+            coach.save_plan(db, week, roles, days, contact)
+        return RedirectResponse("/?planned=1#plan", status_code=303)
+
+    @app.post("/plan/day")
+    async def plan_day(request: Request):
+        """One day of the weekly goals: mark time done, change it, move what's left to the next chosen day, or
+        change a day's planned amounts (the week's total follows)."""
+        from . import goals
+        f = await request.form()
+        action, goal = str(f.get("action") or ""), str(f.get("goal") or "")
+        if action == "set":
+            try:
+                week = stats.week_start(date.fromisoformat(str(f.get("week") or "")))
+            except ValueError:
+                raise HTTPException(400)
+            day = str(f.get("day") or "")
+            vals = {g: f.get(f"v_{g}") for g in goals.GOALS if f.get(f"v_{g}") is not None}
+            if not vals:
+                raise HTTPException(400)
+            for g, v in vals.items():
+                if goals.set_day(db, week, day, g, v if g == "apps" else goals.parse_totals({f"{g}_h": v})[g]) is None:
+                    raise HTTPException(400)
+            return RedirectResponse("/#plan", status_code=303)
+        try:
+            day = date.fromisoformat(str(f.get("day") or ""))
+        except ValueError:
+            raise HTTPException(400)
+        if action in ("done", "adjust"):
+            if goal not in goals.TIMED:
+                raise HTTPException(400)
+            mins = None
+            if action == "adjust":
+                mins = f.get("minutes")
+                if mins is None:
+                    mins = goals.parse_totals({f"{goal}_h": f.get("hours")})[goal]
+            goals.mark_done(db, day, goal, mins)
+        elif action == "move":
+            if goal not in goals.GOALS:
+                raise HTTPException(400)
+            goals.move_to_tomorrow(db, day, goal)
+        else:
+            raise HTTPException(400)
+        return RedirectResponse("/#today", status_code=303)
+
+    @app.post("/plan/note")
+    def plan_note(week: str = Form(""), text: str = Form("")):
+        """The optional look-back note: what helped, or what got in the way. Only the person sees it."""
+        from . import goals
+        try:
+            wk = stats.week_start(date.fromisoformat(week))
+        except ValueError:
+            raise HTTPException(400)
+        goals.save_note(db, wk, text)
         return RedirectResponse("/#plan", status_code=303)
 
     @app.post("/contacts")
