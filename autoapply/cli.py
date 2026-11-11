@@ -621,13 +621,15 @@ def reset_password(s, email: str = "", ask=None, ask_secret=None):
 
 
 def finish(job_id: str, server: str):
-    """Runs on your laptop: pulls the plan and PDFs from the review page and fills a visible Chrome."""
+    """Runs on your laptop: pulls the plan and PDFs from the review page and fills a visible Chrome. It watches for the
+    site's confirmation page while you finish, and marks the job sent with the command the moment it shows."""
     import httpx
     from .fillers import handoff
     if not server:
         sys.exit("set AUTOAPPLY_SERVER (e.g. http://<server-ip>:8787) or pass --server")
+    base = server.rstrip("/")
     params = {"t": os.environ["AUTOAPPLY_TOKEN"]} if os.environ.get("AUTOAPPLY_TOKEN") else {}
-    with httpx.Client(base_url=server.rstrip("/"), params=params, timeout=60) as c:
+    with httpx.Client(base_url=base, params=params, timeout=60) as c:
         r = c.get(f"/bundle/{job_id}")
         if r.status_code != 200:
             sys.exit(f"review page said {r.status_code} for {job_id}")
@@ -641,13 +643,31 @@ def finish(job_id: str, server: str):
             dest.write_bytes(c.get(f"/file/{slot}/{job_id}").raise_for_status().content)
             plan["files"][slot] = str(dest)
     job = b["job"]
+    page = f"{base}/job/{job_id}"
+    marked = []
+
+    def on_sent(confirmation: str):
+        try:
+            with httpx.Client(base_url=base, params=params, timeout=30) as c:
+                ok = c.post(f"/finished/{job_id}", json={"confirmation": confirmation}).status_code == 200
+        except httpx.HTTPError:
+            ok = False
+        marked.append(ok)
+        print(f"Saw the confirmation page. {'Marked as sent with the command' if ok else 'Could not reach the server to mark it'}: {page}")
+
     print(f"Opening {job['company']} · {job['title']} in Chrome. Check it, answer any captcha, and press Submit yourself.")
-    print("Close the tab when you're done.")
-    report = handoff(plan, b["profile"])
+    print("It watches for the confirmation page and marks the job sent when it shows. Close the tab when you're done.")
+    report = handoff(plan, b["profile"], on_sent=on_sent)
     left = [u["label"] for u in report.unanswered]
     if left:
         print("Left for you to answer:", "; ".join(left))
-    print(f"Once it's sent, press 'I sent it with the command' on {server.rstrip('/')}/job/{job_id} (the confirmation email also marks it).")
+    if report.submitted and all(marked):
+        print(f"Done. If it didn't really go through, press 'Not sent? Undo' on {page}")
+    elif report.submitted:
+        print(f"It looked sent, but the server didn't get the mark. Press 'I sent it with the command' on {page}")
+    else:
+        print(f"Closed without a confirmation page, so nothing was marked. If you did send it, press "
+              f"'I sent it with the command' on {page} (the confirmation email also marks it).")
 
 
 if __name__ == "__main__":

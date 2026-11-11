@@ -358,10 +358,51 @@ def fill(plan: dict, profile: dict, shot_dir: Path, headless: bool = True, _subm
     return report
 
 
-def handoff(plan: dict, profile: dict, wait: bool = True) -> Report:
+CONFIRM_URL = r"confirm|thank|success|submitted"
+
+
+def _sent_now(page: Page, a: ATS, start_url: str, text_before: bool) -> str:
+    """The confirmation the site shows after you press Submit, or "" while the form is still there.
+    A move to a /confirmation-style address counts; so does thank-you text, but only text that wasn't already on the
+    form and only once the form's Submit button is gone, so a form that says "thank you for your interest" doesn't."""
+    url = page.url
+    if url != start_url and re.search(CONFIRM_URL, url, re.I):
+        return url
+    m = re.search(a.success, page.inner_text("body"), re.I)
+    if m and not text_before and not page.locator(f"{a.submit} >> visible=true").count():
+        return m.group(0)
+    return ""
+
+
+def watch_for_sent(page: Page, a: ATS, on_sent=None, poll_ms: int = 1000, max_s: float | None = None) -> str:
+    """Watches the tab you're finishing in until you close it. Returns the confirmation it saw ("" if none).
+    on_sent(confirmation) runs once, as soon as the confirmation shows. Never clicks anything."""
+    start_url = page.url
+    try:
+        text_before = bool(re.search(a.success, page.inner_text("body"), re.I))
+    except Exception:
+        return ""
+    sent, until = "", (time.monotonic() + max_s) if max_s else None
+    while until is None or time.monotonic() < until:
+        try:
+            if page.is_closed():
+                break
+            if not sent:
+                sent = _sent_now(page, a, start_url, text_before)
+                if sent and on_sent:
+                    on_sent(sent)
+            page.wait_for_timeout(poll_ms)
+        except Exception:  # the tab or the whole browser was closed
+            break
+    return sent
+
+
+def handoff(plan: dict, profile: dict, wait: bool = True, on_sent=None) -> Report:
     """Fills the form in a visible browser and leaves it open for you to finish and submit.
 
-    Never clicks Submit. Uses the installed Google Chrome when there is one.
+    Never clicks Submit. Uses the installed Google Chrome when there is one. While you finish, it watches for the
+    site's confirmation page: report.submitted and report.confirmation say whether it saw one, and on_sent is
+    called the moment it does.
     """
     a = detect(plan["url"], plan.get("ats"))
     url = a.form_url(plan["url"])
@@ -377,8 +418,12 @@ def handoff(plan: dict, profile: dict, wait: bool = True) -> Report:
         page.wait_for_timeout(2500)
         _fill_page(page, plan, profile, report)
         if wait:
-            page.wait_for_event("close", timeout=0)  # you close the tab when done
-        browser.close()
+            report.confirmation = watch_for_sent(page, a, on_sent)  # you close the tab when done
+            report.submitted = bool(report.confirmation)
+        try:
+            browser.close()
+        except Exception:
+            pass  # already closed by you
     return report
 
 

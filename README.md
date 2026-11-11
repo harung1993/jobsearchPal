@@ -352,8 +352,11 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
   ask, form answers, screen prep) as a formatted document; **Open as a page** gives it a page of its own with
   **Print or save as PDF**.
 - **Finish with the command:** when a site shows a captcha, the review page gives you `autoapply-finish <job>` to
-  run on your laptop (**Copy command** works on the plain http address too). Each run is counted. Once it has run
-  for a job, the page offers **I sent it with the command**; **I applied by hand** stays under More.
+  run on your laptop (**Copy command** works on the plain http address too). Each run is counted, and the job shows
+  *Filled with the command*. While Chrome is open the command watches for the site's confirmation page and marks the
+  job sent the moment it shows (it never clicks anything). If you close Chrome without one, nothing is marked: press
+  **I sent it with the command** if you did send it. A job marked either way has **Not sent? Undo**, which puts it
+  back as it was. **I applied by hand** stays under More.
 - **Stats:** response and interview rates, median time to reply, funnels, results by application
   platform, reply-time buckets, weeks at your work-search minimum, and pipeline trends. *Beyond applications*
   counts the weeks you wrote a plan, the people you got in touch with (and interviews at their companies), and

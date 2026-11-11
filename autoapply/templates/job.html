@@ -2,7 +2,8 @@
 {% block title %}{{ job.company }}{% endblock %}
 {% block body %}
 {% import "_doc.html" as d %}{{ d.doc_css() }}
-<style>.finish{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)} .finish h2{font-size:18px;color:var(--accent-ink)}
+<style>.sent-cmd{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 40%,transparent);margin:0 0 14px} .sent-cmd .grow{flex:1 1 280px}
+.finish{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)} .finish h2{font-size:18px;color:var(--accent-ink)}
 .finish .why{margin:-4px 0 10px;font-weight:600} .finish .steps{margin:0 0 12px;padding-left:20px;display:grid;gap:10px}
 .finish .cmd{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px;padding:10px 12px;background:var(--surface);border-radius:12px;border:1px solid var(--line-2)}
 .finish .cmd code{font-size:15.5px;background:none;padding:0;user-select:all;word-break:break-all;flex:1;min-width:0}
@@ -21,7 +22,7 @@
 {% set pre_n = report.held|selectattr('prefilled')|list|length %}
 {% set need_n = report.held|rejectattr('value')|list|length %}
 <div class="bar" role="region" aria-label="Review and decide">
- {% if kitmode %}<div class="chips"><span class="chip {{ 'ok' if job.status == 'prepped' else '' }}">{{ 'Prepped: apply by hand' if job.status == 'prepped' else 'Not prepared yet' }}</span></div>
+ {% if kitmode %}<div class="chips">{% if command_ran and job.status != 'submitted' %}<span class="chip ok" title="autoapply-finish filled this form in Chrome on your laptop">Filled with the command</span>{% endif %}<span class="chip {{ 'ok' if job.status == 'prepped' else '' }}">{{ 'Prepped: apply by hand' if job.status == 'prepped' else 'Not prepared yet' }}</span></div>
  <div class="act">
   {% if not running %}{% if job.status == 'new' %}<button class="btn" form="prep-form" title="Resume, cover letter and answers. You apply by hand. Uses credits.">Prep only</button>{% endif %}
   <button class="btn" form="auto-form" title="Tailor and fill the form for you to review. Uses credits.">Auto apply</button>{% endif %}
@@ -31,6 +32,7 @@
  </div>
  {% else %}
  <div class="chips">
+  {% if command_ran and job.status != 'submitted' %}<span class="chip ok" title="autoapply-finish filled this form in Chrome on your laptop">Filled with the command</span>{% endif %}
   {% if blocked %}<a href="#preflight" class="chip bad">Fix first <b>{{ blocked|length }}</b></a>{% elif checks %}<a href="#preflight" class="chip ok">Checks pass</a>{% endif %}
   {% if report.held %}<a href="#check" class="chip warn">Check these <b>{{ report.held|length }}</b>{% if need_n %} · {{ need_n }} need you{% endif %}</a>{% endif %}
   {% if report.unanswered %}<a href="#unanswered" class="chip">Unanswered <b>{{ report.unanswered|length }}</b>{% set req = report.unanswered|selectattr('required')|list|length %}{% if req %} · {{ req }} required{% endif %}</a>{% endif %}
@@ -51,6 +53,11 @@
  </div>{% endif %}
  {% endif %}
 </div>
+{% if sent_mark and sent_mark.kind in ('auto', 'command') %}{% set was = sent_mark.detail.get('status') %}
+<p class="notice sent-cmd" id="sent"><span class="grow"><b>Sent with the command.</b>
+ {% if sent_mark.kind == 'auto' %}It saw the site's confirmation page{% if sent_mark.detail.get('confirmation') and not sent_mark.detail.confirmation.startswith('http') %} ("{{ sent_mark.detail.confirmation }}"){% endif %} at {{ sent_mark.at }}.{% else %}You marked it at {{ sent_mark.at }}.{% endif %}
+ If it didn't go through, undo puts it back {{ 'as prepped' if was == 'prepped' else 'as filled' }}.</span>
+ <button class="btn ghost sm" name="action" value="unsend">Not sent? Undo</button></p>{% endif %}
 {% if job.error %}<p class="notice">{{ job.error }}</p>{% endif %}
 
 {% if handoff %}<section class="card finish" style="margin-bottom:16px" id="finish"><h2>Finish this one yourself</h2>

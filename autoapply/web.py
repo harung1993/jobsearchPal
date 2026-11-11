@@ -98,7 +98,7 @@ def make_app(settings, db: DB) -> FastAPI:
         # Sign-in is required everywhere once the account exists, and the account is created first.
         from urllib.parse import quote
         path = request.url.path
-        if path.startswith(("/bundle/", "/file/")) and auth.token_ok(request.query_params.get("t")):
+        if path.startswith(("/bundle/", "/file/", "/finished/")) and auth.token_ok(request.query_params.get("t")):
             return await call_next(request)  # `autoapply finish` on the laptop: machine key, no cookie
         if path in ("/login", "/logout", "/account"):
             return await call_next(request)  # these routes check for themselves
@@ -798,7 +798,8 @@ def make_app(settings, db: DB) -> FastAPI:
                     blocked=preflight.blocking(checks), letter=letter, lead=dict(lead) if lead else None,
                     answers=plan.get("answers", {}), docx=docx, running=rs, apply_link=_web_link(job.get("apply_url") or job.get("url") or ""),
                     notes=(n := _notes(plan)), notes_html=notesdoc.render(n), plan_text=json.dumps(shown, indent=1),
-                    handoff=_handoff(job, report), command_ran=finish.ran(db, job_id))
+                    handoff=_handoff(job, report), command_ran=finish.ran(db, job_id),
+                    sent_mark=finish.last_mark(db, job_id) if job["status"] == "submitted" else None)
 
     def _web_link(u: str) -> str:
         from .history import _web
@@ -849,6 +850,35 @@ def make_app(settings, db: DB) -> FastAPI:
         if not body:
             raise HTTPException(404)
         return page("notes.html", job=job, body=body, nav="", posting_link=_web_link(job.get("url") or ""))
+
+    def _lead_status(job_id: str):
+        from . import leads
+        leads.ensure(db)
+        row = db.conn.execute("select status from leads where job_id = ?", (job_id,)).fetchone()
+        return row[0] if row else None
+
+    def _set_lead(job_id: str, status):
+        if status is not None:
+            db.conn.execute("update leads set status = ? where job_id = ?", (status, job_id))
+            db.conn.commit()
+
+    @app.post("/finished/{job_id:path}")
+    async def finished(job_id: str, request: Request):
+        """`autoapply finish` saw the site's confirmation page: mark it sent with the command. Undo is on the job page."""
+        from . import finish
+        job, _, _ = load(job_id)
+        try:
+            conf = str((await request.json()).get("confirmation") or "")[:200]
+        except ValueError:
+            conf = ""
+        if job["status"] == "submitted":
+            return {"ok": True, "already": True}
+        before = {"status": job["status"], "lead": _lead_status(job_id)}
+        db.update(job_id, status="submitted", error=None, submitted_at=time.strftime("%Y-%m-%d %H:%M"))
+        _set_lead(job_id, "applied" if before["lead"] is not None else None)
+        finish.mark(db, job_id, "auto", before, conf)
+        _record_applied(job, None)
+        return {"ok": True}
 
     @app.get("/bundle/{job_id:path}")
     def bundle(job_id: str):
@@ -1375,6 +1405,16 @@ def make_app(settings, db: DB) -> FastAPI:
         new_plan["held_reviewed"] = True  # from now on a blank consent stays blank: no standing answer fills it
         new_plan["approved_by_user"] = False
 
+        before = {"status": job["status"], "lead": _lead_status(job_id)}  # what a command mark's Undo goes back to
+        if action == "unsend":
+            from . import finish
+            m = finish.undo(db, job_id) if job["status"] == "submitted" else None
+            if m:
+                prev = m["detail"].get("status") or "filled"
+                db.update(job_id, status=prev if prev != "submitted" else "filled", submitted_at=None)
+                _set_lead(job_id, m["detail"].get("lead"))
+                db.delete_event(f"applied:{job_id}")
+            return RedirectResponse(f"/job/{job_id}", status_code=303)
         if action in ("skip", "manual", "command"):  # the lead behind this job follows it
             from . import leads
             leads.ensure(db)
@@ -1386,7 +1426,7 @@ def make_app(settings, db: DB) -> FastAPI:
             from . import finish
             db.update(job_id, status="submitted", plan_json=new_plan, error=None,
                       submitted_at=time.strftime("%Y-%m-%d %H:%M"))
-            finish.mark(db, job_id, "command" if action == "command" else "hand")
+            finish.mark(db, job_id, "command" if action == "command" else "hand", before)
             _record_applied(job, None)
         elif action == "refill":
             r = await run_in_threadpool(fill, new_plan, settings.profile, shots, headless)  # sync Playwright can't share the event loop
