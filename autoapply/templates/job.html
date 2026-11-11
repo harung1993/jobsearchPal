@@ -68,7 +68,8 @@
 </details>
 </section>{% endif %}
 
-{% if job.description %}<section class="card jd-card"><details {% if not files %}open{% endif %}><summary><b>The job description</b></summary><div class="jd">{{ job.description }}</div></details></section>{% endif %}
+{% if job.description %}<section class="card jd-card"><details><summary><b>The job description</b> <span class="jd-peek">{{ job.description|striptags|truncate(140, true, '…') }}</span>
+ <span class="muted jd-n">{{ job.description.split()|length }} words</span></summary><div class="jd">{{ job.description }}</div></details></section>{% endif %}
 <div class="grid g2 mt">
 <div>
  {% if job.status == 'prepped' %}<section class="card kit" id="kit"><h2>Your kit</h2>
@@ -155,7 +156,9 @@ It uses AI credit. Nothing is filled or sent."><input type="hidden" name="mode" 
 It uses credits, roughly 1M tokens of your Claude plan (or OpenRouter credit). Nothing is submitted until you press Submit."><input type="hidden" name="mode" value="apply"><input type="hidden" name="back" value="/job/{{ job.id|urlencode }}"></form>{% endif %}
 {% if letter.can and not letter.busy %}<form id="letter-form" method="post" action="/letter/{{ job.id|urlencode }}"></form>{% endif %}
 <style>
-.jd-card{margin-top:8px}.jd{white-space:pre-wrap;line-height:1.55;margin-top:10px;overflow-wrap:anywhere;max-height:60vh;overflow:auto}
+.jd-card{margin-top:8px;padding:14px 20px}.jd-card summary{display:flex;gap:10px;align-items:baseline;min-width:0}.jd-card summary b{flex:none}
+.jd-peek{flex:1;min-width:0;color:var(--ink-3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jd-n{flex:none;font-weight:500;font-size:13.5px}
+.jd-card details[open] .jd-peek{visibility:hidden}.jd{white-space:pre-wrap;line-height:1.55;margin-top:10px;overflow-wrap:anywhere;max-height:60vh;overflow:auto}
 .kit h2{font-size:18px}.kit .files{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kit .answers td{vertical-align:top;overflow-wrap:anywhere}
 .tried-note{font-size:14.5px;padding:8px 12px;border-radius:12px;background:var(--surface-2)}
 .rewrite{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}

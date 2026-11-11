@@ -2,7 +2,7 @@
 {% block title %}Leads{% endblock %}
 {% block body %}{% from "macros.html" import applied_btn %}
 <div class="ph ph-leads"><div><h1>Leads</h1>
- <div class="sub">Every role from your LinkedIn, Indeed and other job-alert emails, best fit first. Star the ones that feel right; you don't have to look at all of them.</div>
+ <div class="sub">Roles from your job-alert emails, best fit first. Star the ones that feel right; you don't have to look at all of them.</div>
  <details class="how"><summary>How leads work</summary><p>After each email sync, the top leads are looked up on the company's own job board
   (Greenhouse, Lever, Ashby, Workable; no AI). Matches join the roles the daily run can tailor. <b>Star</b> a lead and the next run searches the web for it;
   <b>Auto apply</b> does that for one role right away and uses credits. <b>Score</b> is a rough fit from your titles and resume.</p></details></div>
@@ -12,7 +12,8 @@
  </div></details></div>
 <style>.how{margin-top:6px;font-size:14.5px;color:var(--ink-2)}.how summary{cursor:pointer;color:var(--accent-ink);font-weight:600}.how p{margin:6px 0 0;max-width:760px}</style>
 
-{% with open=src_open %}{% include "_sources.html" %}{% endwith %}
+{% with open=false %}{% include "_sources.html" %}{% endwith %}
+<script>if(location.hash==="#sources"){const s=document.getElementById("sources");if(s)s.open=true}</script>
 {% if running %}<p class="notice" role="status" style="margin:0 0 14px"><span class="grow">A run is going{% if running.at %} (since {{ running.at }}){% endif %}{% if running.label %}: {{ running.label }}{% endif %}. Auto apply is available again when it finishes, and what it found shows under the role.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
  <script>setTimeout(()=>location.reload(),20000)</script>{% endif %}
 <dialog id="pastejob" class="ask pastejob" aria-labelledby="pastejob-t">

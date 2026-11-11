@@ -75,7 +75,7 @@
 </section>
 
 <section class="card people" id="people" aria-labelledby="people-h"><h2 id="people-h"><span>People you've been in touch with</span><span class="count">{{ people|length }}</span></h2>
- <p class="ink2 lead">Many jobs come through people you know a little: a former colleague, a friend of a friend, someone from a meetup. A short note to one of them is real search work. Each one is listed in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
+ <p class="ink2 lead">A short note to a former colleague or a friend of a friend is real search work. Each one goes in your log as a networking contact{% if not contacts_count %}, not counted toward your weekly number unless you turn that on below{% endif %}.</p>
  <form method="post" action="/contacts" class="add-person"><input type="hidden" name="action" value="add">
   <label class="fld"><span>Who</span><input type="text" name="name" maxlength="80" required placeholder="e.g. Sam Rivera"></label>
   <label class="fld"><span>Where they work</span><input type="text" name="company" maxlength="80" value="{{ prefill_company }}" {% if prefill_company %}autofocus{% endif %}></label>

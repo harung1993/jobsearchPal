@@ -24,7 +24,7 @@
 <style>.beyond .num{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}.beyond .sub{font-size:14px;color:var(--ink-2)}</style>
 
 <section class="card mt"><h2>Applications per week <span class="count">last {{ s.weeks }} weeks</span></h2>
- {{ week_bars(s.series, 'application', 'Applications per week for the last ' ~ s.weeks ~ ' weeks, with the weekly minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, H=210, every=4) }}
+ {{ week_bars(s.series, 'application', 'Applications per week for the last ' ~ s.weeks ~ ' weeks, with the weekly minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, H=200, every=4, W=1000) }}
 </section>
 
 <section class="grid g11 mt">
@@ -46,7 +46,7 @@
   <p class="muted" style="font-size:13.5px;margin:10px 0 0">Interviews, offers and rejections, measured from the day you applied.</p>
  </div>
  <div class="card"><h2>{{ ws_label }} weeks <a href="/dua">Details</a></h2>
-  {{ week_bars(s.work_weeks, 'activity', ws_label ~ ' activities per week for the last 12 weeks, with the minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, H=170) }}
+  {{ week_bars(s.work_weeks, 'activity', ws_label ~ ' activities per week for the last 12 weeks, with the minimum of ' ~ s.dua_floor, floor=s.dua_floor, floor_label='Minimum ' ~ s.dua_floor, H=170, W=440) }}
  </div>
 </section>
 
@@ -60,10 +60,10 @@
 
 <section class="grid g11 mt">
  <div class="card"><h2>Roles found per week</h2>
-  {{ week_bars(s.found_series, 'role', 'New matching roles found per week for the last ' ~ s.weeks ~ ' weeks', H=150, every=4) }}
+  {{ week_bars(s.found_series, 'role', 'New matching roles found per week for the last ' ~ s.weeks ~ ' weeks', H=150, every=6, W=440) }}
  </div>
  <div class="card"><h2>Recruiter emails per week</h2>
-  {{ week_bars(s.recruiter_series, 'recruiter email', 'Recruiter emails per week for the last ' ~ s.weeks ~ ' weeks', H=150, every=4) }}
+  {{ week_bars(s.recruiter_series, 'recruiter email', 'Recruiter emails per week for the last ' ~ s.weeks ~ ' weeks', H=150, every=6, W=440) }}
  </div>
 </section>
 

@@ -1,62 +1,63 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
 {% block body %}{% from "_palstack.html" import about_card %}
-{% set tab_sub = {'sorting': 'Each job email goes to the first source that is on; if it fails or is unsure, to the next.',
-                  'daily': 'The morning pass: finds roles, tailors your materials and fills forms. It never submits.',
-                  'costs': 'What the daily pass may do each day, and what it all costs.'}[tab] %}
+{% set tab_sub = {'sorting': 'Which models read your job emails, and in what order.',
+                  'daily': 'The morning pass finds roles, tailors your materials and fills forms. It never submits.',
+                  'costs': 'What the daily pass may do each day, and what it costs.'}[tab] %}
 {% include "_tabs.html" %}
+{% macro choice(name, value, current, title, text, auto=false) %}<label><input type="radio" name="{{ name }}" value="{{ value }}" {% if current %}checked{% endif %}>
+ <span><b>{{ title }}</b>{{ caller() if caller else text }}</span></label>{% endmacro %}
 
-<form method="post" action="/settings">
+<form method="post" action="/settings" data-dirty>
 <input type="hidden" name="tab" value="{{ tab }}">
 <button name="action" value="save" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px">Save</button>
+
 {% if tab == 'sorting' %}
 <input type="hidden" name="sources_form" value="1">
-<section class="card mt">
- <h2>Email sorting <span class="count">tried top to bottom</span></h2>
- <p class="muted" style="font-size:14.5px;margin:-4px 0 14px">Each new email goes to the first source that's on. If it fails, or isn't
-  sure, the email goes to the next one. Anything no source can sort waits for you on the <a href="/emails">Emails</a> page.
-  {% if pending %}<b>{{ pending }} waiting now.</b>{% endif %}</p>
-
+<section class="card mt set">
+ <h2>Sources <span class="count">tried top to bottom</span></h2>
+ <p class="lead">Each new email goes to the first source that's on. If it fails or isn't sure, the next one tries.
+  Anything left waits on the <a href="/emails">Emails</a> page.</p>
+ {% if pending %}<div class="pending"><span><b>{{ pending }}</b> email{{ '' if pending == 1 else 's' }} waiting to be sorted</span>
+  <button class="btn sm" name="action" value="sort">Sort them now</button></div>{% endif %}
  <ol class="srcs">
  {% for name in p.order %}{% set meta = providers[name] %}{% set st = status[name] %}{% set u = usage.get(name) %}{% set t = (p.tests or {}).get(name) %}
   {% set on = name in p.enabled %}
-  <li class="src {% if on %}on{% endif %}" id="src-{{ name }}">
-   <div class="rank" aria-hidden="true">{{ loop.index }}</div>
-   <div class="main-col">
-    <div class="top">
-     <label class="switch"><input type="checkbox" name="on::{{ name }}" value="1" {% if on %}checked{% endif %} onchange="this.form.requestSubmit()">
-      <span><b>{{ meta.name }}</b> <span class="ink2">· {{ meta.via }}</span></span></label>
-     {% if on %}<span class="dot {{ 'ok' if st.ready else 'no' }}">{{ st.note }}</span>{% else %}<span class="pill skipped">Off</span>{% endif %}
-    </div>
-    <div class="row2">
-     <label class="fld"><span>Model</span>
-     {% if name == 'claude' %}
-      <select name="model::claude">{% for m in meta.models %}<option value="{{ m }}" {% if prefs.model('claude') == m %}selected{% endif %}>{{ m|capitalize }}{% if m == 'haiku' %} (fastest, lightest on limits){% endif %}</option>{% endfor %}</select>
-     {% elif name == 'jev' %}
-      <select name="model::jev">{% for m in meta.models %}<option value="{{ m }}" {% if prefs.model('jev') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
-     {% elif name == 'codex' %}
-      <input type="text" name="model::codex" value="{{ p.models.get('codex', '') }}" placeholder="blank = Codex's default" list="codex-models">
-      <datalist id="codex-models"><option value="gpt-5-mini"><option value="gpt-5"><option value="gpt-5-codex"></datalist>
-     {% elif name == 'openrouter' %}
-      {% if or_models %}<select name="model::openrouter"><option value="">Pick a model…</option>
-       {% for m in or_models %}<option value="{{ m.id }}" {% if p.models.get('openrouter') == m.id %}selected{% endif %}>{{ m.name }} · {% if m['in'] == 0 and m.out == 0 %}free{% else %}${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M{% endif %}</option>{% endfor %}</select>
-      {% else %}<input type="text" name="model::openrouter" value="{{ p.models.get('openrouter', '') }}" placeholder="model id, e.g. google/gemini-2.0-flash-001">{% endif %}
-     {% elif name == 'ollama' %}
-      {% if st.models %}<select name="model::ollama"><option value="">Pick a model…</option>{% for m in st.models %}<option value="{{ m }}" {% if p.models.get('ollama') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
-      {% else %}<input type="text" name="model::ollama" value="{{ p.models.get('ollama', '') }}" placeholder="e.g. llama3.1:8b">{% endif %}
-     {% endif %}</label>
-     <div class="btns">
-      <button class="btn sm" name="action" value="test:{{ name }}">Test</button>
-      <button class="btn sm icon" name="action" value="up:{{ name }}" {% if loop.first %}disabled{% endif %} aria-label="Move {{ meta.name }} up">↑</button>
-      <button class="btn sm icon" name="action" value="down:{{ name }}" {% if loop.last %}disabled{% endif %} aria-label="Move {{ meta.name }} down">↓</button>
-     </div>
-    </div>
+  <li class="src" id="src-{{ name }}">
+   <div class="top">
+    <span class="rank" aria-hidden="true">{{ loop.index }}</span>
+    <label class="toggle"><input type="checkbox" name="on::{{ name }}" value="1" {% if on %}checked{% endif %}>
+     <span>{{ meta.name }} <span class="via">{{ meta.via }}</span></span></label>
+    <span class="state {{ 'ok' if st.ready else 'no' }} st">{{ st.note }}</span>
+    <span class="btns">
+     <button class="btn sm icon ghost" name="action" value="up:{{ name }}" {% if loop.first %}disabled{% endif %} aria-label="Move {{ meta.name }} up" title="Move up">↑</button>
+     <button class="btn sm icon ghost" name="action" value="down:{{ name }}" {% if loop.last %}disabled{% endif %} aria-label="Move {{ meta.name }} down" title="Move down">↓</button>
+    </span>
+   </div>
+   <div class="body">
+    <label class="fld"><span>Model</span>
+    {% if name == 'claude' %}
+     <select name="model::claude">{% for m in meta.models %}<option value="{{ m }}" {% if prefs.model('claude') == m %}selected{% endif %}>{{ m|capitalize }}{% if m == 'haiku' %} (fastest, lightest on limits){% endif %}</option>{% endfor %}</select>
+    {% elif name == 'jev' %}
+     <select name="model::jev">{% for m in meta.models %}<option value="{{ m }}" {% if prefs.model('jev') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+    {% elif name == 'codex' %}
+     <input type="text" name="model::codex" value="{{ p.models.get('codex', '') }}" placeholder="blank = Codex's default" list="codex-models">
+     <datalist id="codex-models"><option value="gpt-5-mini"><option value="gpt-5"><option value="gpt-5-codex"></datalist>
+    {% elif name == 'openrouter' %}
+     {% if or_models %}<select name="model::openrouter"><option value="">Pick a model…</option>
+      {% for m in or_models %}<option value="{{ m.id }}" {% if p.models.get('openrouter') == m.id %}selected{% endif %}>{{ m.name }} · {% if m['in'] == 0 and m.out == 0 %}free{% else %}${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M{% endif %}</option>{% endfor %}</select>
+     {% else %}<input type="text" name="model::openrouter" value="{{ p.models.get('openrouter', '') }}" placeholder="model id, e.g. google/gemini-2.0-flash-001">{% endif %}
+    {% elif name == 'ollama' %}
+     {% if st.models %}<select name="model::ollama"><option value="">Pick a model…</option>{% for m in st.models %}<option value="{{ m }}" {% if p.models.get('ollama') == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+     {% else %}<input type="text" name="model::ollama" value="{{ p.models.get('ollama', '') }}" placeholder="e.g. llama3.1:8b">{% endif %}
+    {% endif %}</label>
+    <button class="btn sm" name="action" value="test:{{ name }}">Test</button>
     <div class="facts">
-     {% if u %}<span>Last 30 days: <b>{{ u.sorted or 0 }}</b> of {{ u.emails or 0 }} emails sorted</span>
-      <span>{{ u.calls }} call{{ '' if u.calls == 1 else 's' }}, ~{{ ((u.ms or 0) / 1000)|round(1) }}s each</span>
+     {% if u %}<span><b>{{ u.sorted or 0 }}</b> of {{ u.emails or 0 }} sorted in 30 days</span>
+      <span>~{{ ((u.ms or 0) / 1000)|round(1) }}s a call</span>
       <span>{% if u.cost %}${{ '%.4f'|format(u.cost) }}{% else %}no API cost{% endif %}</span>
       {% if u.failures %}<span class="bad">{{ u.failures }} failed{% if u.last_error %}: {{ u.last_error.error|truncate(90) }}{% endif %}</span>{% endif %}
-     {% else %}<span class="muted">Not used in the last 30 days.</span>{% endif %}
+     {% else %}<span>Not used in the last 30 days</span>{% endif %}
     </div>
     {% if t %}<div class="test {{ 'ok' if t.ok else 'bad' }}">Test {{ t.at }}{% if t.model %} ({{ t.model }}){% endif %}:
       {% if t.ok %}sorted the sample interview email correctly{% if t.confidence %}, {{ (100 * t.confidence)|round|int }}% sure{% endif %}{% else %}{{ t.error }}{% endif %}
@@ -65,217 +66,186 @@
   </li>
  {% endfor %}
  </ol>
- <div class="grid g2 mt">
-  <label class="fld"><span>Jev: minimum confidence</span>
-   <input type="text" name="min_confidence" value="{{ p.min_confidence }}" inputmode="decimal">
-   <small class="muted">Jev returns a probability with each answer. Below this, the email goes to the next source.</small></label>
-  <label class="fld"><span>Ollama address</span>
-   <input type="text" name="ollama_url" value="{{ p.ollama_url }}">
-   <small class="muted">Where Ollama runs, from this server.</small></label>
- </div>
- <div class="actions"><button class="btn primary" name="action" value="save">Save</button>
-  {% if pending %}<button class="btn" name="action" value="sort">Sort the {{ pending }} waiting now</button>{% endif %}</div>
+ <details class="adv mt"><summary>Advanced</summary>
+  <div class="srow"><div class="sl"><b>Jev: minimum confidence</b><p>Below this, the email goes to the next source.</p></div>
+   <div class="sc"><div class="inl"><input type="text" name="min_confidence" value="{{ p.min_confidence }}" inputmode="decimal"><small>0 to 1</small></div></div></div>
+  <div class="srow"><div class="sl"><b>Ollama address</b><p>Where Ollama runs, as seen from this server.</p></div>
+   <div class="sc"><input type="text" name="ollama_url" value="{{ p.ollama_url }}"></div></div>
+ </details>
 </section>
 
-{% endif %}{% if tab == 'costs' %}
+<section class="card mt set">
+ <h2>OpenRouter key <span class="count">used by Jev and OpenRouter</span></h2>
+ <div class="srow"><div class="sl"><b>API key</b><p>Currently {{ key_hint }}.</p></div>
+  <div class="sc"><input type="password" name="openrouter_key" autocomplete="off" placeholder="sk-or-…">
+   {% if key_hint != 'not set' and 'saved here' in key_hint %}<label class="switch"><input type="checkbox" name="forget_key" value="1"> <span>Forget the saved key</span></label>{% endif %}
+   <details class="more"><summary>More</summary>
+    <p>Get one at openrouter.ai/keys. A saved key goes to data/secrets.json on this server, readable only by you, and is never shown again. A key in .env takes priority.</p>
+    <p>Emails sent to Jev or OpenRouter leave your server. Claude and Codex use your subscriptions, and Ollama stays local.</p></details></div></div>
+</section>
+{% endif %}
+
+{% if tab == 'daily' %}
+<section class="card mt set">
+ <h2>Daily run</h2>
+ <div class="lead">Short steps, each in a fresh session. Neither agent can submit: the tool has no submit command.
+  <details class="more"><summary>How a run works</summary>
+   <p>Email sync and job search come first and use no AI. Then prep packs, follow-up drafts, and finding and ranking roles, all on the
+    light model. Last, one session per application on the main model. It needs an agent that can run commands and write files, so it
+    runs on a subscription CLI. Both agents follow the same rules (AGENTS.md).</p></details></div>
+
+ <div class="srow"><div class="sl"><b>Agent</b><p>Which command-line agent does the work.</p></div>
+  <div class="sc wide"><div class="choice">
+  {% for key, label in daily_agents.items() %}{% set st = status[key] %}
+   <label><input type="radio" name="daily_agent" value="{{ key }}" {% if p.daily_agent == key %}checked{% endif %}>
+    <span><b>{{ label }}</b><span class="state {{ 'ok' if st.ready else 'no' }}">{{ st.note }}</span></span></label>
+  {% endfor %}</div></div></div>
+
+ <div class="srow"><div class="sl"><b>Pay for the model with</b><p>Your plan, or an OpenRouter key billed per token.</p></div>
+  <div class="sc wide"><div class="choice">
+   <label><input type="radio" name="daily_via" value="subscription" {% if p.daily_via != 'openrouter' %}checked{% endif %}>
+    <span><b>Your subscription</b>No per-run cost. Counts toward your plan's limits.</span></label>
+   <label><input type="radio" name="daily_via" value="openrouter" {% if p.daily_via == 'openrouter' %}checked{% endif %}>
+    <span><b>OpenRouter key</b>Any model, billed to your key. Stops at your <a href="/settings?tab=costs">monthly budget</a>.
+     <span class="state {{ 'ok' if key_hint != 'not set' else 'no' }}">Key {{ key_hint }}{% if key_hint == 'not set' %}: <a href="/settings?tab=sorting">add it</a>{% endif %}</span></span></label>
+  </div>
+  {% if p.daily_via == 'openrouter' and daily.why %}<p class="notice" style="margin:4px 0 0">The next run will be skipped: {{ daily.why }}.</p>{% endif %}</div></div>
+
+ {# main and light models: only the pair for the chosen agent and payment shows #}
+ <div class="srow" data-when="daily_via=openrouter"><div class="sl"><b>Model</b><p>For each application: tailoring, cover letter, form answers.</p></div>
+  <div class="sc"><input type="text" name="daily_or_model" value="{{ p.daily_or_model }}" list="or-daily" placeholder="{{ or_default[p.daily_agent] or 'pick a model, e.g. openai/…' }}">
+   <datalist id="or-daily">{% for m in or_models if (p.daily_agent != 'claude' or m.id.startswith('anthropic/')) %}<option value="{{ m.id }}">{{ m.name }} · ${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M</option>{% endfor %}</datalist>
+   <small>{% if p.daily_agent == 'claude' %}Claude Code through OpenRouter works only with Anthropic models. Blank uses {{ or_default.claude }}.{% else %}Use the full id with its prefix, e.g. openai/… or anthropic/….{% endif %}
+    A run with a large model often costs a few dollars; each run's real cost shows on <a href="/settings?tab=costs">Costs &amp; limits</a>.</small></div></div>
+ <div class="srow" data-when="daily_via=openrouter"><div class="sl"><b>Model for the light steps</b><p>Finding and ranking, prep packs, drafts. A cheaper model here saves the most.</p></div>
+  <div class="sc"><input type="text" name="daily_or_light_model" value="{{ p.daily_or_light_model }}" list="or-daily" placeholder="blank = same as above"></div></div>
+
+ <div class="srow" data-when="daily_via!=openrouter"><div class="sl"><b>Model</b><p>For each application: tailoring, cover letter, form answers.</p></div>
+  <div class="sc"><div data-when="daily_agent=claude">
+    <select name="daily_model">{% for m in daily_models %}<option value="{{ m }}" {% if p.daily_model == m %}selected{% endif %}>{{ m|capitalize if m else "Claude Code's default" }}</option>{% endfor %}</select>
+    <small>Opus writes the best letters.</small></div>
+   <div data-when="daily_agent=codex"><input type="text" name="daily_codex_model" value="{{ p.daily_codex_model }}" placeholder="blank = Codex's default">
+    <small>Codex can only write inside the jobsearchPal folder; network is on so it can reach job boards.</small></div></div></div>
+ <div class="srow" data-when="daily_via!=openrouter"><div class="sl"><b>Model for the light steps</b><p>Finding and ranking roles, prep packs, follow-up drafts.</p></div>
+  <div class="sc"><div data-when="daily_agent=claude">
+    <select name="daily_light_model">{% for m in daily_models %}<option value="{{ m }}" {% if p.daily_light_model == m %}selected{% endif %}>{{ m|capitalize if m else "same as above" }}</option>{% endfor %}</select>
+    <small>Sonnet is plenty and much lighter on limits.</small></div>
+   <div data-when="daily_agent=codex"><input type="text" name="daily_codex_light_model" value="{{ p.daily_codex_light_model }}" placeholder="blank = same as above"></div></div></div>
+
+ <div class="srow"><div class="sl"><b>Look for new companies</b><p>Once a week the run finds about 10 companies hiring for roles like yours and watches their boards.</p></div>
+  <div class="sc"><select name="discover_weekday">{% for v, l in [(0, 'Never'), (1, 'Mondays'), (2, 'Tuesdays'), (3, 'Wednesdays'), (4, 'Thursdays'), (5, 'Fridays')] %}<option value="{{ v }}" {% if p.discover_weekday == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div></div>
+
+ <details class="adv" {% if p.quick_pick_model %}open{% endif %}><summary>Advanced</summary>
+  <div class="srow"><div class="sl"><b>Quick pick</b><p>Pick the day's roles in one cheap OpenRouter call instead of an agent session.</p></div>
+   <div class="sc"><input type="text" name="quick_pick_model" value="{{ p.quick_pick_model }}" list="or-quick" placeholder="blank = off (the agent picks)">
+    <datalist id="or-quick">{% for m in or_models %}<option value="{{ m.id }}">{{ m.name }} · ${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M</option>{% endfor %}</datalist>
+    <details class="more"><summary>More</summary><p>Usually well under a cent a day. Any model works, e.g. google/gemini-2.5-flash or
+     deepseek/deepseek-chat, on your OpenRouter key and budget. It also reads your job-alert emails and lists the roles that fit; a short
+     light-model step then finds those on the company's own site. The agent still picks on the day it looks for new companies.</p></details></div></div>
+ </details>
+</section>
+
+<section class="card mt set" id="skills">
+ <input type="hidden" name="skills_form" value="1">
+ <h2>Skill matching <span class="count">optional</span></h2>
+ <p class="lead">A model lists each new role's must-have skills and matches them to yours, synonyms included, so "Looker" meets
+  "LookML". Roles that need what you have rank higher.</p>
+ <div class="srow"><div class="sl"><b>On or off</b><p>About {{ "{:,}".format(skills_est.tokens_day) }} tokens a day{% if skills_est.cash_month is not none and skills_est.via != 'claude' %}, about ${{ '%.2f'|format(skills_est.cash_month) }} a month{% endif %}.</p></div>
+  <div class="sc"><label class="toggle"><input type="checkbox" name="skills_enabled" value="1" {% if p.skills_enabled %}checked{% endif %}> <span>Turn on skill matching</span></label>
+   <details class="more"><summary>What it uses</summary><p>{{ skills_est.per_day }} roles in {{ skills_est.calls }} call{{ '' if skills_est.calls == 1 else 's' }}, roughly
+    {{ "{:,}".format(skills_est.tokens_month // 100000 * 100000) if skills_est.tokens_month >= 100000 else "{:,}".format(skills_est.tokens_month) }} tokens a month on weekdays.
+    {% if skills_est.via == 'claude' %}{{ skills_est.note }} Most of it is Claude Code's own overhead on each call, so OpenRouter with a small model is far lighter.
+    {% elif skills_est.cash_month is not none %}With {{ skills_est.model }}. {{ skills_est.note }}{% else %}{{ skills_est.note }}{% endif %}
+    Adding a skill or synonym re-scores everything for free; roles are only read once.
+    {% if skills_usage[0] %}Last 30 days: {{ skills_usage[3] }} roles in {{ skills_usage[0] }} calls, {{ "{:,}".format(skills_usage[1]) }} tokens{% if skills_usage[2] %}, ${{ '%.3f'|format(skills_usage[2]) }} billed{% endif %}.{% endif %}</p></details></div></div>
+
+ <div class="srow" data-when="skills_enabled=1"><div class="sl"><b>Which model reads the postings</b></div>
+  <div class="sc wide"><div class="choice">
+   <label><input type="radio" name="skills_via" value="openrouter" {% if p.skills_via != 'claude' %}checked{% endif %}>
+    <span><b>OpenRouter, a small model</b>Cents a month. Recommended. <span class="state {{ 'ok' if key_hint != 'not set' else 'no' }}">Key {{ key_hint }}</span></span></label>
+   <label><input type="radio" name="skills_via" value="claude" {% if p.skills_via == 'claude' %}checked{% endif %}>
+    <span><b>Your Claude subscription</b>Haiku. No extra cost, but heavier on your plan's limits.</span></label>
+  </div></div></div>
+ <div class="srow" data-when="skills_enabled=1"><div class="sl"><b>Model</b><p>Blank uses the one shown. For Claude: haiku, sonnet or opus.</p></div>
+  <div class="sc"><input type="text" name="skills_model" value="{{ p.skills_model }}" list="or-quick" placeholder="{{ 'haiku' if p.skills_via == 'claude' else 'google/gemini-2.5-flash-lite' }}"></div></div>
+ <div class="srow" data-when="skills_enabled=1"><div class="sl"><b>Roles to read per day</b><p>The best-scored new roles each morning.</p></div>
+  <div class="sc"><div class="inl"><input type="number" name="skills_per_day" value="{{ p.skills_per_day }}" min="5" max="100"><small>5 to 100</small></div></div></div>
+ <div class="srow"><div class="sl"><b>Your skills</b><p>One per line. Other names after "=", separated by commas. Only list what's true.</p></div>
+  <div class="sc"><textarea name="my_skills" rows="7" placeholder="dbt = data build tool&#10;Snowflake&#10;Power BI = PowerBI, BI&#10;Python">{{ skills_text }}</textarea>
+   <div class="inl"><button class="btn sm" name="action" value="skills:build" title="One call: about 20,000 tokens on Claude, far fewer on OpenRouter">{{ 'Redraft from my resume' if skills_text else 'Draft from my resume' }}</button>
+    {% if p.skills_enabled %}<button class="btn sm ghost" name="action" value="skills:tag" title="Uses tokens now">Read today's new roles now</button>{% endif %}</div></div></div>
+</section>
+{% endif %}
+
+{% if tab == 'costs' %}
 <section class="card mt" id="costs">
- <h2>Costs and limits <span class="count">last 30 days</span></h2>
- <input type="hidden" name="limits_form" value="1">
+ <h2>Costs <span class="count">last 30 days</span></h2>
  <div class="grid g4">
   <div class="tile"><div class="lbl">Daily runs</div><div class="num">{{ costs.daily_runs }}</div>
    <div class="sub">{{ '{:,}'.format(costs.daily_tokens|int) }} tokens</div></div>
   <div class="tile"><div class="lbl">At API prices</div><div class="num">${{ '%.2f'|format(costs.daily_est + costs.sort_est) }}</div>
-   <div class="sub">what your subscription covered</div></div>
+   <div class="sub">covered by your subscription</div></div>
   <div class="tile"><div class="lbl">Billed (OpenRouter)</div><div class="num">${{ '%.2f'|format(costs.sort_cost) }}</div>
    <div class="sub">paid per token</div></div>
   <div class="tile"><div class="lbl">This month</div><div class="num">${{ '%.2f'|format(costs.month_spend) }}<small> / ${{ '%g'|format(p.monthly_api_budget) }}</small></div>
    <div class="meter {% if costs.month_spend < p.monthly_api_budget %}ok{% endif %}"><span style="width:{{ [100, (100 * costs.month_spend / (p.monthly_api_budget or 1))|round]|min }}%"></span></div>
    <div class="sub">{% if costs.month_spend >= p.monthly_api_budget %}Budget reached: paid sources are skipped{% else %}paid sources stop at the budget{% endif %}</div></div>
  </div>
- {% if costs.by_stage %}<h3 class="sub3">Daily run by step <span class="muted">(last 30 days)</span></h3>
- <table><thead><tr><th>Step</th><th>Model</th><th class="num">Sessions</th><th class="num">Tokens</th><th class="num">Tokens per session</th><th class="num">At API prices</th><th class="num">Billed</th></tr></thead><tbody>
+ {% if costs.by_stage %}<h3 class="sub3">Daily run by step</h3>
+ <table><thead><tr><th>Step</th><th>Model</th><th class="num">Sessions</th><th class="num">Tokens</th><th class="num">Per session</th><th class="num">At API prices</th><th class="num">Billed</th></tr></thead><tbody>
  {% for r in costs.by_stage %}<tr><td>{{ {'rank': 'Find and rank', 'apply': 'Applications', 'prep': 'Prep packs', 'drafts': 'Follow-up drafts'}.get(r.stage, 'Whole run (before steps)') }}</td>
   <td class="ink2">{{ r.models or '' }}</td><td class="num">{{ r.n }}</td><td class="num">{{ '{:,}'.format(r.tokens|int) }}</td>
   <td class="num">{{ '{:,}'.format((r.tokens / (r.n or 1))|int) }}</td><td class="num">${{ '%.2f'|format(r.est) }}</td><td class="num">${{ '%.2f'|format(r.cost) }}</td></tr>{% endfor %}
- </tbody></table>
- <p class="muted" style="font-size:14px;margin:6px 0 0">Tokens include cached re-reads of the conversation, which are most of the count and are cheap.
-  Each step starts fresh, so a long step doesn't make the next one heavier.</p>{% endif %}
+ </tbody></table>{% endif %}
  {% if costs.by_day %}<details class="mt"><summary>By day</summary><table><thead><tr><th>Day</th><th class="num">Runs</th><th class="num">Tokens</th><th class="num">At API prices</th><th class="num">Billed</th></tr></thead><tbody>
   {% for r in costs.by_day|reverse %}<tr><td>{{ r.day }}</td><td class="num">{{ r.runs }}</td><td class="num">{{ '{:,}'.format((r.tokens or 0)|int) }}</td><td class="num">${{ '%.2f'|format(r.est or 0) }}</td><td class="num">${{ '%.4f'|format(r.cost or 0) }}</td></tr>{% endfor %}
  </tbody></table></details>{% endif %}
- <p class="muted" style="font-size:14px;margin:12px 0">Claude and Codex runs use your subscription, so "at API prices" is a gauge, not a bill: it shows
-  which steps are heavy. Your plan's usage limits are what you'd hit first; a smaller model or fewer roles per day goes further.</p>
- <div class="grid g4">
-  <label class="fld"><span>Roles to tailor per day</span><input type="text" name="picks_per_day" value="{{ p.picks_per_day }}" inputmode="numeric">
-   <small class="muted">The heaviest step: research, resume, cover letter, form.</small></label>
-  <label class="fld"><span><label class="switch"><input type="checkbox" name="prep_enabled" value="1" {% if p.prep_enabled %}checked{% endif %}> Interview prep packs</label></span>
-   <input type="text" name="prep_per_day" value="{{ p.prep_per_day }}" inputmode="numeric"><small class="muted">Per day. Web research, so medium cost.</small></label>
-  <label class="fld"><span><label class="switch"><input type="checkbox" name="drafts_enabled" value="1" {% if p.drafts_enabled %}checked{% endif %}> Follow-up drafts</label></span>
-   <input type="text" name="drafts_per_day" value="{{ p.drafts_per_day }}" inputmode="numeric"><small class="muted">Per day. Short, cheap.</small></label>
-  <label class="fld"><span>Monthly budget for paid APIs ($)</span><input type="text" name="monthly_api_budget" value="{{ p.monthly_api_budget }}" inputmode="decimal">
-   <small class="muted">Jev and OpenRouter stop for the month at this amount.</small></label>
- </div>
- <div class="actions"><button class="btn primary" name="action" value="save">Save</button></div>
+ <details class="more mt"><summary>What these numbers mean</summary>
+  <p>Claude and Codex runs use your subscription, so "at API prices" is a gauge, not a bill: it shows which steps are heavy. Your plan's
+   usage limits are what you'd hit first; a smaller model or fewer roles per day goes further. Tokens include cached re-reads of the
+   conversation, which are most of the count and are cheap.</p></details>
 </section>
 
-{% endif %}{% if tab == 'sorting' %}
-<section class="card mt">
- <h2>OpenRouter key <span class="count">for Jev and OpenRouter</span></h2>
- <div class="grid g2">
-  <label class="fld"><span>API key</span>
-   <input type="password" name="openrouter_key" autocomplete="off" placeholder="sk-or-…">
-   <small class="muted">Currently {{ key_hint }}. Saved keys go to data/secrets.json on this server (owner-only) and are never shown again.
-    A key in .env takes priority.</small></label>
-  <div class="fld"><span>&nbsp;</span>{% if key_hint != 'not set' and 'saved here' in key_hint %}<label class="switch"><input type="checkbox" name="forget_key" value="1"> <span>Forget the saved key</span></label>{% endif %}
-   <small class="muted">Get one at openrouter.ai/keys. Emails sent to Jev or OpenRouter leave your server; Claude and Codex
-    runs use your subscriptions, and Ollama stays local.</small></div>
- </div>
- <div class="actions"><button class="btn primary" name="action" value="save">Save</button></div>
-</section>
-
-{% endif %}{% if tab == 'daily' %}
-<section class="card mt">
- <h2>Daily run <span class="count">finds roles, tailors, fills forms</span></h2>
- <p class="muted" style="font-size:14.5px;margin:-4px 0 10px">Runs as short steps, each in a fresh session: email sync and job search (no AI), then
-  prep packs, follow-up drafts, find and rank (light model), then one session per application (main model).</p>
- <p class="muted" style="font-size:14.5px;margin:-4px 0 14px">This needs an agent that can run commands and write files, so it runs on a
-  subscription CLI. Both follow the same rules (AGENTS.md) and neither can submit: the tool has no submit command.</p>
- <div class="agents">
- {% for key, label in daily_agents.items() %}{% set st = status[key] %}
-  <label class="agent {% if p.daily_agent == key %}on{% endif %}"><input type="radio" name="daily_agent" value="{{ key }}" {% if p.daily_agent == key %}checked{% endif %} onchange="this.form.requestSubmit()">
-   <span><b>{{ label }}</b><br><span class="dot {{ 'ok' if st.ready else 'no' }}">{{ st.note }}</span></span></label>
- {% endfor %}
- </div>
- <h3 class="sub3">Pay for the model with</h3>
- <div class="agents">
-  <label class="agent {% if p.daily_via != 'openrouter' %}on{% endif %}"><input type="radio" name="daily_via" value="subscription" {% if p.daily_via != 'openrouter' %}checked{% endif %} onchange="this.form.requestSubmit()">
-   <span><b>Your subscription</b><br><span class="ink2">Claude Pro/Max or ChatGPT Plus/Pro, signed in on this server. No per-run cost; counts toward your plan's limits.</span></span></label>
-  <label class="agent {% if p.daily_via == 'openrouter' %}on{% endif %}"><input type="radio" name="daily_via" value="openrouter" {% if p.daily_via == 'openrouter' %}checked{% endif %} onchange="this.form.requestSubmit()">
-   <span><b>OpenRouter key</b> · pay per token<br><span class="ink2">No subscription or sign-in needed. Any model on OpenRouter, billed to your key.
-    Stops for the month at your <a href="/settings?tab=costs">budget</a>.</span>
-    <br><span class="dot {{ 'ok' if key_hint != 'not set' else 'no' }}">OpenRouter key {{ key_hint }}{% if key_hint == 'not set' %}: add it on <a href="/settings?tab=sorting">Email sorting</a>{% endif %}</span></span></label>
- </div>
- {% if p.daily_via == 'openrouter' and daily.why %}<p class="notice">The next run will be skipped: {{ daily.why }}.</p>{% endif %}
-
- {% if p.daily_via == 'openrouter' %}
- <div class="grid g2 mt">
-  <label class="fld"><span>OpenRouter model</span>
-   <input type="text" name="daily_or_model" value="{{ p.daily_or_model }}" list="or-daily" placeholder="{{ or_default[p.daily_agent] or 'pick a model, e.g. openai/…' }}">
-   <datalist id="or-daily">{% for m in or_models if (p.daily_agent != 'claude' or m.id.startswith('anthropic/')) %}<option value="{{ m.id }}">{{ m.name }} · ${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M</option>{% endfor %}</datalist>
-   <small class="muted">{% if p.daily_agent == 'claude' %}Claude Code through OpenRouter works only with Anthropic models
-    (OpenRouter's own guidance). Blank uses {{ or_default.claude }}.{% else %}Codex can use most models; use the full id with its prefix, e.g. openai/… or anthropic/….{% endif %}</small></label>
-  <label class="fld"><span>OpenRouter model for the light steps</span>
-   <input type="text" name="daily_or_light_model" value="{{ p.daily_or_light_model }}" list="or-daily" placeholder="blank = same as above">
-   <small class="muted">Finding and ranking, prep packs, drafts. A cheaper model here saves the most.</small></label>
-  <div class="fld"><span>What a run costs</span>
-   <small class="muted">A run reads job pages, writes a resume and cover letter per pick and fills forms, so it uses a lot of tokens:
-    often a few dollars with a large model, far less with a small one. Each run's real cost is read from your key's usage and shown on
-    <a href="/settings?tab=costs">Costs &amp; limits</a>. Fewer roles per day costs less.</small></div>
- </div>
- {% else %}
- <div class="grid g2 mt">
-  <label class="fld"><span>Claude model</span>
-   <select name="daily_model">{% for m in daily_models %}<option value="{{ m }}" {% if p.daily_model == m %}selected{% endif %}>{{ m|capitalize if m else "Claude Code's default" }}</option>{% endfor %}</select>
-   <small class="muted">For each application: tailoring, cover letter, form answers. Opus writes the best letters.</small></label>
-  <label class="fld"><span>Claude model for the light steps</span>
-   <select name="daily_light_model">{% for m in daily_models %}<option value="{{ m }}" {% if p.daily_light_model == m %}selected{% endif %}>{{ m|capitalize if m else "same as above" }}</option>{% endfor %}</select>
-   <small class="muted">Finding and ranking roles, prep packs, follow-up drafts. Sonnet is plenty and much lighter on limits.</small></label>
-  <label class="fld"><span>Codex model</span>
-   <input type="text" name="daily_codex_model" value="{{ p.daily_codex_model }}" placeholder="blank = Codex's default">
-   <small class="muted">Runs with writes limited to the jobsearchPal folder and network on, so it can reach job boards.</small></label>
-  <label class="fld"><span>Codex model for the light steps</span>
-   <input type="text" name="daily_codex_light_model" value="{{ p.daily_codex_light_model }}" placeholder="blank = same as above"></label>
- </div>
- {% endif %}
- <div class="grid g2 mt">
-  <label class="fld"><span>Quick pick with a cheap OpenRouter model</span>
-   <input type="text" name="quick_pick_model" value="{{ p.quick_pick_model }}" list="or-quick" placeholder="blank = off (the agent picks)">
-   <datalist id="or-quick">{% for m in or_models %}<option value="{{ m.id }}">{{ m.name }} · ${{ '%g'|format(m['in']) }} in / ${{ '%g'|format(m.out) }} out per M</option>{% endfor %}</datalist>
-   <small class="muted">Picks the day's roles in one call, usually well under a cent, instead of an agent session. Any model works here,
-    e.g. google/gemini-2.5-flash or deepseek/deepseek-chat. Uses your OpenRouter key and budget. It also reads your job-alert
-    emails (LinkedIn, Indeed...) and lists the roles that fit; a short light-model step then finds only those on the company's
-    own site. The agent still picks on the day it looks for new companies.</small></label>
-  <label class="fld"><span>Look for new companies to watch</span>
-   <select name="discover_weekday">{% for v, l in [(0, 'Never'), (1, 'Mondays'), (2, 'Tuesdays'), (3, 'Wednesdays'), (4, 'Thursdays'), (5, 'Fridays')] %}<option value="{{ v }}" {% if p.discover_weekday == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
-   <small class="muted">Once a week the run searches the web for about 10 companies hiring for roles like yours and starts watching their boards. It's the heaviest light step.</small></label>
- </div>
- <div class="actions"><button class="btn primary" name="action" value="save">Save</button></div>
-</section>
-
-<section class="card mt" id="skills">
- <input type="hidden" name="skills_form" value="1">
- <h2>Skill matching <span class="count">optional · {{ 'on' if p.skills_enabled else 'off' }}</span></h2>
- <p class="muted" style="font-size:14.5px;margin:-4px 0 12px">The built-in ranking only counts words your resume shares with a posting, so
-  "Looker" and "LookML", or "BI" and "business intelligence", never meet. With this on, a model lists each new role's must-have
-  and nice-to-have skills, and they're matched against <b>your skills list</b> below, synonyms included. Roles that need what you
-  have rank higher, and the dashboard shows "4 of 5 must-haves · missing Looker".</p>
- <label class="switch"><input type="checkbox" name="skills_enabled" value="1" {% if p.skills_enabled %}checked{% endif %}><b>Turn on skill matching</b></label>
-
- <div class="tokens {{ 'on' if p.skills_enabled }}">
-  <b>What it uses, honestly:</b> about {{ "{:,}".format(skills_est.tokens_day) }} tokens a day
-  ({{ skills_est.per_day }} roles in {{ skills_est.calls }} call{{ '' if skills_est.calls == 1 else 's' }}), roughly
-  {{ "{:,}".format(skills_est.tokens_month // 100000 * 100000) if skills_est.tokens_month >= 100000 else "{:,}".format(skills_est.tokens_month) }} a month on weekdays.
-  {% if skills_est.via == 'claude' %}{{ skills_est.note }} Most of it is Claude Code's own overhead on each call, so OpenRouter with a small model is far lighter.
-  {% elif skills_est.cash_month is not none %}With {{ skills_est.model }} that's about ${{ '%.2f'|format(skills_est.cash_month) }} a month. {{ skills_est.note }}
-  {% else %}{{ skills_est.note }}{% endif %}
-  Adding a skill or synonym to your list re-scores everything for free; roles are only read once.
-  {% if skills_usage[0] %}<br>Last 30 days: {{ skills_usage[3] }} roles in {{ skills_usage[0] }} calls, {{ "{:,}".format(skills_usage[1]) }} tokens{% if skills_usage[2] %}, ${{ '%.3f'|format(skills_usage[2]) }} billed{% endif %}
-   (<a href="/settings?tab=costs">Costs &amp; limits</a>).{% endif %}
- </div>
-
- <h3 class="sub3">Which model reads the postings</h3>
- <div class="agents">
-  <label class="agent {% if p.skills_via != 'claude' %}on{% endif %}"><input type="radio" name="skills_via" value="openrouter" {% if p.skills_via != 'claude' %}checked{% endif %}>
-   <span><b>OpenRouter, a small model</b> · recommended<br><span class="ink2">Cents a month with google/gemini-2.5-flash-lite.
-    Needs an OpenRouter key; stops at your monthly budget.</span><br><span class="dot {{ 'ok' if key_hint != 'not set' else 'no' }}">OpenRouter key {{ key_hint }}</span></span></label>
-  <label class="agent {% if p.skills_via == 'claude' %}on{% endif %}"><input type="radio" name="skills_via" value="claude" {% if p.skills_via == 'claude' %}checked{% endif %}>
-   <span><b>Your Claude subscription</b> (Haiku)<br><span class="ink2">No extra cost, but every call carries Claude Code's overhead
-    and counts toward your plan's limits.</span></span></label>
- </div>
- <div class="grid g2 mt">
-  <label class="fld"><span>Model</span>
-   <input type="text" name="skills_model" value="{{ p.skills_model }}" list="or-quick" placeholder="{{ 'haiku' if p.skills_via == 'claude' else 'google/gemini-2.5-flash-lite' }}">
-   <small class="muted">Blank uses the one shown. For Claude: haiku, sonnet or opus.</small></label>
-  <label class="fld"><span>Roles to read per day</span>
-   <input type="number" name="skills_per_day" value="{{ p.skills_per_day }}" min="5" max="100">
-   <small class="muted">The best-scored new roles each morning. Tokens grow with this number.</small></label>
- </div>
-
- <h3 class="sub3">Your skills</h3>
- <label class="fld"><textarea name="my_skills" rows="8" placeholder="dbt = data build tool&#10;Snowflake&#10;Power BI = PowerBI, BI&#10;Python">{{ skills_text }}</textarea>
-  <small class="muted">One per line. Add other names after "=", separated by commas. Only list what's true: it decides what counts as a match.</small></label>
- <div class="actions">
-  <button class="btn primary" name="action" value="save">Save</button>
-  <button class="btn" name="action" value="skills:build" title="One call: about 20,000 tokens on Claude, far fewer on OpenRouter">{{ 'Redraft from my resume' if skills_text else 'Draft from my resume' }}</button>
-  {% if p.skills_enabled %}<button class="btn ghost" name="action" value="skills:tag" title="Uses tokens now">Read today's new roles now</button>{% endif %}
- </div>
+<section class="card mt set">
+ <input type="hidden" name="limits_form" value="1">
+ <h2>Limits</h2>
+ <div class="srow"><div class="sl"><b>Roles to tailor per day</b><p>The heaviest step: research, resume, cover letter, form.</p></div>
+  <div class="sc"><div class="inl"><input type="text" name="picks_per_day" value="{{ p.picks_per_day }}" inputmode="numeric"><small>0 to 5</small></div></div></div>
+ <div class="srow"><div class="sl"><b>Interview prep packs</b><p>Web research for each interview, so a medium cost.</p></div>
+  <div class="sc"><div class="inl"><label class="toggle"><input type="checkbox" name="prep_enabled" value="1" {% if p.prep_enabled %}checked{% endif %}></label>
+   <span data-when="prep_enabled=1" class="inl"><input type="text" name="prep_per_day" value="{{ p.prep_per_day }}" inputmode="numeric"><small>per day</small></span></div></div></div>
+ <div class="srow"><div class="sl"><b>Follow-up drafts</b><p>Short and cheap.</p></div>
+  <div class="sc"><div class="inl"><label class="toggle"><input type="checkbox" name="drafts_enabled" value="1" {% if p.drafts_enabled %}checked{% endif %}></label>
+   <span data-when="drafts_enabled=1" class="inl"><input type="text" name="drafts_per_day" value="{{ p.drafts_per_day }}" inputmode="numeric"><small>per day</small></span></div></div></div>
+ <div class="srow"><div class="sl"><b>Monthly budget for paid APIs</b><p>Jev and OpenRouter stop for the month at this amount.</p></div>
+  <div class="sc"><div class="inl"><span class="pre">$</span><input type="text" name="monthly_api_budget" value="{{ p.monthly_api_budget }}" inputmode="decimal"></div></div></div>
 </section>
 {% endif %}
+
+<div class="savebar" role="region" aria-label="Unsaved changes"><span>You have unsaved changes.</span>
+ <button type="button" class="btn ghost" data-undo>Undo</button><button class="btn primary" name="action" value="save">Save changes</button></div>
 </form>
 
 <style>
-.srcs{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.src{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:var(--radius);padding:14px;background:var(--surface)}
-.src.on{border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
-.src:not(.on){background:var(--surface-2);border-color:transparent;padding:8px 14px;align-items:center}
-.src:not(.on) .row2,.src:not(.on) .facts,.src:not(.on) .test{display:none} .src:not(.on) .switch b{color:var(--ink-2);font-weight:600}
-.rank{width:28px;height:28px;border-radius:8px;background:var(--surface-2);display:grid;place-items:center;font-weight:700;color:var(--ink-2)}
-.src.on .rank{background:var(--accent-soft);color:var(--accent-ink)}
-.src .top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.switch{display:flex;gap:8px;align-items:center;cursor:pointer}.switch input{width:18px;height:18px;accent-color:var(--accent)}
-.dot{font-size:14px;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
-.dot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink-3)}.dot.ok::before{background:var(--good-dot)}.dot.no::before{background:var(--warn-dot)}
-.row2{display:flex;gap:10px;align-items:flex-end;margin-top:10px;flex-wrap:wrap}.row2 .fld{flex:1;min-width:220px}
-.btns{display:flex;gap:6px}.btn.icon{width:34px;justify-content:center;padding-left:0;padding-right:0}
-.facts{display:flex;gap:6px 16px;flex-wrap:wrap;margin-top:10px;font-size:14px;color:var(--ink-2)}.facts .bad{color:var(--bad)}
-.test{margin-top:8px;font-size:14px;padding:7px 10px;border-radius:9px}.test.ok{background:var(--good-soft);color:var(--good)}.test.bad{background:var(--bad-soft);color:var(--bad)}
-.agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
-.agent{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line-2);border-radius:14px;padding:12px 14px;cursor:pointer}
-.agent.on{border-color:color-mix(in srgb,var(--accent) 45%,var(--line-2));background:var(--accent-soft)}.agent input{margin-top:3px;accent-color:var(--accent)}
-.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.sub3{font-size:14px;font-weight:650;color:var(--ink-2);margin:18px 0 8px}
-.notice{margin:12px 0 0}
-.tokens{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--ink);font-size:14.5px}.tokens.on{background:var(--surface-2)}
+.pending{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--warn-soft);border-radius:10px;padding:8px 8px 8px 14px;margin:6px 0 12px;font-size:14.5px}
+.srcs{list-style:none;margin:6px 0 0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.src{border-top:1px solid var(--line);padding:12px 14px}.src:first-child{border-top:0}
+.src .top{display:flex;gap:12px;align-items:center}
+.src .toggle{flex:1;min-width:0}.src .via{font-weight:400;color:var(--ink-3);margin-left:6px}
+.rank{width:24px;height:24px;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--ink-3);flex:none}
+.src .btns{display:flex;gap:2px}.btn.icon{width:30px;padding:0}
+.src .body{display:none;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;align-items:end;margin:12px 0 2px 36px}
+.src:has(.toggle input:checked){background:color-mix(in srgb,var(--accent-soft) 35%,transparent)}
+.src:has(.toggle input:checked) .body{display:grid}.src:has(.toggle input:checked) .rank{background:var(--accent-soft);color:var(--accent-ink)}
+.src:not(:has(.toggle input:checked)) .st{display:none}
+.src .facts,.src .test{grid-column:1/-1}
+.facts{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:13.5px;color:var(--ink-3)}.facts .bad{color:var(--bad)}
+.test{font-size:13.5px;padding:6px 10px;border-radius:8px}.test.ok{background:var(--good-soft);color:var(--good)}.test.bad{background:var(--bad-soft);color:var(--bad)}
+.switch{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14.5px}
+.sub3{font-size:14px;font-weight:650;color:var(--ink-2);margin:20px 0 6px}
+.choice .state{display:flex;margin-top:4px}
+.pre{color:var(--ink-3)}
+@media (max-width:640px){.src .body{margin-left:0;grid-template-columns:1fr}.src .via{display:none}}
 </style>
 {{ about_card() }}
 {% endblock %}

@@ -24,7 +24,7 @@
  {% else %}<div class="empty-state"><b>Nothing missing.</b><span>Your resume covers everything these roles ask for.</span></div>{% endif %}
 </section>
 
-<section class="card mt" id="ai" aria-labelledby="ai-h"><h2 id="ai-h">Where these come from</h2>
+<details class="card mt fold-card" id="ai"><summary><b id="ai-h">Where these come from</b></summary>
  {% if g.read_by_ai %}<p class="ink2">{{ g.read_by_ai }} of the {{ g.jobs }} roles were read by <b>Skill matching</b>, so their skills are the
   model's must-have and nice-to-have list. The rest are matched against a fixed list of about 80 skills.</p>
  {% else %}<p class="ink2">Right now every role is matched against a fixed list of about 80 skills: free, but it only knows that list and can't
@@ -32,7 +32,8 @@
  <p class="ink2"><b>Skill matching</b> (off by default, under <a href="/settings?tab=daily#skills">Settings &gt; Daily run</a>) has a model read each new role
   once and list its must-haves and nice-to-haves. This page uses that list too, so nothing is read twice. Settings shows the expected tokens
   and cost before you turn it on.{% if not g.has_list %} It also builds the skills list that "I have this" adds to.{% endif %}</p>
-</section>
+</details>
+<style>.fold-card{padding:14px 20px}.fold-card>summary{font-size:15px;color:var(--ink)}.fold-card[open]>summary{margin-bottom:8px}.fold-card p{margin:0 0 8px}</style>
 
 {% if g.learning %}<section class="card mt" aria-labelledby="learn-h"><h2 id="learn-h">Learning now <span class="count">{{ g.learning|length }}</span></h2>
  <ul class="sk-list">{% for i in g.learning %}{{ row(i, mark(i, "Done, I have this", "have", "") ~ mark(i, "Stop", "clear")) }}{% endfor %}</ul></section>{% endif %}
