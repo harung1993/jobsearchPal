@@ -55,6 +55,12 @@
  </div>
 </section>
 
+<section class="card mt" aria-labelledby="how-h"><h2 id="how-h">How applications went out</h2>
+ {{ hbars(s.sent_how) }}
+ <p class="muted" style="font-size:13.5px;margin:10px 0 0">{% if s.finish_runs %}autoapply-finish ran {{ s.finish_runs }} time{{ '' if s.finish_runs == 1 else 's' }}.{% else %}autoapply-finish hasn't run yet.{% endif %}
+  "With the command" counts the ones you marked I sent it with the command, and ones its confirmation email marked after the command ran.</p>
+</section>
+
 <section class="card mt"><h2>By application platform</h2>
  <table><thead><tr><th>Platform</th><th class="num">Applied</th><th class="num">Replies</th><th class="num hide-sm">Interviews</th><th style="width:34%">Response rate</th></tr></thead><tbody>
  {% for p in s.platforms %}<tr><td><b style="font-weight:600">{{ p.name }}</b></td><td class="num">{{ p.applied }}</td><td class="num">{{ p.responded }}</td><td class="num hide-sm">{{ p.interviews }}</td>

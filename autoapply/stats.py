@@ -214,8 +214,10 @@ def detail(db: DB, today: date | None = None, floor: int = 3, weeks: int = 26) -
 
     states = Counter(j["state"] for j in applied)
     skipped = Counter((j["error"] or "no reason").split(":")[0][:40] for j in jobs if j["status"] == "skipped")
-    from . import coach, goals
+    from . import coach, finish, goals
     return {**base,
+            "sent_how": finish.split(db, applied),
+            "finish_runs": finish.run_count(db),
             "goal_weeks": goals.history(db, today),
             "weeks": weeks,
             # Beyond applications: counts only, from this install (no visits or opens are ever counted).

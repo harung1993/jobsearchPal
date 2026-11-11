@@ -286,6 +286,19 @@ Applied on a different day? Use Applied elsewhere in the menu to pick the date.<
 .ask-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .field-err,.fld .field-err{display:block;color:var(--bad);font-size:13.5px;margin-top:4px}[aria-invalid=true]{border-color:var(--bad)!important}</style>
 <script>
+// Copy buttons. The clipboard API only exists on https or localhost, and this app is usually opened at a plain http
+// address, so fall back to the older copy command. "Copied" only shows when one of them worked; otherwise the text is
+// left selected so you can press Cmd+C.
+window.copyText=async(btn,text)=>{const done=ok=>{const was=btn.dataset.label||btn.textContent;btn.dataset.label=was;
+  btn.textContent=ok?"Copied":"Press Cmd+C";setTimeout(()=>{btn.textContent=was},2000)};
+ try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return done(true)}}catch(e){}
+ const t=document.createElement("textarea");t.value=text;t.setAttribute("readonly","");
+ t.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";document.body.appendChild(t);
+ t.focus();t.select();t.setSelectionRange(0,text.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}
+ if(ok){t.remove();return done(true)}
+ t.remove();const n=btn.previousElementSibling&&["CODE","PRE"].includes(btn.previousElementSibling.tagName)?btn.previousElementSibling:null;
+ if(n){const r=document.createRange();r.selectNodeContents(n);const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}
+ done(false)};
 // In-app dialogs, no browser popups. One <dialog> does both jobs:
 //  - confirm: a form with data-confirm (and data-confirm-title, data-confirm-ok) asks before it is sent;
 //    data-confirm-ref="<id>" takes the text from that <template> instead, so a long list carries it once;
