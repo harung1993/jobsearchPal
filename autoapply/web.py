@@ -102,6 +102,8 @@ def make_app(settings, db: DB) -> FastAPI:
             return await call_next(request)  # `autoapply finish` on the laptop: machine key, no cookie
         if path in ("/login", "/logout", "/account"):
             return await call_next(request)  # these routes check for themselves
+        if path.startswith("/static/"):
+            return await call_next(request)  # the app's own font: the sign-in page needs it too
         account = auth.load(settings.data_dir)
         if auth.valid_cookie(account, request.cookies.get(auth.COOKIE)):
             return await call_next(request)
@@ -170,6 +172,16 @@ def make_app(settings, db: DB) -> FastAPI:
             return _bare("login.html", 401, mode="login", next=nxt, email=email, err="That email and password don't match.")
         throttle.clear(ip)
         return _signed_in(nxt, account)
+
+    static_root = (Path(__file__).parent / "static").resolve()
+
+    @app.get("/static/{name:path}")
+    def static_file(name: str):
+        """Files shipped with the app (the Figtree font). Nothing outside autoapply/static is served."""
+        p = (static_root / name).resolve()
+        if static_root not in p.parents or not p.is_file():
+            raise HTTPException(404)
+        return FileResponse(p, headers={"cache-control": "public, max-age=31536000, immutable"})
 
     @app.post("/logout")
     def logout():

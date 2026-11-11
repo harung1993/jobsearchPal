@@ -374,7 +374,9 @@ Choices are saved in `data/settings.json`. Nothing on the page needs a restart.
 - **Work search:** see [Unemployment help](#unemployment-help). It also holds *People you've been in touch with*.
 - **Reflection** (`/reflect`): the fifteen-minute values reflection, and what you wrote before.
 
-Light and dark mode, and it works on a phone.
+Light and dark mode, and it works on a phone. It looks like the other palStack apps: the Figtree typeface (served by the
+app itself from `/static/fonts`, no font service), a light sidebar, and a sunrise scene on the dashboard and the sign-in page.
+Motion is finite and plays once; with Reduce Motion the finished picture shows.
 
 ## FAQ
 

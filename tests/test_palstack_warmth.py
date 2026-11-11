@@ -87,7 +87,7 @@ def test_benefit_dates_are_amber_until_they_are_close(tmp_path):
 def test_warm_tokens_and_reduced_motion_still_hold(tmp_path):
     s, db, c = _app(tmp_path)
     html = c.get("/").text
-    assert "--bg:#f6f2ea" in html and "--bg:#f1f4f2" not in html
+    assert "--bg:#f5f2ec" in html and "--bg:#f1f4f2" not in html  # warm paper, not the cool grey
     assert "prefers-reduced-motion:reduce" in html and " forwards" not in html
 
 

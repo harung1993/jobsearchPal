@@ -34,3 +34,50 @@
   {% if play == 'week' %}<rect class="hz-light" x="120" y="94" width="760" height="6" rx="3"/><rect class="hz-light" x="220" y="104" width="560" height="4" rx="2"/><rect class="hz-light" x="340" y="112" width="320" height="3" rx="1.5"/>{% endif %}
  </svg>
 </div>{% endmacro %}
+
+
+{# The dashboard's hero scene: the same sunrise, taller, with hills and a little sky. Celebrations play here as in horizon();
+   the quiet entrance (hills settle, clouds drift, sun rises) plays only on the first dashboard view of a visit (html.intro). #}
+{% macro scene_css() %}<style>
+:root{--hz-sky-0:#fffaf1;--hz-hill-1:#cfe2d8;--hz-hill-2:#e2ece4;--hz-cloud:#ffffff}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--hz-sky-0:#151d19;--hz-hill-1:#1a3a33;--hz-hill-2:#162b26;--hz-cloud:#8a7a52}}
+:root[data-theme="dark"]{--hz-sky-0:#151d19;--hz-hill-1:#1a3a33;--hz-hill-2:#162b26;--hz-cloud:#8a7a52}
+.hz.scene{--hz-h:190px;background:linear-gradient(to bottom,var(--hz-sky-1),var(--hz-sky-2) 76%)}
+.hz.scene .hz-hill-1{fill:var(--hz-hill-1)}.hz.scene .hz-hill-2{fill:var(--hz-hill-2)}
+.hz.scene .hz-cloud{fill:var(--hz-cloud);opacity:.75}
+:root[data-theme="dark"] .hz.scene .hz-cloud{opacity:.22}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .hz.scene .hz-cloud{opacity:.22}}.hz.scene .hz-glow{opacity:.9}
+.hz.scene .hz-sun,.hz.scene .hz-hill-1,.hz.scene .hz-hill-2,.hz.scene .hz-cloud,.hz.scene .hz-glow{transform-box:fill-box;transform-origin:center}
+.hz.scene .hz-sun{animation:none}
+html.intro .hz.scene .hz-sun{animation:hz-rise 1.6s cubic-bezier(.2,.8,.2,1) .25s 1 backwards}
+html.intro .hz.scene .hz-glow{animation:hz-fade 1.8s ease-out .35s 1 backwards}
+html.intro .hz.scene .hz-hill-2{animation:hz-settle 1.1s cubic-bezier(.2,.8,.2,1) 1 backwards}
+html.intro .hz.scene .hz-hill-1{animation:hz-settle 1.1s cubic-bezier(.2,.8,.2,1) .12s 1 backwards}
+html.intro .hz.scene .hz-cloud{animation:hz-drift 2.6s ease-out 1 backwards}
+@keyframes hz-settle{from{transform:translateY(18px);opacity:0}}
+@keyframes hz-fade{from{opacity:0}}
+@keyframes hz-drift{from{transform:translateX(-28px);opacity:0}}
+@media (max-width:600px){.hz.scene{--hz-h:130px}}
+@media (prefers-reduced-motion:reduce){html.intro .hz.scene *{animation:none!important}}
+</style>{% endmacro %}
+
+{% macro scene(hour=9, play="") %}{% set lift = [[(hour - 13)|abs * 3, 0]|max, 24]|min %}
+<div class="hz scene{{ ' play-' ~ play if play }}" aria-hidden="true">
+ <svg viewBox="0 0 1000 200" preserveAspectRatio="xMidYMax slice">
+  <defs><radialGradient id="hz-glow-g"><stop offset="0" stop-color="var(--sun)" stop-opacity=".45"/><stop offset="1" stop-color="var(--sun)" stop-opacity="0"/></radialGradient></defs>
+  <ellipse class="hz-cloud" cx="250" cy="52" rx="74" ry="9"/><ellipse class="hz-cloud" cx="292" cy="44" rx="38" ry="8"/>
+  <ellipse class="hz-cloud" cx="760" cy="68" rx="90" ry="8"/><ellipse class="hz-cloud" cx="722" cy="61" rx="34" ry="7"/>
+  {% if play == 'offer' %}<g><path class="hz-ray" d="M500 132V70"/><path class="hz-ray" d="M500 132L430 82"/><path class="hz-ray" d="M500 132L570 82"/><path class="hz-ray" d="M500 132L382 108"/><path class="hz-ray" d="M500 132L618 108"/></g>{% endif %}
+  {% if play == 'interview' %}<circle class="hz-ring" cx="500" cy="140" r="34"/><circle class="hz-ring r2" cx="500" cy="140" r="34"/>{% endif %}
+  <g transform="translate(0 {{ 0 if play in ('interview', 'offer') else lift }})">
+   <circle class="hz-glow" cx="500" cy="{{ 128 if play == 'offer' else 146 }}" r="120" fill="url(#hz-glow-g)"/>
+   <circle class="hz-sun" cx="500" cy="{{ 128 if play == 'offer' else (140 if play == 'interview' else 150) }}" r="{{ 38 if play == 'offer' else 34 }}" fill="var(--sun)"/></g>
+  <path class="hz-hill-2" d="M0 158 C120 132 210 140 300 146 C390 152 430 136 520 142 C640 150 720 128 820 134 C900 139 960 146 1000 144 V160 H0Z"/>
+  <path class="hz-hill-1" d="M0 120 C70 118 150 138 230 150 C270 156 300 158 330 160 H0Z"/>
+  <path class="hz-hill-1" d="M1000 112 C930 116 860 136 790 150 C750 157 720 159 690 160 H1000Z"/>
+  <rect class="hz-water" x="0" y="158" width="1000" height="42"/>
+  <path class="hz-wave" d="M60 172h120M260 180h90M410 168h180M650 182h80M800 172h140M120 192h70M560 194h110"/>
+  <path class="hz-glint" d="M466 164h68v3h-68zM480 173h40v2.5h-40zM489 182h22v2h-22z"/>
+  {% if play == 'week' %}<rect class="hz-light" x="120" y="166" width="760" height="6" rx="3"/><rect class="hz-light" x="220" y="177" width="560" height="4" rx="2"/><rect class="hz-light" x="340" y="187" width="320" height="3" rx="1.5"/>{% endif %}
+ </svg>
+</div>{% endmacro %}

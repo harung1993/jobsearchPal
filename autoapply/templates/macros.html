@@ -13,7 +13,7 @@
  {% for wk, c in series %}{% set h = H * c / top %}{% set gap = [2, bw * 0.22]|max %}{% set x = pad + loop.index0 * bw + gap / 2 %}{% set w = bw - gap %}
   <g data-tip="Week of {{ wk.strftime('%b %-d') }}: {{ c }} {{ noun }}{{ '' if c == 1 else 's' }}">
    <rect class="hit" x="{{ pad + loop.index0 * bw }}" y="0" width="{{ bw }}" height="{{ H }}"/>
-   {% if c %}{% set r = [4, w / 2, h]|min %}<path class="bar {% if loop.last %}now{% endif %}" d="M{{ x }},{{ H }} V{{ H - h + r }} q0,-{{ r }} {{ r }},-{{ r }} h{{ w - 2 * r }} q{{ r }},0 {{ r }},{{ r }} V{{ H }} Z"/>{% endif %}</g>
+   {% if c %}{% set r = [4, w / 2, h]|min %}<path class="bar {% if loop.last %}now{% endif %}" style="--i:{{ loop.index0 }}" d="M{{ x }},{{ H }} V{{ H - h + r }} q0,-{{ r }} {{ r }},-{{ r }} h{{ w - 2 * r }} q{{ r }},0 {{ r }},{{ r }} V{{ H }} Z"/>{% endif %}</g>
   {% if (n - 1 - loop.index0) % every == 0 %}<text x="{{ x + w / 2 }}" y="{{ H + 18 }}" text-anchor="middle">{{ wk.strftime('%-m/%-d') }}</text>{% endif %}{% endfor %}
  {% if floor %}{% set fy = H - H * floor / top %}<line class="floor" x1="{{ pad }}" x2="{{ W }}" y1="{{ fy }}" y2="{{ fy }}"/>
   <text class="flabel" x="{{ W - 2 }}" y="{{ fy - 6 }}" text-anchor="end">{{ floor_label }}</text>{% endif %}
