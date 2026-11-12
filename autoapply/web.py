@@ -874,6 +874,12 @@ def make_app(settings, db: DB) -> FastAPI:
             db.conn.execute("update leads set status = ? where job_id = ?", (status, job_id))
             db.conn.commit()
 
+    @app.get("/job-status/{job_id:path}")
+    def job_status(job_id: str):
+        """The job page asks this every few seconds, so a mark from `autoapply-finish` shows without a reload."""
+        job, _, _ = load(job_id)
+        return {"status": job["status"], "submitted_at": job.get("submitted_at")}
+
     @app.post("/finished/{job_id:path}")
     async def finished(job_id: str, request: Request):
         """`autoapply finish` saw the site's confirmation page: mark it sent with the command. Undo is on the job page."""

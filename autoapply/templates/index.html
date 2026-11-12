@@ -10,14 +10,16 @@
    <h1 id="hello">{{ greet.title }}</h1>
    {% if celebrate and celebrate.kind not in ('week', 'milestone') %}<p class="hello-line cel-{{ celebrate.kind }}" role="status"><b>{{ celebrate.title }}.</b> {{ celebrate.line }}</p>
    {% else %}<p class="hello-line">{{ greet.line }}</p>{% endif %}
-   {% if greet.market %}<p class="market">{{ greet.market.text }} <small>{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener">{{ greet.market.source }}</a>{% else %}{{ greet.market.source }}{% endif %}, checked {{ strptime(greet.market.checked).strftime("%b %-d, %Y") }}</small></p>{% endif %}
-   <div class="sub">{{ s.today.strftime("%A, %B %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} found · {{ s.ready|length }} ready for you</div>
+   {% if greet.market %}<p class="market">{{ greet.market.text }} {% set src = greet.market.source ~ ", checked " ~ strptime(greet.market.checked).strftime("%b %-d, %Y") %}{% if greet.market.url %}<a href="{{ greet.market.url }}" target="_blank" rel="noopener" title="{{ src }}">Source</a>{% else %}<span title="{{ src }}">({{ src }})</span>{% endif %}</p>{% endif %}
   </div>
- <div class="ph-acts"><button type="button" class="btn applied-open" title="Log an application you sent on LinkedIn, a company site or by email">Applied elsewhere</button>{% if running %}<a class="running" role="status" href="/runs" title="See what it's doing"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.label %} · {{ running.label }}{% endif %}</a>
+  <div class="welcome-row">
+   <div class="sub">{{ s.today.strftime("%a, %b %-d") }} · {{ s.new_count }} new role{{ '' if s.new_count == 1 else 's' }} · {{ s.ready|length }} ready for you</div>
+   <div class="ph-acts">{% if running %}<a class="running" role="status" href="/runs" title="See what it's doing"><i aria-hidden="true"></i>Running{% if running.at %} since {{ running.at }}{% endif %}{% if running.label %} · {{ running.label }}{% endif %}</a>
   <script>setTimeout(()=>location.reload(),20000)</script>
  {% else %}<form method="post" action="/run" class="runnow" onsubmit="this.querySelector('button').disabled=true">
   <label class="ink2" for="picks">Roles</label><select id="picks" name="picks">{% for n in range(1, 6) %}<option {% if n == picks_default %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
   <button class="btn" title="Find, tailor and fill more roles now. Nothing is submitted.">Run now</button></form>{% endif %}</div>
+  </div>
  </div>
  {{ scene(s.now_hour, ('week' if celebrate.kind == 'milestone' else celebrate.kind) if celebrate else "") }}
  <div class="hero-stats" role="group" aria-label="Headline numbers">
@@ -32,8 +34,8 @@
  <div class="tile"><div class="lbl">Interviews</div><div class="num" data-count="{{ s.interviews }}">{{ s.interviews }}</div>
   <div class="sub">{{ s.waiting }} still in play · {{ s.rejected }} closed</div></div>
  </div>
- {% if rejection %}<div class="palnote" role="note">
-  <svg class="stone" width="96" height="22" viewBox="0 0 96 22" aria-hidden="true"><path d="M2 16h92" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M24 20h48" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/><ellipse cx="48" cy="13" rx="5" ry="3.4" fill="var(--accent-ink)"/></svg>
+ {% if rejection %}{% set slim = greet.state == 'rejection' and not if_then %}<div class="palnote{{ ' slim' if slim }}" role="note">
+  {% if not slim %}<svg class="stone" width="96" height="22" viewBox="0 0 96 22" aria-hidden="true"><path d="M2 16h92" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M24 20h48" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/><ellipse cx="48" cy="13" rx="5" ry="3.4" fill="var(--accent-ink)"/></svg>{% endif %}
   {% if greet.state != 'rejection' %}<p><b>{{ rejection.company }} said no this time.</b> Rejections sting, even when you expect them. It's one stone in a very big ocean: most no's come down to numbers and screening, and one doesn't decide the rest of your search.</p>{% endif %}
   {% if if_then %}<p class="ifthen">You wrote this for a day like today: <q>{{ if_then }}</q></p>{% endif %}
   <form method="post" action="/pal/seen" class="acts"><input type="hidden" name="key" value="{{ rejection.key }}">
@@ -44,7 +46,8 @@
 {% if today_goals %}{{ g.today_card(today_goals, just_met, so_far) }}{% endif %}
 
 <style>.welcome{overflow:hidden;margin-bottom:24px;padding:0}
-.welcome-b{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding:26px 28px 8px;
+.welcome .hz.scene{--hz-h:140px}
+.welcome-b{display:grid;gap:14px;padding:26px 28px 6px;
  background:linear-gradient(to bottom,var(--hz-sky-0),var(--hz-sky-1))}
 .hero-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
 .hero-stats .tile{padding:18px 22px 20px;min-width:0}.hero-stats .tile+.tile{border-left:1px solid var(--line)}
@@ -62,15 +65,16 @@ html.intro .wdots i.on:nth-child(4){animation-delay:1.3s}html.intro .wdots i.on:
 @media (prefers-reduced-motion:reduce){html.intro .hero-stats .tile,html.intro .welcome-t,html.intro .wdots i.on{animation:none}}
 @media (max-width:860px){.hero-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-stats .tile:nth-child(3){border-left:0}
  .hero-stats .tile:nth-child(n+3){border-top:1px solid var(--line)}}
-.welcome-t{min-width:0;flex:1 1 420px;display:grid;gap:6px}
+.welcome-t{min-width:0;display:grid;gap:8px}
+.welcome-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line)}
 .welcome h1{font-size:34px;line-height:1.15;margin:0;letter-spacing:-.03em;font-weight:800;text-wrap:balance}
 .hello-line{margin:0;color:var(--ink-2);font-size:16.5px;max-width:64ch}
 .welcome .sub{color:var(--ink-3);font-size:14.5px}
-.market{margin:2px 0 0;background:var(--sun-soft);border-radius:10px;padding:8px 12px;font-size:15px;max-width:64ch}.market small{display:block;color:var(--ink-3);font-size:13px}
+.market{margin:0;color:var(--ink-3);font-size:14px;max-width:72ch}.market a{color:var(--ink-3);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 .cel{display:grid;gap:2px;background:var(--sun-soft);border-radius:10px;padding:10px 12px;margin-bottom:4px}.cel b{font-size:16px}.cel span{color:var(--ink-2);font-size:15px}
 .palnote{margin:16px 22px 20px;padding:12px 16px;border-radius:12px;background:var(--accent-soft);display:grid;gap:8px}
-.palnote p{margin:0}.palnote .acts{display:flex;gap:8px;flex-wrap:wrap;margin:0}
-@media (max-width:600px){.welcome-b{padding:18px 16px 6px}.welcome h1{font-size:27px}.palnote{margin:0 16px 16px}
+.palnote p{margin:0}.palnote.slim{background:none;padding:0 0 0 0;margin:14px 22px 18px}.palnote .acts{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+@media (max-width:600px){.welcome-b{padding:18px 16px 6px}.welcome h1{font-size:27px}.palnote{margin:0 16px 16px}.welcome .hz.scene{--hz-h:100px}
  .hero-stats .tile{padding:14px 16px 16px}.ph-acts{flex-wrap:wrap}}</style>
 <style>.wdots{display:flex;gap:6px;margin-top:8px}.wdots i{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2)}.wdots i.on{background:var(--sun);border-color:var(--sun)}
 .ph-acts{display:flex;gap:8px;align-items:center}.runnow{display:flex;gap:6px;align-items:center;margin:0}.runnow select{width:auto;min-width:60px}

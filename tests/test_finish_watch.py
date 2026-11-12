@@ -120,3 +120,17 @@ def test_old_finish_log_table_gets_the_detail_column(tmp_path):
     db.conn.execute("insert into finish_log values ('j', '2026-11-11 10:00', 'run')")
     finish.mark(db, "j", "auto", {"status": "filled"}, "Thanks")
     assert finish.ran(db, "j") and finish.last_mark(db, "j")["detail"]["confirmation"] == "Thanks"
+
+
+def test_job_page_sees_the_mark_and_drops_old_submit_warnings(tmp_path, monkeypatch):
+    s, db, c = _setup(tmp_path, monkeypatch)
+    db.update("greenhouse:acme:1", report_json={"filled": [], "submit_clicked": True, "errors": [
+        {"label": "(submit)", "error": "Submit was pressed but not confirmed."}, {"label": "Phone", "error": "bad format"}]})
+    assert TestClient(c.app).get("/job-status/greenhouse:acme:1").status_code == 401   # signed in only
+    assert c.get("/job-status/greenhouse:acme:1").json()["status"] == "filled"
+    html = c.get("/job/greenhouse:acme:1").text
+    assert "/job-status/" in html and "pressed but not confirmed" in html               # the page polls; warning still matters
+    TestClient(c.app).post("/finished/greenhouse:acme:1?t=finish-key-123", json={})
+    assert c.get("/job-status/greenhouse:acme:1").json()["status"] == "submitted"
+    html = c.get("/job/greenhouse:acme:1").text
+    assert "pressed but not confirmed" not in html and "bad format" in html               # sent: only the stale one goes

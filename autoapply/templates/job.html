@@ -15,6 +15,7 @@
 {% if report.submitted %}<p class="notice" style="background:var(--good-soft)">Sent {{ job.submitted_at }}. That's one more door you knocked on. Confirmation: “{{ report.confirmation }}”</p>{% endif %}
 
 {% set kitmode = job.status in ('new', 'prepped') %}
+{% set errors = report.errors|rejectattr('label', 'equalto', '(submit)')|list if job.status == 'submitted' else report.errors %}
 {% if lead and lead.note %}<p class="tried-note"><b>Last run {{ lead.tried_at[5:10]|replace('-', '/') }} {{ lead.tried_at[11:16] }}:</b> {{ lead.note }} <a href="/runs">Run log</a></p>{% endif %}
 {% if kitmode and running %}<p class="notice" role="status"><span class="grow">A run is going{% if running.label %}: {{ running.label }}{% endif %}. What it makes shows up on this page.</span><a class="btn sm" href="/runs">See what it's doing</a></p>
  <script>setTimeout(()=>location.reload(),20000)</script>{% endif %}
@@ -36,7 +37,7 @@
   {% if blocked %}<a href="#preflight" class="chip bad">Fix first <b>{{ blocked|length }}</b></a>{% elif checks %}<a href="#preflight" class="chip ok">Checks pass</a>{% endif %}
   {% if report.held %}<a href="#check" class="chip warn">Check these <b>{{ report.held|length }}</b>{% if need_n %} · {{ need_n }} need you{% endif %}</a>{% endif %}
   {% if report.unanswered %}<a href="#unanswered" class="chip">Unanswered <b>{{ report.unanswered|length }}</b>{% set req = report.unanswered|selectattr('required')|list|length %}{% if req %} · {{ req }} required{% endif %}</a>{% endif %}
-  {% if report.errors %}<a href="#problems" class="chip bad">Problems <b>{{ report.errors|length }}</b></a>{% endif %}
+  {% if errors %}<a href="#problems" class="chip bad">Problems <b>{{ errors|length }}</b></a>{% endif %}
   <a href="#answers" class="chip ok">Filled <b>{{ report.filled|length }}</b></a>
  </div>
  {% if job.status != 'submitted' %}<div class="act">
@@ -120,7 +121,7 @@
    fill any you want and press <b>Save and refill</b>.</p><table>{% for u in report.unanswered %}<tr><td>{{ u.label }}{% if u.required %} <b>*</b>{% else %} <span class="muted">optional</span>{% endif %}</td><td style="width:45%">
   {% if u.options %}<select name="ans::{{ u.label }}"><option value=""></option>{% for o in u.options %}<option>{{ o }}</option>{% endfor %}</select>
   {% else %}<input type="text" name="ans::{{ u.label }}">{% endif %}</td></tr>{% endfor %}</table></section>{% endif %}
- {% if report.errors %}<section class="card mt" id="problems"><h2>Problems</h2><ul style="margin:0;padding-left:18px">{% for e in report.errors %}<li>{{ e.label }}: {{ e.error }}</li>{% endfor %}</ul></section>{% endif %}
+ {% if errors %}<section class="card mt" id="problems"><h2>Problems</h2><ul style="margin:0;padding-left:18px">{% for e in errors %}<li>{{ e.label }}: {{ e.error }}</li>{% endfor %}</ul></section>{% endif %}
 
  {% if not kitmode %}<section class="card mt" id="answers"><details><summary><b>Filled answers ({{ report.filled|length }})</b> · what the form has now</summary>
   <table style="margin-top:8px">{% for f in report.filled %}<tr><td class="ink2" style="width:40%">{{ f.label }}</td><td>{{ f.value }}</td><td><span class="pill">{{ f.source }}</span></td></tr>{% endfor %}</table>
@@ -202,5 +203,16 @@ document.addEventListener("click",e=>document.querySelectorAll("details.menu[ope
 document.querySelectorAll(".ptabs button").forEach(b=>b.onclick=()=>{const box=b.closest(".card");
  box.querySelectorAll(".ptabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
  box.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!==b.dataset.p)});
+// autoapply-finish marks the job sent from the laptop: check every few seconds and show it without a manual reload.
+// If you've typed in a field, it asks before reloading so your edits aren't lost.
+(()=>{const id={{ job.id|tojson }},was={{ job.status|tojson }};let typed=false,told=false;
+ document.addEventListener("input",()=>typed=true);
+ const check=()=>{if(document.hidden||told)return;fetch("/job-status/"+encodeURI(id),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
+  if(!d||d.status===was)return;
+  if(!typed){location.reload();return}
+  told=true;const p=document.createElement("p");p.className="notice";p.setAttribute("role","status");
+  p.innerHTML='<span class="grow">This job changed since you opened it'+(d.status==="submitted"?": it was marked sent":"")+'.</span><button type="button" class="btn sm">Reload</button>';
+  p.querySelector("button").onclick=()=>location.reload();document.querySelector("main,body").prepend(p)}).catch(()=>{})};
+ setInterval(check,5000);document.addEventListener("visibilitychange",check)})();
 </script>
 {% endblock %}

@@ -26,8 +26,7 @@ LINES = {
     "reply": ["{co} wrote back. Let's look at that first.",
               "Someone's reaching out: {co}. Worth a look this morning."],
     # Not personal, not permanent, and one thing in their control; never "it's never you" (Kroft, Lange and Notowidigdo 2013; see VOICE.md, rule 3).
-    "rejection": ["{co} said no this time. Rejections sting, even when you expect them. It's one stone in a very big ocean: "
-                  "most no's come down to numbers and screening, and one doesn't decide the rest of your search.",
+    "rejection": ["{co} said no this time. It stings. It's one stone in a very big ocean, and it doesn't decide the rest of your search.",
                   "A no from {co}. That stings, and it's fine that it does. One stone in a big ocean; most applications end "
                   "this way, even good ones. {ready}"],
     # After a week or more with nothing done: no catch-up list, just what's ready and one place to start.
