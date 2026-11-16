@@ -50,6 +50,10 @@ The screenshots use fictional demo data (`scripts/demo-data.py`; regenerate them
 
 ## How it works
 
+![How jobsearchPal works: where jobs come from, where AI is used, how the Skills page learns, and what only you do](docs/how-it-works.png)
+
+The diagram's source is [`docs/how-it-works.html`](docs/how-it-works.html). The same run, step by step:
+
 ```
 6:30am weekdays (cron or the Docker scheduler) ─► scripts/daily.sh, in short steps:
   no AI:     autoapply sync-email (a small model sorts the emails) · autoapply find (boards, job sites)
