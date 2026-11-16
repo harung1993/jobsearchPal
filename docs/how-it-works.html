@@ -1,0 +1,77 @@
+<!-- Source for docs/how-it-works.png. Render at 2x, 1240x850 CSS px, e.g. Playwright: page.screenshot(full_page=True) with device_scale_factor=2. -->
+<html><head><style>
+@font-face{font-family:Figtree;src:url(../autoapply/static/fonts/figtree-latin-wght.woff2) format('woff2');font-weight:300 900}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f2ec;--s:#fffefb;--s2:#f4f0e8;--line:#cfc6b6;--ink:#1d2420;--ink2:#474d46;--ink3:#686c64;--acc:#0f6e66;--accs:#e6f2ee;--sun:#c98a10;--suns:#fdf4df;--rust:#b4472b;--rusts:#fcece6}
+body{background:var(--bg);font-family:Figtree,sans-serif;color:var(--ink);width:1240px;height:850px;position:relative}
+h1{position:absolute;left:30px;top:22px;font-size:24px;font-weight:700}
+.sub{position:absolute;left:30px;top:56px;color:var(--ink3);font-size:14px}
+.n{position:absolute;background:var(--s);border:1.5px solid var(--line);border-radius:12px;padding:8px 11px;z-index:2}
+.n h3{font-size:14px;font-weight:700;line-height:1.2}.n p{font-size:11.5px;color:var(--ink2);line-height:1.35;margin-top:3px}
+.src{background:var(--s2)}
+.no{border-color:#b9b2a4}.cheap{border-color:var(--sun);background:var(--suns)}.main{border-color:var(--acc);background:var(--accs)}.you{border-color:var(--rust);background:var(--rusts);border-width:2px}
+.t{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin-bottom:3px}
+.no .t{color:var(--ink3)}.cheap .t{color:#8a5300}.main .t{color:var(--acc)}.you .t{color:var(--rust)}
+.lane{position:absolute;left:30px;width:1200px;border-top:1px dashed #d8d0c2;font-size:11px;font-weight:800;letter-spacing:1.2px;color:var(--ink3);text-transform:uppercase;padding-top:6px;z-index:1}
+svg{position:absolute;left:0;top:0;z-index:1}
+.lbl{font-size:10.5px;fill:#686c64;font-family:Figtree}
+.legend{position:absolute;left:30px;bottom:18px;display:flex;gap:16px;font-size:12px;color:var(--ink2);align-items:center}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid;margin-right:5px;vertical-align:-2px}
+</style></head><body>
+<h1>How jobsearchPal works</h1>
+<div class=sub>Where jobs come from, where AI is used, and how the Skills page learns. Nothing is ever submitted for you.</div>
+<div class=lane style="top:92px">Finding and applying</div>
+<div class=lane style="top:530px">Skills</div>
+<div class=lane style="top:660px">Your job email</div>
+
+<!-- sources -->
+<div class="n src no" id=boards style="left:30px;top:124px;width:240px"><span class=t>Source</span><h3>Company job boards</h3><p>Greenhouse, Lever, Ashby and more</p></div>
+<div class="n src no" id=sites style="left:30px;top:214px;width:240px"><span class=t>Source</span><h3>Open job sites and RSS</h3><p>RemoteOK, Adzuna, USAJOBS, RSS feeds</p></div>
+<div class="n src no" id=alerts style="left:30px;top:334px;width:240px"><span class=t>Source</span><h3>Job-alert emails</h3><p>LinkedIn, Indeed, Built In and more</p></div>
+<div class="n src no" id=paste style="left:30px;top:424px;width:240px"><span class=t>Source</span><h3>Jobs you paste</h3><p>a post or a link</p></div>
+
+<div class="n no" id=leads style="left:310px;top:350px;width:190px"><span class=t>No AI</span><h3>Leads page</h3><p>parsed in plain Python; the best ones are looked up on the company's own board</p></div>
+<div class="n no" id=store style="left:310px;top:140px;width:190px"><span class=t>No AI</span><h3>Your job list</h3><p>one database; roles already tracked or applied to are skipped</p></div>
+
+<div class="n cheap" id=skillm style="left:540px;top:250px;width:200px"><span class=t>Model, optional</span><h3>Skill matching</h3><p>reads each role's must-haves and checks them against your skills, synonyms too</p></div>
+<div class="n no" id=rank style="left:540px;top:118px;width:200px"><span class=t>No AI</span><h3>Pre-rank</h3><p>title words, resume overlap, freshness; top 12 go on</p></div>
+
+<div class="n cheap" id=pick style="left:800px;top:118px;width:190px"><span class=t>Light model</span><h3>Pick</h3><p>best 1 or 2, misses skipped with a reason; or Quick pick, one cheap call</p></div>
+<div class="n main" id=apply style="left:800px;top:262px;width:190px"><span class=t>Main model</span><h3>Apply, one role per session</h3><p>tailor resume and letter, scan the form, plan.json, fill in a real browser, stop before Submit</p></div>
+
+<div class="n you" id=you style="left:1040px;top:262px;width:180px"><span class=t>Only you</span><h3>Review and Submit</h3><p>check every answer and consent; a code or captcha? finish on your laptop</p></div>
+
+<!-- skills -->
+<div class="n no" id=mylist style="left:310px;top:560px;width:190px"><span class=t>You</span><h3>Your skills list</h3><p>drafted once from your resume, editable</p></div>
+<div class="n no" id=skills style="left:800px;top:560px;width:190px"><span class=t>No AI</span><h3>Skills page</h3><p>what matched roles ask for that you don't show yet, most asked first, with free courses</p></div>
+
+<!-- email -->
+<div class="n src no" id=inbox style="left:30px;top:692px;width:240px"><span class=t>No AI</span><h3>Your inbox, read-only</h3><p>IMAP; keyword rules pick candidates</p></div>
+<div class="n cheap" id=sort style="left:310px;top:692px;width:190px"><span class=t>Small model</span><h3>Sort</h3><p>confirmation, interview, rejection, offer, recruiter</p></div>
+<div class="n no" id=log style="left:540px;top:692px;width:200px"><span class=t>No AI</span><h3>Tracker and work-search log</h3><p>weekly count, proof, deadlines</p></div>
+<div class="n cheap" id=follow style="left:800px;top:692px;width:190px"><span class=t>Light model</span><h3>Follow-ups and prep packs</h3><p>drafted replies, never sent</p></div>
+<div class="n no" id=brief style="left:1040px;top:692px;width:180px"><span class=t>No AI</span><h3>Morning brief</h3><p>one email to yourself</p></div>
+
+<div class=legend><span><i class=sw style="border-color:#b9b2a4;background:#fffefb"></i>No AI, plain code</span><span><i class=sw style="border-color:#c98a10;background:#fdf4df"></i>Small or light model</span><span><i class=sw style="border-color:#0f6e66;background:#e6f2ee"></i>Main model</span><span><i class=sw style="border-color:#b4472b;background:#fcece6"></i>Only you</span><span style="color:#686c64">Dashed lines: optional</span></div>
+<svg id=svg width=1240 height=850></svg>
+<script>
+const E=[['boards','store'],['sites','store'],['alerts','leads'],['paste','leads'],['leads','store','','top'],
+['store','rank'],['store','skillm','','dash'],['skillm','rank','raises roles you fit','dash'],['rank','pick'],['pick','apply','picks.json'],['apply','you'],
+['skillm','skills','must-haves','dash'],['apply','skills','fit/gap gaps count double'],['skills','mylist','"I have this"','back'],['mylist','skillm','','dash'],
+['inbox','sort'],['sort','log'],['log','follow'],['follow','brief'],['inbox','alerts','','up']];
+const svg=document.getElementById('svg'),NS='http://www.w3.org/2000/svg';
+const defs=document.createElementNS(NS,'defs');defs.innerHTML='<marker id=a viewBox="0 0 10 10" refX=9 refY=5 markerWidth=7 markerHeight=7 orient=auto-start-reverse><path d="M0,0 L10,5 L0,10 z" fill="#7d7a70"/></marker>';svg.appendChild(defs);
+function r(id){const e=document.getElementById(id).getBoundingClientRect();return {l:e.left,r:e.right,t:e.top,b:e.bottom,cx:(e.left+e.right)/2,cy:(e.top+e.bottom)/2}}
+for(const [a,b,label,kind] of E){const A=r(a),B=r(b);let x1,y1,x2,y2,d;
+ if(kind=='up'){x1=A.l;y1=A.cy;x2=B.l;y2=B.cy;d=`M${x1},${y1} L18,${y1} L18,${y2} L${x2},${y2}`}
+ else if(kind=='top'){x1=A.cx;y1=A.t;x2=B.cx;y2=B.b;d=`M${x1},${y1} L${x2},${y2}`}
+ else if(kind=='back'){x1=A.l;y1=A.cy;x2=B.r;y2=B.cy;d=`M${x1},${y1} L${x2},${y2}`}
+ else if(Math.abs(A.cy-B.cy)<8||B.l>A.r+20){x1=A.r;y1=A.cy;x2=B.l;y2=B.cy;const m=(x1+x2)/2;d=`M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}`}
+ else if(B.t>A.b){x1=A.cx;y1=A.b;x2=B.cx;y2=B.t;const m=(y1+y2)/2;d=`M${x1},${y1} C${x1},${m} ${x2},${m} ${x2},${y2}`}
+ else {x1=A.cx;y1=A.t;x2=B.cx;y2=B.b;const m=(y1+y2)/2;d=`M${x1},${y1} C${x1},${m} ${x2},${m} ${x2},${y2}`}
+ const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke','#8f8b80');p.setAttribute('stroke-width','1.6');p.setAttribute('marker-end','url(#a)');
+ if(kind=='dash'||(a=='mylist')||(a=='skillm'))p.setAttribute('stroke-dasharray','5 4');svg.appendChild(p);
+ if(label){const t=document.createElementNS(NS,'text');t.setAttribute('class','lbl');const L=p.getTotalLength(),pt=p.getPointAtLength(L/2);const left=(kind=='top'||kind=='up');t.setAttribute('x',left?pt.x-6:pt.x+5);if(left)t.setAttribute('text-anchor','end');if(kind=='up'){t.setAttribute('transform',`rotate(-90 12 ${pt.y})`);t.setAttribute('x',12);t.setAttribute('text-anchor','middle')}t.setAttribute('y',pt.y-5);t.textContent=label;
+  const bg=document.createElementNS(NS,'rect');svg.appendChild(t);const bb=t.getBBox();bg.setAttribute('x',bb.x-3);bg.setAttribute('y',bb.y-1);bg.setAttribute('width',bb.width+6);bg.setAttribute('height',bb.height+2);bg.setAttribute('fill','#f5f2ec');bg.setAttribute('rx',3);svg.insertBefore(bg,t)}}
+</script>
+</body></html>
