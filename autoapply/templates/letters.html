@@ -7,7 +7,7 @@
   application and use <b>Rewrite this letter</b> on its Cover letter tab.</div></div></div>
 {% if saved %}<p class="notice good-note" role="status">Saved. The next letter is written this way.</p>{% endif %}
 
-<form method="post" action="/letters" class="voice">
+<form method="post" action="/letters" class="voice" data-dirty>
 <div class="grid vgrid">
 <div>
  <section class="card o1" aria-labelledby="tone-h"><h2 id="tone-h">Tone</h2>
@@ -59,7 +59,8 @@
  </details></section>
 </div>
 </div>
-<div class="savebar"><button class="btn primary">Save how my letters sound</button></div>
+<div class="savebar" role="region" aria-label="Unsaved changes"><span>You have unsaved changes.</span>
+ <button type="button" class="btn ghost" data-undo>Undo</button><button class="btn primary">Save how my letters sound</button></div>
 </form>
 <form method="post" action="/letters/examples" id="ex-form" hidden></form>
 
@@ -84,7 +85,6 @@
 .small{font-size:13.5px}.voice textarea{width:100%;font:inherit;font-size:15.5px;line-height:1.5}
 .sugs{display:flex;flex-wrap:wrap;gap:6px}.sug{font:inherit;font-size:13.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);cursor:pointer}
 .sug[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
-.savebar{margin-top:16px;display:flex;justify-content:flex-end}
 .good-note{background:var(--good-soft)}.bad-note{background:var(--bad-soft,#fde8e8)}
 .preview h2{flex-wrap:wrap}.pv-src{display:inline-flex;border:1px solid var(--line-2);border-radius:999px;padding:2px;gap:2px}
 .pv-src button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--ink-2);padding:4px 10px;border-radius:999px;cursor:pointer}
@@ -101,5 +101,6 @@ document.querySelectorAll('.pv-src button').forEach(b=>b.addEventListener('click
 const a=document.getElementById('avoid'),list=()=>a.value.split('\n').map(x=>x.trim()).filter(Boolean);
 const mark=()=>document.querySelectorAll('.sug').forEach(b=>b.setAttribute('aria-pressed',list().some(x=>x.toLowerCase()===b.dataset.p.toLowerCase())));
 document.querySelectorAll('.sug').forEach(b=>b.addEventListener('click',()=>{const l=list(),i=l.findIndex(x=>x.toLowerCase()===b.dataset.p.toLowerCase());
- if(i>=0)l.splice(i,1);else l.push(b.dataset.p);a.value=l.join('\n');mark()}));a.addEventListener('input',mark);mark()})()</script>
+ if(i>=0)l.splice(i,1);else l.push(b.dataset.p);a.value=l.join('\n');a.dispatchEvent(new Event('input',{bubbles:true}))}));a.addEventListener('input',mark);mark();
+f.addEventListener('reset',()=>setTimeout(()=>{show();mark()}))})()</script>
 {% endblock %}
