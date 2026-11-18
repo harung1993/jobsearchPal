@@ -1,5 +1,6 @@
 """How your letters sound (the Letters page, voice.md) and Rewrite this letter on an application."""
 import json
+import re
 import subprocess
 
 import pytest
@@ -76,6 +77,8 @@ def test_letters_page_shows_examples_and_saves(tmp_path, db):
     assert voice.load(db)["tone"] == "formal" and voice.path(tmp_path).exists()
     assert esc(voice.SAMPLES[("formal", "result")]) in c.get("/letters?saved=1").text
     assert 'href="/letters"' in c.get("/setup").text
+    # The Save bar only shows once something changed, and only on forms marked data-dirty (it was hidden for good).
+    assert re.search(r'<form method="post" action="/letters"[^>]*data-dirty', html)
 
 
 def test_rewrite_this_letter_starts_a_letter_only_run(tmp_path, db, monkeypatch):
